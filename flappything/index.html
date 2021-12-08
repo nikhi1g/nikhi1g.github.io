@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nikhil</title>
+  </head>
+  <body>
+    <button onclick="myFunction()">Try it</button>
+    <form action="https://www.w3docs.com/" method="get" target="_blank">
+      <button type="submit">Click me</button>
+   </form>
+    <canvas id="bg"></canvas>
+    <div id="info">Description</div>
+    <script type="module" src="/main.js"></script>
+    <script>
+      var a = document.createElement('a');
+      var linkText = document.createTextNode("my title text");
+      a.appendChild(linkText);
+      a.title = "my title text";
+      a.href = "http://example.com";
+      document.body.appendChild(a);
+
+      //https://stackoverflow.com/questions/7790725/javascript-track-mouse-position
+
+
+      var text3 = document.createElement('div');
+      text3.style.position = 'absolute';
+      //text2.style.zIndex = 1;    // if still don't see the label, try uncommenting this
+      text3.href = 'http://www.example.com';
+      document.body.appendChild(text3);
+      text3.style.width = 100;
+      text3.style.height = 100;
+      text3.style.color = 'white';
+      //text2.style.backgroundColor = "black";
+      text3.title = "This is my Website!";
+      text3.innerHTML = "This is my website, click around!";
+      text3.style.top = 350 + 'px';
+      text3.style.left = 300 + 'px';
+      document.body.appendChild(text3);
+
+      var info = document.getElementById('info');
+
+      // Creating function that will tell the position of cursor
+      // PageX and PageY will getting position values and show them in P
+      function tellPos(p){
+        info.innerHTML = 'Position X : ' + p.pageX + '<br />Position Y : ' + p.pageY;     
+}
+
+
+addEventListener('mousemove', tellPos, false);
+      // while (true){
+      //   if (info.innerHTML.pageX > 1400){
+      //             window.open("https://www.w3schools.com");
+      //           }
+      //         }
+     // 
+
+    </script>
+    <button onclick="location.href='http://www.example.com'" type="button">
+      www.example.com</button>
+    <h1>Nikhil Gupta</h1>
+    <a href="https://2022mechatronicsnikhilgupta.weebly.com/">Visit my more updated site!</a>
+  </body>
+</html>
