@@ -3,6 +3,23 @@ body{
     background-image: url("tree.jpg");
     background-size: cover;
     background-repeat: no-repeat;
-    border: 2px solid white;
+    /*border: 2px solid white;*/
 }
 
+a:hover {
+    background-color: rgba(0, 162, 255, 0.568);
+  }
+
+h1:hover {
+    background: #e1e1e100;
+    border: 10px solid #1a047c5e;
+}
+
+
+a:visited {
+    color: blue;
+  }
+
+a:active {
+color: yellow;
+}
