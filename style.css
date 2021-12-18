@@ -31,22 +31,35 @@ color: yellow;
 }
 
 p {
-  animation-duration: 1.3s;
-  animation-name: slidein;
+  animation: slidein 2s, flipp 3s;
+
+ 
 }
 
 
 @keyframes slidein {
   from {
     margin-left: 100%;
-    width: 2000%;
+    width: 1000%;
   }
 
   to {
     margin-left: 0%;
     width: 100%;
     text-align: center;
-    transition-delay: 1s;
-    color: rgba(255, 255, 255, 0.747);
+    /* transition-delay: 2000ms;
+    animation-duration: 1000ms; */
+  }
+}
+
+@keyframes flipp {
+  from {
+    transform: rotate(0);
+
+  }
+
+  to {
+    transform: rotate(360deg);
+
   }
 }
