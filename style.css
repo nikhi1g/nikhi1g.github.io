@@ -24,6 +24,8 @@ h1:hover {
     /* border: 10px solid #1a047c5e; */
     transition-duration: 1s; transform: translateY(-20px); transform: scale(200%);
     color: #000;
+    /* box-shadow: 0 12px 16px 0 rgba(0, 0, 0, 0.808), 0 17px 50px 0 rgb(0, 0, 0); */
+
                                                 
 }
 
@@ -39,6 +41,12 @@ p {
   animation: slidein 4.5s, flipp 4.2s;
 }
 
+@keyframes hop {
+  from{
+    transform:
+  }
+  
+}
 
 @keyframes slidein {
   from {
@@ -69,10 +77,22 @@ p {
   }
   to {
     transform: scale(200%);
+    
+  }
+}
+@keyframes spin { 
+  100% { 
+      transform: rotate(180deg);
+  } 
+}
+
+@keyframes scale {
+  100% {
+       transform: scale(200%);
   }
 }
 .button2 {
-  animation: expand 10s, flipp 0.4s;
+  animation: spin 1s, scale 1s; 
   transition-duration: 4s; transform: translateY(6px); transform: scale(200%);
   background-color: #b403033a; /* Green */
   border: none;
@@ -92,7 +112,7 @@ p {
 
 .button2:hover {
   background-color: #3a3a3a33; /* Green */
-  color: #000000;
+  color: #f5eeee;
   padding: 15px 15px;
   box-shadow: 0 12px 16px 0 rgba(0, 0, 0, 0.808), 0 17px 50px 0 rgb(0, 0, 0);
   /* transition-duration: 1s; transform: translateY(50px); */
@@ -106,4 +126,16 @@ p {
   color: #000000;
   padding: 15px 15px;
   box-shadow: 0 12px 16px 0 rgba(0, 0, 0, 0), 0 17px 50px 0 rgba(0, 0, 0, 0);
+}
+
+img {
+  max-width: 33%;
+  height: auto;
+  margin-top: 260px;
+  margin-left: -10px;
+  opacity: 0.9;
+}
+
+img:hover {
+  animation: forwards;
 }
