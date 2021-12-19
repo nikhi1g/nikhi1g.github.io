@@ -9,18 +9,21 @@ body{
 
 h1 {
   text-align: center;
+  animation-timing-function: cubic-bezier(0.075, 0.82, 0.165, 1000);
 }
 
 a:hover {
     background-color: rgba(0, 162, 255, 0.568);
+    text-decoration-style:dotted;
+    font-size: x-large;
   }
 
 h1:hover {
     background: #e1e1e100;
     border: 10px solid #1a047c5e;
     color: #000;
+                                                
 }
-
 
 a:visited {
     color: blue;
@@ -31,9 +34,7 @@ color: yellow;
 }
 
 p {
-  animation: slidein 2s, flipp 3s;
-
- 
+  animation: slidein 4.5s, flipp 4s;
 }
 
 
