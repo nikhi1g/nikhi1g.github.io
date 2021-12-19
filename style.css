@@ -129,13 +129,31 @@ p {
 }
 
 img {
+  transition-duration: 1s; transform: scale(100%);
   max-width: 33%;
   height: auto;
   margin-top: 260px;
   margin-left: -10px;
-  opacity: 0.9;
+  opacity: 0.2;
+  border-radius: 200px;
+
 }
 
 img:hover {
-  animation: forwards;
+  animation: spinning 4s;
+}
+
+@keyframes pop {
+  100%{
+    transform: scale(10%); transform: rotateY(330deg); transform: rotateY(-10deg);
+  }
+}
+
+@keyframes spinning {
+  0% {
+    transform: rotate(0);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
