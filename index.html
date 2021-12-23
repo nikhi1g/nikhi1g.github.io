@@ -8,12 +8,73 @@
 
 </head>
 <body>
-<a href="https://github.com/nikhi1g?tab=repositories"><button style="margin-top: 300px; margin-left: 400px; background-color: #b403033a;" class="button2">Repositories</button>
-<a href="https://2022mechatronicsnikhilgupta.weebly.com/"><button style="margin-top: 100px; margin-left: 400px; background-color: #b403033a;" class="button2">Weebly</button>
-<a href="https://nikhi1g.github.io/SpotifyAdSkipper/"><button style="margin-top: 100px; margin-left: -500px; background-color: #2725587a;" class="button2">SpotifyAdSkipper</button>
-<a href="https://www.linkedin.com/in/nikhil---gupta/"><button style="margin-top: 300px; margin-left: -500px; background-color: hsla(226, 78%, 27%, 0.377);" class="button2">LinkedIn</button>
+<a href="https://github.com/nikhi1g?tab=repositories"><button id = "repositories" onmouseover="changeText()" onmouseleave="changeText()"
+    style="margin-top: 300px; margin-left: 400px; background-color: #b403033a;" 
+    class="button2">Repositories</button>
+<a href="https://2022mechatronicsnikhilgupta.weebly.com/"><button id = "weebly" onmouseover="changeText1()" onmouseleave="changeText1" 
+    style="margin-top: 100px; margin-left: 400px; background-color: #b403033a;" 
+    class="button2">Weebly</button>
+<a href="https://nikhi1g.github.io/SpotifyAdSkipper/"><button id = "SpotifyAdSkipper" onmouseover="changeText2()" onmouseleave="changeText2"
+    style="margin-top: 100px; margin-left: -500px; background-color: #2725587a;" 
+    class="button2">SpotifyAdSkipper</button>
+<a href="https://www.linkedin.com/in/nikhil---gupta/"><button id = "LinkedIn" onmouseover="changeText3()" onmouseleave="changeText3"
+    style="margin-top: 300px; margin-left: -500px; background-color: hsla(226, 78%, 27%, 0.377);" 
+    class="button2">LinkedIn</button>
 <h1 style="color: rgb(0, 0, 0);"><a style="color: rgba(196, 69, 69, 0.836);" href = "https://nikhi1g.github.io/">Nikhil Gupta</h1>
 <img class = "img" src="treebutton.png" alt="tree">
-</div>
+<script>
+    var x = 0;
+    function changeText() {
+        if (x==0){
+            document.getElementById("repositories").innerHTML = "Repositories!"
+            x = 1;
+            }
+        else {
+            if (x == 1){
+                document.getElementById("repositories").innerHTML = "Repositories"
+                x = 0;
+                }
+            }
+        }
+    function changeText1() {
+        if (x==0){
+            document.getElementById("weebly").innerHTML = "Weebly!"
+            x = 1;
+            }
+        else {
+            if (x == 1){
+                document.getElementById("weebly").innerHTML = "Weebly"
+                x = 0;
+                }
+            }
+        }
+    function changeText2() {
+        if (x==0){
+            document.getElementById("SpotifyAdSkipper").innerHTML = "SpotifyAdSkipper!"
+            x = 1;
+            }
+        else {
+            if (x == 1){
+                document.getElementById("SpotifyAdSkipper").innerHTML = "SpotifyAdSkipper"
+                x = 0;
+                }
+            }
+        }
+    function changeText3() {
+        if (x==0){
+            document.getElementById("LinkedIn").innerHTML = "LinkedIn!"
+            x = 1;
+            }
+        else {
+            if (x == 1){
+                document.getElementById("LinkedIn").innerHTML = "LinkedIn"
+                x = 0;
+                }
+            }
+        }
+    x = 0
+
+    
+    </script>
 </body>
 </html>
