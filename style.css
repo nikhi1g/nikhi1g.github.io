@@ -21,15 +21,25 @@ h1 {
   } */
 
 h1:hover {
+    animation: flippy 1s;
     background: #e1e1e100;
     /* border: 10px solid #1a047c5e; */
-    transition-duration: 1s; transform: translateY(-20px); transform: scale(200%);
+    transition-duration: 6s; transform: translateY(-20px); transform: scale(200%);
     color: #000;
     /* box-shadow: 0 12px 16px 0 rgba(0, 0, 0, 0.808), 0 17px 50px 0 rgb(0, 0, 0); */
 
                                                 
 }
+@keyframes flippy {
+  from {
 
+    transform: rotate(0deg);
+  }
+  to {
+
+    transform: rotate(1080deg);
+  }
+}
 a:visited {
     color: blue;
   }
@@ -115,9 +125,9 @@ p {
 
 .button2 {
   animation: spin 1s; 
-  animation: scale2  3s, ccolor2 3s, ccolor 3s 3s;
+  animation: scale2  3s, ccolor2 5s, ccolor 2s 5s;
   /* animation: color 3s; */
-  transition-duration: 3.5s; transform: translateY(6px); transform: scale(200%);
+  transition-duration: 1.5s; transform: translateY(6px); transform: scale(200%);
   background-color: #b403033a; /* Green */
   border: none;
   color: rgba(0, 0, 0, 0.527);
@@ -143,7 +153,7 @@ p {
   padding: 15px 15px;
   box-shadow: 0 12px 16px 0 rgba(0, 0, 0, 0.808), 0 17px 50px 0 rgb(0, 0, 0);
   /* transition-duration: 1s; transform: translateY(50px); */
-  transition-duration: 2s; transform: translateY(-6px); transform: scale(300%);
+  transition-duration: 1s; transform: translateY(-6px); transform: scale(300%); 
   /* transition-duration: 2s; transform: rotate(360deg); */
 }
 
@@ -155,7 +165,7 @@ p {
   box-shadow: 0 12px 16px 0 rgba(0, 0, 0, 0), 0 17px 50px 0 rgba(0, 0, 0, 0);
 }
 
-img {
+.img {
   transition-duration: 1s; transform: scale(100%);
   max-width: 33%;
   height: auto;
@@ -166,8 +176,37 @@ img {
 
 }
 
-img:hover {
+.img:hover {
   animation: spinning 4s;
+}
+
+.img2 {
+  max-width: 7%;
+  height: auto;
+  opacity: 0.3;
+  animation: expshrink 2s 2s, shrinkexp 2s;
+  animation-iteration-count: infinite;
+  border-radius: 111px;
+
+}
+
+@keyframes expshrink {
+  from {
+    transform: scale(1);
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+    transform: scale(4);
+  }
+  
+}
+@keyframes shrinkexp {
+  100%{
+    opacity: 0.0;
+    transform: scale(1);
+  }
+   
 }
 
 @keyframes glow {

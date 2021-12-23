@@ -20,17 +20,32 @@
 <a href="https://www.linkedin.com/in/nikhil---gupta/"><button id = "LinkedIn" onmouseover="changeText3()" onmouseleave="changeText3()"
     style="margin-top: 300px; margin-left: -500px; background-color: hsla(226, 78%, 27%, 0.377);" 
     class="button2">LinkedIn</button>
-<h1 style="color: rgb(0, 0, 0);"><a style="color: rgba(196, 69, 69, 0.836);" href = "https://nikhi1g.github.io/">Nikhil Gupta</h1>
-<img class = "img" src="treebutton.png" alt="tree">
+<h1 style="color: #000000;"><a style="color: rgba(196, 69, 69, 0.836);" href = "https://nikhi1g.github.io/">Nikhil Gupta</h1>
+<!-- <img class = "img" src="treebutton.png" alt="tree"> -->
+<img style="z-index: 1; margin-left: -700px; margin-top: 145px;"
+class="img2" src = "star1.png" >
+<div>
+    <img style="z-index: 2; margin-left: 700px; margin-top: 165px;"
+class="img2" src = "star2.png" >
+</div>
+
+ 
+
+
 <script>
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+   }
     var x = 0;
     function changeText() {
         if (x==0){
+
             document.getElementById("repositories").innerHTML = "Repositories!"
             x = 1;
             }
         else {
             if (x == 1){
+
                 document.getElementById("repositories").innerHTML = "Repositories"
                 x = 0;
                 }
