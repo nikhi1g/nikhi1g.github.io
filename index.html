@@ -44,23 +44,55 @@
 
     <script>
         // Blob Animation Script
-        document.addEventListener('mousemove', (e) => {
-            const eyes = document.querySelectorAll('.eye');
+        const blobContainer = document.getElementById('blob-container');
+        let blobState = 'idle'; // idle, falling, recovering, active
+
+        function triggerBlobEntrance() {
+            if (blobState !== 'idle') return;
             
-            eyes.forEach(eye => {
-                const pupil = eye.querySelector('.pupil');
-                const rect = eye.getBoundingClientRect();
-                const eyeCenterX = rect.left + rect.width / 2;
-                const eyeCenterY = rect.top + rect.height / 2;
+            blobState = 'falling';
+            blobContainer.classList.add('falling');
+
+            // Timeout matches drop animation duration (1s)
+            setTimeout(() => {
+                blobState = 'recovering';
+                blobContainer.classList.remove('falling');
+                blobContainer.classList.add('recovering');
+
+                // Timeout matches recover animation duration (1.5s)
+                setTimeout(() => {
+                    blobState = 'active';
+                    blobContainer.classList.remove('recovering');
+                    blobContainer.classList.add('active');
+                }, 1500);
+            }, 1000);
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            // Trigger entrance on first move
+            if (blobState === 'idle') {
+                triggerBlobEntrance();
+            }
+
+            // Only track eyes if active
+            if (blobState === 'active') {
+                const eyes = document.querySelectorAll('.eye');
                 
-                const angle = Math.atan2(e.clientY - eyeCenterY, e.clientX - eyeCenterX);
-                const distance = Math.min(3, Math.hypot(e.clientX - eyeCenterX, e.clientY - eyeCenterY) / 10);
-                
-                const pupilX = Math.cos(angle) * distance;
-                const pupilY = Math.sin(angle) * distance;
-                
-                pupil.style.transform = `translate(${pupilX}px, ${pupilY}px)`;
-            });
+                eyes.forEach(eye => {
+                    const pupil = eye.querySelector('.pupil');
+                    const rect = eye.getBoundingClientRect();
+                    const eyeCenterX = rect.left + rect.width / 2;
+                    const eyeCenterY = rect.top + rect.height / 2;
+                    
+                    const angle = Math.atan2(e.clientY - eyeCenterY, e.clientX - eyeCenterX);
+                    const distance = Math.min(3, Math.hypot(e.clientX - eyeCenterX, e.clientY - eyeCenterY) / 10);
+                    
+                    const pupilX = Math.cos(angle) * distance;
+                    const pupilY = Math.sin(angle) * distance;
+                    
+                    pupil.style.transform = `translate(${pupilX}px, ${pupilY}px)`;
+                });
+            }
         });
 
         // Version Sensor Script

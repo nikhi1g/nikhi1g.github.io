@@ -57,6 +57,37 @@ a:hover {
     width: 100px;
     height: 100px;
     z-index: 1000;
+    /* Initial state: Hidden above the screen */
+    transform: translateY(-150vh); 
+}
+
+/* Animation Classes */
+#blob-container.falling {
+    animation: blob-drop 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+#blob-container.recovering {
+    animation: blob-recover 1.5s ease-out forwards;
+}
+
+#blob-container.active {
+    transform: translateY(0);
+}
+
+@keyframes blob-drop {
+    0% { transform: translateY(-150vh); }
+    60% { transform: translateY(0); }
+    75% { transform: translateY(-30px); }
+    100% { transform: translateY(0); }
+}
+
+@keyframes blob-recover {
+    0% { transform: translateY(0) scale(1.1, 0.7); } /* Squashed on impact */
+    20% { transform: translateY(-10px) scale(0.9, 1.1) rotate(-5deg); } /* Stretching up */
+    40% { transform: translateY(0) scale(1.05, 0.95) rotate(5deg); }
+    60% { transform: translateY(0) scale(0.98, 1.02) rotate(-2deg); }
+    80% { transform: translateY(0) scale(1.01, 0.99) rotate(1deg); }
+    100% { transform: translateY(0) scale(1) rotate(0); }
 }
 
 .blob {
