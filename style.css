@@ -6,6 +6,9 @@ body {
     padding: 0 20px;
     color: #1a1a1a;
     background: #fff;
+    /* Ensure body takes full height for the blob to be positioned relative to viewport if needed, 
+       though fixed positioning works regardless. */
+    min-height: 100vh;
 }
 
 h1, h2 {
@@ -48,6 +51,73 @@ a:hover {
     background: #eee;
 }
 
+/* Blob Styles */
+#blob-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 100px;
+    height: 100px;
+    z-index: 1000;
+}
+
+.blob {
+    width: 100%;
+    height: 100%;
+    background-color: #ff9f43; /* Orange */
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+    position: relative;
+    animation: blob-pulse 4s ease-in-out infinite;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+@keyframes blob-pulse {
+    0% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; transform: scale(1); }
+    50% { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; transform: scale(1.05); }
+    100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; transform: scale(1); }
+}
+
+.eye {
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    position: absolute;
+    top: 30%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#eye-left {
+    left: 25%;
+}
+
+#eye-right {
+    right: 25%;
+}
+
+.pupil {
+    width: 6px;
+    height: 6px;
+    background: black;
+    border-radius: 50%;
+}
+
+.mouth {
+    width: 30px;
+    height: 15px;
+    border-bottom: 3px solid #333;
+    border-radius: 50%;
+    position: absolute;
+    bottom: 25%;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
 @media (prefers-color-scheme: dark) {
     body {
         background: #121212;
@@ -61,5 +131,9 @@ a:hover {
     }
     a:hover {
         background: #333;
+    }
+    /* Adjust blob shadow for dark mode */
+    .blob {
+        box-shadow: 0 10px 20px rgba(0,0,0,0.4);
     }
 }

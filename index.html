@@ -25,5 +25,40 @@
             </ul>
         </section>
     </main>
+    <div id="blob-container">
+        <div class="blob">
+            <div class="eye" id="eye-left">
+                <div class="pupil"></div>
+            </div>
+            <div class="eye" id="eye-right">
+                <div class="pupil"></div>
+            </div>
+            <div class="mouth"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('mousemove', (e) => {
+            const eyes = document.querySelectorAll('.eye');
+            
+            eyes.forEach(eye => {
+                const pupil = eye.querySelector('.pupil');
+                const rect = eye.getBoundingClientRect();
+                const eyeCenterX = rect.left + rect.width / 2;
+                const eyeCenterY = rect.top + rect.height / 2;
+                
+                // Calculate angle to mouse
+                const angle = Math.atan2(e.clientY - eyeCenterY, e.clientX - eyeCenterX);
+                
+                // Limit movement distance so pupil stays in eye
+                const distance = Math.min(3, Math.hypot(e.clientX - eyeCenterX, e.clientY - eyeCenterY) / 10);
+                
+                const pupilX = Math.cos(angle) * distance;
+                const pupilY = Math.sin(angle) * distance;
+                
+                pupil.style.transform = `translate(${pupilX}px, ${pupilY}px)`;
+            });
+        });
+    </script>
 </body>
 </html>
