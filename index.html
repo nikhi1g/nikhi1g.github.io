@@ -26,6 +26,7 @@
         </section>
     </main>
     <div id="blob-container">
+        <div class="speech-bubble">Gimme your cursor!</div>
         <div class="blob">
             <div class="eye" id="eye-left">
                 <div class="pupil"></div>
@@ -34,6 +35,7 @@
                 <div class="pupil"></div>
             </div>
             <div class="mouth"></div>
+            <div class="basketball"></div>
         </div>
     </div>
 
@@ -45,7 +47,9 @@
     <script>
         // Blob Animation Script
         const blobContainer = document.getElementById('blob-container');
-        let blobState = 'idle'; // idle, falling, recovering, active
+        const speechBubble = document.querySelector('.speech-bubble');
+        const basketball = document.querySelector('.basketball');
+        let blobState = 'idle'; // idle, falling, recovering, active, begging, dunking, pointing
 
         function triggerBlobEntrance() {
             if (blobState !== 'idle') return;
@@ -53,44 +57,118 @@
             blobState = 'falling';
             blobContainer.classList.add('falling');
 
-            // Timeout matches drop animation duration (1s)
             setTimeout(() => {
                 blobState = 'recovering';
                 blobContainer.classList.remove('falling');
                 blobContainer.classList.add('recovering');
 
-                // Timeout matches recover animation duration (1.5s)
                 setTimeout(() => {
                     blobState = 'active';
                     blobContainer.classList.remove('recovering');
                     blobContainer.classList.add('active');
+                    
+                    // Start begging sequence shortly after activating
+                    setTimeout(startBegging, 1000);
                 }, 1500);
             }, 1000);
         }
 
+        function startBegging() {
+            blobState = 'begging';
+            blobContainer.classList.remove('active');
+            blobContainer.classList.add('begging');
+            
+            // Listen for interaction
+            blobContainer.addEventListener('mouseenter', startDunkSequence, { once: true });
+        }
+
+        function startDunkSequence() {
+            if (blobState !== 'begging') return;
+            blobState = 'dunking';
+            
+            // 1. Visual Changes
+            document.body.style.cursor = 'none'; // Hide cursor
+            blobContainer.classList.remove('begging');
+            blobContainer.classList.add('dunking');
+            speechBubble.style.opacity = '0';
+            basketball.style.display = 'block'; // Show ball
+
+            // 2. Identify Target Link
+            const links = document.querySelectorAll('main ul li a');
+            if (links.length === 0) return; // Fail safe
+            const targetLink = links[Math.floor(Math.random() * links.length)];
+            
+            // 3. Create Hoop
+            const hoop = document.createElement('div');
+            hoop.className = 'hoop-container';
+            hoop.innerHTML = `
+                <div class="hoop-backboard"></div>
+                <div class="hoop-rim"></div>
+                <div class="hoop-net"></div>
+            `;
+            targetLink.parentElement.style.position = 'relative'; // Ensure positioning relative to LI
+            targetLink.parentElement.appendChild(hoop);
+            
+            // Trigger reflow/animation
+            requestAnimationFrame(() => hoop.classList.add('show-hoop'));
+
+            // 4. Calculate Positions
+            const blobRect = blobContainer.getBoundingClientRect();
+            const hoopRect = hoop.getBoundingClientRect();
+            const linkRect = targetLink.getBoundingClientRect();
+
+            // Calculate translation needed to get to hoop
+            // Position relative to viewport, but we need to move the fixed element
+            const deltaX = (hoopRect.left - blobRect.left) - 60; // Offset to be "dunking" position
+            const deltaY = (hoopRect.top - blobRect.top) - 50;
+
+            // 5. Animate to Hoop
+            // Use transform directly for movement
+            blobContainer.style.transition = 'transform 1s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+            blobContainer.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(1.2)`;
+
+            // 6. Dunk Action (at end of movement)
+            setTimeout(() => {
+                // Ball goes through hoop animation could go here
+                
+                // 7. Celebrate & Highlight
+                blobContainer.classList.add('celebrating');
+                
+                setTimeout(() => {
+                    // 8. Move to resting pointing position (next to link)
+                    const pointX = deltaX - 50; // Move slightly left of hoop
+                    const pointY = deltaY + 50; // Move down
+                    
+                    blobContainer.style.transform = `translate(${pointX}px, ${pointY}px) scale(0.8)`;
+                    blobContainer.classList.remove('dunking', 'celebrating');
+                    blobContainer.classList.add('pointing');
+                    
+                    // Highlight Link
+                    targetLink.classList.add('link-highlight');
+                    
+                    // Show cursor again
+                    document.body.style.cursor = 'auto';
+                    
+                }, 1000); // Celebration duration
+            }, 1000); // Movement duration
+        }
+
         document.addEventListener('mousemove', (e) => {
-            // Trigger entrance on first move
             if (blobState === 'idle') {
                 triggerBlobEntrance();
             }
 
-            // Only track eyes if active
-            if (blobState === 'active') {
+            // Track eyes (only when active or begging)
+            if (['active', 'begging', 'pointing'].includes(blobState)) {
                 const eyes = document.querySelectorAll('.eye');
-                
                 eyes.forEach(eye => {
                     const pupil = eye.querySelector('.pupil');
                     const rect = eye.getBoundingClientRect();
-                    const eyeCenterX = rect.left + rect.width / 2;
-                    const eyeCenterY = rect.top + rect.height / 2;
-                    
-                    const angle = Math.atan2(e.clientY - eyeCenterY, e.clientX - eyeCenterX);
-                    const distance = Math.min(3, Math.hypot(e.clientX - eyeCenterX, e.clientY - eyeCenterY) / 10);
-                    
-                    const pupilX = Math.cos(angle) * distance;
-                    const pupilY = Math.sin(angle) * distance;
-                    
-                    pupil.style.transform = `translate(${pupilX}px, ${pupilY}px)`;
+                    const centerX = rect.left + rect.width / 2;
+                    const centerY = rect.top + rect.height / 2;
+                    const angle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+                    const distance = Math.min(3, Math.hypot(e.clientX - centerX, e.clientY - centerY) / 10);
+                    pupil.style.transform = `translate(${Math.cos(angle) * distance}px, ${Math.sin(angle) * distance}px)`;
                 });
             }
         });
