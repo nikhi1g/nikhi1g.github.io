@@ -117,7 +117,7 @@
         if (!el || !meta) return;
 
         const hash = getShortCommitHash(meta);
-        el.textContent = `v:${hash}`;
+        el.textContent = hash;
         el.title = meta.message || '';
     }
 
