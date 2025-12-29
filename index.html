@@ -11,33 +11,35 @@
         <h1>Nikhil Gupta</h1>
         
         <nav>
-            <a href="https://github.com/nikhi1g?tab=repositories">GitHub</a>
-            <a href="https://www.linkedin.com/in/nikhil---gupta/">LinkedIn</a>
+            <a href="https://github.com/nikhi1g?tab=repositories" data-type="github" data-emoji="🐱">GitHub</a>
+            <a href="https://www.linkedin.com/in/nikhil---gupta/" data-type="linkedin" data-emoji="💼">LinkedIn</a>
         </nav>
 
         <section>
             <h2>Projects</h2>
             <ul>
-                <li><a href="https://nikhi1g.github.io/aminoacids/index.html">Amino Acids</a></li>
-                <li><a href="https://nikhi1g.github.io/SpotifyAdSkipper/">Spotify Ad Skipper</a></li>
-                <li><a href="https://2022mechatronicsnikhilgupta.weebly.com/">Mechatronics Portfolio</a></li>
+                <li><a href="https://nikhi1g.github.io/aminoacids/index.html" data-type="amino" data-emoji="🧬">Amino Acids</a></li>
+                <li><a href="https://nikhi1g.github.io/SpotifyAdSkipper/" data-type="spotify" data-emoji="🎵">Spotify Ad Skipper</a></li>
+                <li><a href="https://2022mechatronicsnikhilgupta.weebly.com/" data-type="robot" data-emoji="🤖">Mechatronics Portfolio</a></li>
             </ul>
         </section>
     </main>
 
     <div id="ground"></div>
 
-    <div id="blob-container">
-        <div class="blob">
-            <div class="eye" id="eye-left">
-                <div class="pupil"></div>
+    <!-- Template for Mascots -->
+    <template id="mascot-template">
+        <div class="mascot-container">
+            <div class="blob">
+                <!-- Face for default -->
+                <div class="eye" id="eye-left"><div class="pupil"></div></div>
+                <div class="eye" id="eye-right"><div class="pupil"></div></div>
+                <div class="mouth"></div>
+                <!-- Emoji container -->
+                <div class="blob-emoji"></div>
             </div>
-            <div class="eye" id="eye-right">
-                <div class="pupil"></div>
-            </div>
-            <div class="mouth"></div>
         </div>
-    </div>
+    </template>
 
     <div id="version-sensor" class="sensor-loading">
         <span class="sensor-icon">●</span>
@@ -45,147 +47,204 @@
     </div>
 
     <script>
-        // --- Custom Physics Engine ---
-        const blobContainer = document.getElementById('blob-container');
-        const blob = blobContainer.querySelector('.blob');
+        // --- Mascot System ---
         const groundElement = document.getElementById('ground');
+        const mascotTemplate = document.getElementById('mascot-template');
+        const GROUND_PAD = 20;
+        const GRAVITY = 0.6;
         
-        // Physics State
-        let state = 'waiting'; 
-        // Init X immediately to right side to prevent top-left rendering 
-        let pos = { x: window.innerWidth - 150, y: -400 }; 
-        let vel = { x: 0, y: 0 };
-        let scale = { x: 1, y: 1 };
-        
-        const GRAVITY = 0.5; 
-        const GROUND_PAD = 20; 
-        
-        // Jelly Spring Physics
-        // Very soft stiffness, high damping for wobble
-        let spring = {
-            target: { x: 1, y: 1 },
-            stiffness: 0.03, 
-            damping: 0.92, 
-            vel: { x: 0, y: 0 } 
-        };
-
-        let groundY = window.innerHeight - 100 - GROUND_PAD; 
-
+        let groundY = window.innerHeight - 100 - GROUND_PAD;
         window.addEventListener('resize', () => {
             groundY = window.innerHeight - 100 - GROUND_PAD;
-            // Keep it docked right if we haven't started or are idle
-            if (state === 'waiting' || state === 'idle') {
-                pos.x = window.innerWidth - 150;
-            }
         });
 
-        function updatePhysics() {
-            // 1. Position Physics
-            if (state === 'falling') {
-                vel.y += GRAVITY;
-                pos.y += vel.y;
+        class Mascot {
+            constructor(type, emoji = null) {
+                this.type = type;
+                this.element = mascotTemplate.content.cloneNode(true).querySelector('.mascot-container');
+                this.blob = this.element.querySelector('.blob');
+                document.body.appendChild(this.element);
 
-                // Air resistance / Jelly stretch
-                const stretch = Math.min(1.6, 1 + (Math.abs(vel.y) * 0.025)); 
-                scale.y = stretch;
-                scale.x = 1 / stretch; 
-
-                // Ground Collision
-                if (pos.y >= groundY) {
-                    pos.y = groundY;
-                    vel.y = 0;
-                    
-                    state = 'slumped';
-                    blob.classList.add('squished');
-                    
-                    // EXTREME SPLAT
-                    scale.y = 0.25; 
-                    scale.x = 2.2;
-                    
-                    // Kickstart the spring wobble violently
-                    spring.vel.x = 0;
-                    spring.vel.y = -0.15; 
-                    
-                    setTimeout(() => {
-                        state = 'recovering';
-                        blob.classList.remove('squished');
-                        blob.classList.add('happy');
-                    }, 150); 
+                // Setup Appearance
+                if (type !== 'default') {
+                    this.blob.classList.add(type, 'has-emoji');
+                    this.blob.querySelector('.blob-emoji').textContent = emoji;
                 }
+
+                // Physics State
+                this.state = 'falling';
+                this.pos = { x: window.innerWidth - 150, y: -200 }; // Start above
+                this.vel = { x: 0, y: 0 };
+                this.scale = { x: 1, y: 1 };
+                this.spring = { target: { x: 1, y: 1 }, stiffness: 0.05, damping: 0.90, vel: { x: 0, y: 0 } };
+                this.active = true;
+
+                // Make visible immediately
+                requestAnimationFrame(() => this.element.classList.add('visible'));
             }
 
-            // 2. Spring Physics (The Jiggle)
-            if (state === 'recovering' || state === 'idle') {
-                const forceX = (spring.target.x - scale.x) * spring.stiffness;
-                const forceY = (spring.target.y - scale.y) * spring.stiffness;
+            update(targetY, otherMascot) {
+                if (!this.active) return;
 
-                spring.vel.x += forceX;
-                spring.vel.y += forceY;
+                // 1. Position Physics
+                if (this.state === 'falling') {
+                    this.vel.y += GRAVITY;
+                    this.pos.y += this.vel.y;
 
-                spring.vel.x *= spring.damping;
-                spring.vel.y *= spring.damping;
+                    // Stretch
+                    const stretch = Math.min(1.6, 1 + (Math.abs(this.vel.y) * 0.025));
+                    this.scale.y = stretch;
+                    this.scale.x = 1 / stretch;
 
-                scale.x += spring.vel.x;
-                scale.y += spring.vel.y;
-                
-                if (state === 'recovering' && 
-                    Math.abs(spring.vel.y) < 0.001 && 
-                    Math.abs(scale.y - 1) < 0.01) {
-                    state = 'idle';
+                    // Collision with Other Mascot (The Fight)
+                    if (otherMascot && otherMascot.state === 'idle' && this.pos.y + 100 >= otherMascot.pos.y + 20) {
+                        // HIT!
+                        this.pos.y = otherMascot.pos.y - 50; // Land slightly inside/on top
+                        this.vel.y = 0;
+                        this.state = 'slumped';
+                        this.triggerImpact();
+                        return 'hit_mascot'; // Signal manager to kill other
+                    }
+
+                    // Collision with Ground
+                    if (this.pos.y >= groundY) {
+                        this.pos.y = groundY;
+                        this.vel.y = 0;
+                        this.state = 'slumped';
+                        this.triggerImpact();
+                        return 'hit_ground';
+                    }
                 }
-            }
 
-            // 3. Render
-            blobContainer.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0)`;
-            blob.style.transform = `scale(${scale.x}, ${scale.y})`;
+                // 2. Spring Physics
+                if (this.state === 'recovering' || this.state === 'idle' || this.state === 'slumped') {
+                    const forceX = (this.spring.target.x - this.scale.x) * this.spring.stiffness;
+                    const forceY = (this.spring.target.y - this.scale.y) * this.spring.stiffness;
+                    this.spring.vel.x += forceX;
+                    this.spring.vel.y += forceY;
+                    this.spring.vel.x *= this.spring.damping;
+                    this.spring.vel.y *= this.spring.damping;
+                    this.scale.x += this.spring.vel.x;
+                    this.scale.y += this.spring.vel.y;
 
-            if (state !== 'waiting') {
-                 requestAnimationFrame(updatePhysics);
-            }
-        }
+                    if (this.state === 'recovering' && Math.abs(this.spring.vel.y) < 0.001) {
+                        this.state = 'idle';
+                        if (this.type === 'default') {
+                            this.blob.classList.add('happy');
+                            this.blob.classList.remove('squished');
+                        }
+                    }
+                }
 
-        // Run once to set initial transform (off screen)
-        updatePhysics(); 
-
-        // Input Trigger
-        document.addEventListener('mousemove', (e) => {
-            if (state === 'waiting') {
-                state = 'falling';
-                blobContainer.classList.add('visible'); // Show it
+                // Render
+                this.element.style.transform = `translate3d(${this.pos.x}px, ${this.pos.y}px, 0)`;
+                this.blob.style.transform = `scale(${this.scale.x}, ${this.scale.y})`;
                 
-                pos.x = window.innerWidth - 150; 
-                groundY = window.innerHeight - 100 - GROUND_PAD; 
-                
-                updatePhysics();
+                return null;
             }
 
-            // Eye Tracking
-            if (state !== 'waiting') {
-                const eyes = document.querySelectorAll('.eye');
+            triggerImpact() {
+                this.blob.classList.add('squished');
+                this.scale.y = 0.25; this.scale.x = 2.2;
+                this.spring.vel.y = -0.15; // Jiggle
+                setTimeout(() => {
+                    if (this.state === 'slumped') {
+                        this.state = 'recovering';
+                        if (this.type === 'default') this.blob.classList.remove('squished');
+                    }
+                }, 150);
+            }
+
+            die() {
+                this.active = false;
+                this.element.style.transition = 'transform 0.2s, opacity 0.2s';
+                this.element.style.transform = `translate3d(${this.pos.x}px, ${this.pos.y + 50}px, 0) scale(2, 0.1)`; // Flat pancake
+                this.element.style.opacity = '0';
+                setTimeout(() => this.element.remove(), 200);
+            }
+            
+            lookAt(mouseX, mouseY) {
+                if (this.type !== 'default') return; // Only default has eyes
+                const eyes = this.blob.querySelectorAll('.eye');
                 eyes.forEach(eye => {
                     const pupil = eye.querySelector('.pupil');
                     const rect = eye.getBoundingClientRect();
                     const centerX = rect.left + rect.width / 2;
                     const centerY = rect.top + rect.height / 2;
-                    const angle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
-                    const distance = Math.min(3, Math.hypot(e.clientX - centerX, e.clientY - centerY) / 10);
-                    
-                    // Adjust pupil for the scale of the parent blob
-                    // If blob is squashed (scale.y = 0.5), local Y movement needs to be inverted/scaled? 
-                    // CSS transform nesting handles visual, but input coords are global.
-                    // Simple offset is usually fine.
+                    const angle = Math.atan2(mouseY - centerY, mouseX - centerX);
+                    const distance = Math.min(3, Math.hypot(mouseX - centerX, mouseY - centerY) / 10);
                     pupil.style.transform = `translate(${Math.cos(angle) * distance}px, ${Math.sin(angle) * distance}px)`;
                 });
             }
+        }
+
+        // --- Manager ---
+        let currentMascot = null;
+        let incomingMascot = null;
+        let mouseX = 0, mouseY = 0;
+        let hasStarted = false;
+
+        function spawnMascot(type, emoji) {
+            if (incomingMascot) return; // Busy
+            if (currentMascot && currentMascot.type === type) return; // Already here
+
+            incomingMascot = new Mascot(type, emoji);
+        }
+
+        function gameLoop() {
+            if (incomingMascot) {
+                // Update Incoming
+                const result = incomingMascot.update(groundY, currentMascot);
+                
+                if (result === 'hit_mascot') {
+                    // Fight Won: Incoming crushes Current
+                    if (currentMascot) currentMascot.die();
+                    currentMascot = incomingMascot;
+                    incomingMascot = null;
+                } else if (result === 'hit_ground') {
+                    // Clean replacement (e.g. first load)
+                    if (currentMascot) currentMascot.die();
+                    currentMascot = incomingMascot;
+                    incomingMascot = null;
+                }
+            }
+
+            if (currentMascot) {
+                currentMascot.update(groundY, null);
+                currentMascot.lookAt(mouseX, mouseY);
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+
+        // --- Events ---
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+
+            if (!hasStarted) {
+                hasStarted = true;
+                spawnMascot('default');
+            }
         });
 
-        // Window resize handler to keep blob on right
-        window.addEventListener('resize', () => {
-             if (state !== 'waiting') {
-                 pos.x = window.innerWidth - 150;
-                 groundY = window.innerHeight - 100 - GROUND_PAD;
-                 if (state === 'idle') pos.y = groundY;
-             }
+        // Link Hover Logic
+        const links = document.querySelectorAll('a[data-type]');
+        links.forEach(link => {
+            link.addEventListener('mouseenter', () => {
+                if (!hasStarted) return;
+                const type = link.getAttribute('data-type');
+                const emoji = link.getAttribute('data-emoji');
+                spawnMascot(type, emoji);
+            });
+
+            link.addEventListener('mouseleave', () => {
+                // Revert to default
+                // Delay slightly to avoid rapid flicker? No, snappy is better.
+                spawnMascot('default');
+            });
         });
 
         // Version Sensor Script

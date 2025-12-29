@@ -60,39 +60,81 @@ a:hover {
     z-index: 5;
 }
 
-/* Blob Styles */
 #blob-container {
+    /* Removed fixed ID styles since we will have multiple/dynamic mascots */
+    display: none; 
+}
+
+.mascot-container {
     position: fixed;
-    top: 0;
-    left: 0;
     width: 100px;
     height: 100px;
     z-index: 10;
     will-change: transform;
-    /* Fix: Start invisible and fully off-screen */
-    opacity: 0; 
+    opacity: 0;
+    /* Start off screen */
     transform: translate3d(0, -200vh, 0);
     transition: opacity 0.2s;
 }
 
-#blob-container.visible {
+.mascot-container.visible {
     opacity: 1;
 }
 
 .blob {
     width: 100%;
     height: 100%;
-    background-color: #ff9f43;
-    /* Default Mound Shape */
+    /* Default Color */
+    background-color: #ff9f43; 
     border-radius: 50% 50% 35% 35% / 80% 80% 20% 20%;
     position: relative;
     display: flex;
     justify-content: center;
     align-items: center;
     box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-    transform-origin: bottom center; /* Scale from bottom */
+    transform-origin: bottom center;
     transition: background-color 0.3s;
 }
+
+/* Mascot Types */
+.blob.github { background-color: #333; color: #fff; }
+.blob.linkedin { background-color: #0077b5; color: #fff; }
+.blob.amino { background-color: #8e44ad; color: #fff; } /* Purple for DNA? Or Green? User said Green for Spotify. Let's do Purple. */
+.blob.spotify { background-color: #1db954; color: #fff; }
+.blob.robot { background-color: #7f8c8d; color: #fff; }
+
+.blob-emoji {
+    font-size: 40px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 5;
+}
+
+/* Hide face parts if emoji is present, or keep them? 
+   User said "Link Icon Fight", implied distinct icons.
+   Let's hide the default face for link mascots to avoid clutter. */
+.blob.has-emoji .eye,
+.blob.has-emoji .mouth {
+    display: none;
+}
+
+.eye {
+    width: 18px;
+    height: 18px;
+    background: white;
+    border-radius: 50%;
+    position: absolute;
+    top: 35%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2;
+    transition: top 0.2s;
+}
+/* ... rest of eye/mouth styles ... */
 
 .eye {
     width: 18px;
