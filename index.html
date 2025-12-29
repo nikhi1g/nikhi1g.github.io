@@ -1,164 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Nikhil Gupta - Developer Portfolio">
-    <title>Nikhil Gupta</title>
-    
-    <!-- 1. DNS Prefetching: Resolve IPs for links before user clicks -->
-    <link rel="dns-prefetch" href="https://github.com">
-    <link rel="dns-prefetch" href="https://www.linkedin.com">
-    <link rel="dns-prefetch" href="https://2022mechatronicsnikhilgupta.weebly.com">
-    
-    <!-- 2. Embedded Favicon: No extra HTTP request -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%23ff9f43%22/></svg>">
-
-    <!-- 3. Inline CSS: Eliminates render-blocking network request -->
-    <style>
-        :root {
-            color-scheme: light dark;
-            --text: #1a1a1a;
-            --bg: #fff;
-            --link: #0000EE;
-        }
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --text: #e0e0e0;
-                --bg: #121212;
-                --link: #8ab4f8;
-            }
-        }
-        body {
-            font-family: system-ui, -apple-system, sans-serif;
-            line-height: 1.5;
-            max-width: 600px;
-            margin: 40px auto;
-            padding: 0 20px;
-            color: var(--text);
-            background: var(--bg);
-            /* Font smoothing for speed/legibility */
-            -webkit-font-smoothing: antialiased;
-        }
-        h1 {
-            margin: 0 0 1rem 0;
-            font-size: 1.5rem;
-            font-weight: 700;
-            letter-spacing: -0.02em;
-        }
-        nav { margin-bottom: 2rem; }
-        nav a { margin-right: 1rem; }
-        ul { list-style: none; padding: 0; margin: 0; }
-        li { margin-bottom: 0.5rem; }
-        a {
-            color: var(--text);
-            text-decoration: underline;
-            text-decoration-thickness: 1px;
-            text-underline-offset: 2px;
-        }
-        a:hover {
-            text-decoration: none;
-            background-color: rgba(125,125,125,0.1);
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nikhil Gupta</title>
+<link rel="dns-prefetch" href="https://github.com">
+<link rel="dns-prefetch" href="https://www.linkedin.com">
+<link rel="dns-prefetch" href="https://2022mechatronicsnikhilgupta.weebly.com">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%23ff9f43%22/></svg>">
+<style>
+:root{color-scheme:light dark;--c:#1a1a1a;--b:#fff}
+@media(prefers-color-scheme:dark){:root{--c:#e0e0e0;--b:#121212}}
+body{font-family:system-ui,-apple-system,sans-serif;line-height:1.5;max-width:600px;margin:40px auto;padding:0 20px;color:var(--c);background:var(--b);-webkit-font-smoothing:antialiased}
+h1{margin:0 0 1rem;font-size:1.5rem;font-weight:700}
+nav{margin-bottom:2rem}
+nav a{margin-right:1rem}
+ul{list-style:none;padding:0;margin:0}
+li{margin-bottom:.5rem}
+a{color:var(--c);text-decoration:underline;text-underline-offset:2px}
+a:hover{text-decoration:none;opacity:.8}
+</style>
 </head>
 <body>
-    <main>
-        <h1>Nikhil Gupta <small id="commit-hash" style="font-size: 0.8rem; font-weight: normal; color: #666;"></small></h1>
-        <nav>
-            <a href="https://github.com/nikhi1g?tab=repositories">GitHub</a>
-            <a href="https://www.linkedin.com/in/nikhil---gupta/">LinkedIn</a>
-        </nav>
-        <ul>
-            <li><a href="https://nikhi1g.github.io/aminoacids/index.html">Amino Acids</a></li>
-            <li><a href="https://nikhi1g.github.io/SpotifyAdSkipper/">Spotify Ad Skipper</a></li>
-            <li><a href="https://2022mechatronicsnikhilgupta.weebly.com/">Mechatronics Portfolio</a></li>
-        </ul>
-    </main>
-
-    <script>
-    /* ===============================
-       GitHub Pages Commit Watcher
-       =============================== */
-
-    const COMMIT_POLL_MS = 5 * 60 * 1000; // 5 minutes
-    let currentCommitHash = null;
-    let currentCommitMeta = null;
-    let initialCommitPromise = null;
-
-    // ---------- Utilities ----------
-    function getShortCommitHash(meta) {
-        if (!meta || !meta.commit) return '';
-        return meta.commit.slice(0, 7);
-    }
-
-    function parseCommitJson(text) {
-        if (!text) return null;
-        try { return JSON.parse(text); } catch { return null; }
-    }
-
-    // ---------- Fetch ----------
-    async function fetchLocalCommitMeta() {
-        try {
-            const response = await fetch(`commit.json?t=${Date.now()}`, { cache: 'no-store' });
-            if (!response.ok) return null;
-            const data = await response.json();
-            return {
-                commit: data.commit,
-                commit_date: data.commit_date,
-                message: data.message
-            };
-        } catch { return null; }
-    }
-
-    // ---------- UI ----------
-    function updateHeaderCommit(meta) {
-        const el = document.getElementById('commit-hash');
-        if (!el || !meta) return;
-
-        const hash = getShortCommitHash(meta);
-        el.textContent = hash;
-        el.title = meta.message || '';
-    }
-
-    function showInlineCommitUpdate(oldMeta, newMeta) {
-        const el = document.getElementById('commit-hash');
-        if (!el) return;
-
-        const oldLabel = getShortCommitHash(oldMeta);
-        const newLabel = getShortCommitHash(newMeta);
-
-        el.innerHTML = `
-            <button onclick="window.location.reload()" style="background: #007bff; color: white; border: none; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-family: inherit;">
-                ${oldLabel} → ${newLabel} • Refresh ↻
-            </button>
-        `;
-    }
-
-    // ---------- Polling ----------
-    async function checkForCommitUpdate() {
-        const latestMeta = await fetchLocalCommitMeta();
-        if (!latestMeta || !latestMeta.commit) return;
-
-        if (!currentCommitHash) {
-            currentCommitHash = latestMeta.commit;
-            updateHeaderCommit(latestMeta);
-            return;
-        }
-
-        if (latestMeta.commit !== currentCommitHash) {
-            const oldMeta = currentCommitMeta || { commit: currentCommitHash };
-            showInlineCommitUpdate(oldMeta, latestMeta);
-            currentCommitHash = latestMeta.commit;
-        }
-    }
-
-    // ---------- Init ----------
-    window.addEventListener('load', () => {
-        checkForCommitUpdate();
-        setInterval(checkForCommitUpdate, COMMIT_POLL_MS);
-        window.addEventListener('focus', checkForCommitUpdate);
-    });
-    </script>
+<main>
+<h1>Nikhil Gupta</h1>
+<nav>
+<a href="https://github.com/nikhi1g?tab=repositories">GitHub</a>
+<a href="https://www.linkedin.com/in/nikhil---gupta/">LinkedIn</a>
+</nav>
+<ul>
+<li><a href="https://nikhi1g.github.io/aminoacids/index.html">Amino Acids</a></li>
+<li><a href="https://nikhi1g.github.io/SpotifyAdSkipper/">Spotify Ad Skipper</a></li>
+<li><a href="https://2022mechatronicsnikhilgupta.weebly.com/">Mechatronics Portfolio</a></li>
+</ul>
+</main>
 </body>
 </html>
