@@ -11,35 +11,105 @@
         <h1>Nikhil Gupta</h1>
         
         <nav>
-            <a href="https://github.com/nikhi1g?tab=repositories" data-type="github" data-emoji="🐱">GitHub</a>
-            <a href="https://www.linkedin.com/in/nikhil---gupta/" data-type="linkedin" data-emoji="💼">LinkedIn</a>
+            <a href="https://github.com/nikhi1g?tab=repositories" data-fighter="github">GitHub</a>
+            <a href="https://www.linkedin.com/in/nikhil---gupta/" data-fighter="linkedin">LinkedIn</a>
         </nav>
 
         <section>
             <h2>Projects</h2>
             <ul>
-                <li><a href="https://nikhi1g.github.io/aminoacids/index.html" data-type="amino" data-emoji="🧬">Amino Acids</a></li>
-                <li><a href="https://nikhi1g.github.io/SpotifyAdSkipper/" data-type="spotify" data-emoji="🎵">Spotify Ad Skipper</a></li>
-                <li><a href="https://2022mechatronicsnikhilgupta.weebly.com/" data-type="robot" data-emoji="🤖">Mechatronics Portfolio</a></li>
+                <li><a href="https://nikhi1g.github.io/aminoacids/index.html" data-fighter="amino">Amino Acids</a></li>
+                <li><a href="https://nikhi1g.github.io/SpotifyAdSkipper/" data-fighter="spotify">Spotify Ad Skipper</a></li>
+                <li><a href="https://2022mechatronicsnikhilgupta.weebly.com/" data-fighter="mech">Mechatronics Portfolio</a></li>
             </ul>
         </section>
     </main>
 
     <div id="ground"></div>
 
-    <!-- Template for Mascots -->
-    <template id="mascot-template">
-        <div class="mascot-container">
-            <div class="blob">
-                <!-- Face for default -->
-                <div class="eye" id="eye-left"><div class="pupil"></div></div>
-                <div class="eye" id="eye-right"><div class="pupil"></div></div>
-                <div class="mouth"></div>
-                <!-- Emoji container -->
-                <div class="blob-emoji"></div>
-            </div>
-        </div>
-    </template>
+    <!-- Arena for blob + link fighters -->
+    <div id="blob-container"></div>
+
+    <!-- SVG sprite sheet for all fighters -->
+    <svg id="fighter-sprites"
+         xmlns="http://www.w3.org/2000/svg"
+         xmlns:xlink="http://www.w3.org/1999/xlink"
+         style="display:none">
+        <!-- Default orange blob -->
+        <symbol id="icon-blob" viewBox="0 0 80 80">
+            <defs>
+                <radialGradient id="blob-grad" cx="30%" cy="20%" r="70%">
+                    <stop offset="0%" stop-color="#ffd39b"/>
+                    <stop offset="100%" stop-color="#ff9f43"/>
+                </radialGradient>
+            </defs>
+            <circle cx="40" cy="40" r="30" fill="url(#blob-grad)"/>
+            <!-- Eyes -->
+            <circle cx="30" cy="32" r="7" fill="#fff"/>
+            <circle cx="50" cy="32" r="7" fill="#fff"/>
+            <circle cx="30" cy="32" r="3" fill="#000"/>
+            <circle cx="50" cy="32" r="3" fill="#000"/>
+            <!-- Smile -->
+            <path d="M26 48 Q40 60 54 48" stroke="#333" stroke-width="3" fill="none" stroke-linecap="round"/>
+        </symbol>
+
+        <!-- GitHub fighter -->
+        <symbol id="icon-github" viewBox="0 0 80 80">
+            <circle cx="40" cy="40" r="30" fill="#111"/>
+            <text x="40" y="47"
+                  text-anchor="middle"
+                  font-family="system-ui, -apple-system, sans-serif"
+                  font-size="22"
+                  fill="#fff"
+                  font-weight="700">GH</text>
+        </symbol>
+
+        <!-- LinkedIn fighter -->
+        <symbol id="icon-linkedin" viewBox="0 0 80 80">
+            <rect x="10" y="10" width="60" height="60" rx="12" fill="#0a66c2"/>
+            <text x="40" y="50"
+                  text-anchor="middle"
+                  font-family="system-ui, -apple-system, sans-serif"
+                  font-size="28"
+                  fill="#fff"
+                  font-weight="700">in</text>
+        </symbol>
+
+        <!-- Amino Acids fighter -->
+        <symbol id="icon-amino" viewBox="0 0 80 80">
+            <circle cx="40" cy="40" r="30" fill="#7e57c2"/>
+            <text x="40" y="46"
+                  text-anchor="middle"
+                  font-family="system-ui, -apple-system, sans-serif"
+                  font-size="20"
+                  fill="#fff"
+                  font-weight="700">AA</text>
+        </symbol>
+
+        <!-- Spotify fighter -->
+        <symbol id="icon-spotify" viewBox="0 0 80 80">
+            <circle cx="40" cy="40" r="30" fill="#1db954"/>
+            <path d="M26 36 C36 33 44 33 54 37"
+                  stroke="#0b1f15" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path d="M27 43 C35 41 45 41 53 45"
+                  stroke="#0b1f15" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path d="M28 50 C36 49 42 49 52 52"
+                  stroke="#0b1f15" stroke-width="3" fill="none" stroke-linecap="round"/>
+        </symbol>
+
+        <!-- Mechatronics fighter -->
+        <symbol id="icon-mech" viewBox="0 0 80 80">
+            <circle cx="40" cy="40" r="30" fill="#455a64"/>
+            <circle cx="40" cy="40" r="14" fill="#eceff1"/>
+            <circle cx="40" cy="40" r="6" fill="#455a64"/>
+            <text x="40" y="20"
+                  text-anchor="middle"
+                  font-family="system-ui, -apple-system, sans-serif"
+                  font-size="12"
+                  fill="#eceff1"
+                  font-weight="600">MECH</text>
+        </symbol>
+    </svg>
 
     <div id="version-sensor" class="sensor-loading">
         <span class="sensor-icon">●</span>
@@ -47,220 +117,194 @@
     </div>
 
     <script>
-        // --- Mascot System ---
-        const groundElement = document.getElementById('ground');
-        const mascotTemplate = document.getElementById('mascot-template');
+        // -------- FIGHTER ARENA + PHYSICS --------
+        const arena = document.getElementById('blob-container');
         const GROUND_PAD = 20;
-        const GRAVITY = 0.6;
-        
+        const GRAVITY = 0.55;
+        const BASE_RIGHT_OFFSET = 150;
+
         let groundY = window.innerHeight - 100 - GROUND_PAD;
+        let animationRunning = false;
+        let hasSpawnedOnce = false;
+        let activeHoverId = null;
+
+        const fighters = {};
+
+        function makeFighter(id, spriteId, sideOffset) {
+            const el = document.createElement('div');
+            el.className = 'fighter';
+            el.dataset.id = id;
+            el.innerHTML = `
+                <svg class="fighter-svg" viewBox="0 0 80 80" aria-hidden="true">
+                    <use href="#\${spriteId}" xlink:href="#\${spriteId}"></use>
+                </svg>
+            `;
+            arena.appendChild(el);
+
+            fighters[id] = {
+                id,
+                spriteId,
+                el,
+                state: 'waiting',
+                x: window.innerWidth - BASE_RIGHT_OFFSET + sideOffset,
+                y: -200,
+                vy: 0,
+                scaleX: 1,
+                scaleY: 1,
+                energy: id === 'blob' ? 1 : 0,
+                sideOffset
+            };
+        }
+
+        function spawnFighter(id) {
+            const f = fighters[id];
+            if (!f) return;
+            f.state = 'falling';
+            f.y = -200;
+            f.vy = 0;
+            f.scaleX = 1;
+            f.scaleY = 1;
+            f.el.classList.add('visible');
+        }
+
+        function startAnimationLoop() {
+            if (animationRunning) return;
+            animationRunning = true;
+            requestAnimationFrame(step);
+        }
+
+        function step() {
+            const ids = Object.keys(fighters);
+            ids.forEach(id => {
+                const f = fighters[id];
+                if (f.state === 'waiting' || f.state === 'dead') return;
+
+                // Basic falling + squish
+                if (f.state === 'falling') {
+                    f.vy += GRAVITY;
+                    f.y += f.vy;
+
+                    const stretch = Math.min(1.6, 1 + Math.abs(f.vy) * 0.025);
+                    f.scaleY = stretch;
+                    f.scaleX = 1 / stretch;
+
+                    if (f.y >= groundY) {
+                        f.y = groundY;
+                        f.vy = 0;
+                        f.state = 'idle';
+                        f.scaleX = 1.15;
+                        f.scaleY = 0.85;
+                    }
+                } else if (f.state === 'idle') {
+                    // Relax scales back to 1
+                    f.scaleX += (1 - f.scaleX) * 0.12;
+                    f.scaleY += (1 - f.scaleY) * 0.12;
+                }
+
+                // Energy logic: hover makes that fighter win, otherwise it decays
+                // Modified to ensure Blob loses energy when Fighting
+                if (id === 'blob') {
+                    if (!activeHoverId) {
+                         f.energy = Math.min(1, f.energy + 0.015);
+                    } else {
+                         // Blob loses energy if someone else is fighting
+                         f.energy = Math.max(0, f.energy - 0.02); 
+                    }
+                } else if (id === activeHoverId) {
+                    f.energy = Math.min(1, f.energy + 0.03);
+                } else {
+                    f.energy = Math.max(0, f.energy - 0.02);
+                }
+
+                // If hovered fighter is strong, blob fades out (is defeated)
+                if (id === 'blob' &&
+                    activeHoverId &&
+                    fighters[activeHoverId] &&
+                    fighters[activeHoverId].energy > 0.8 &&
+                    f.energy < 0.25) {
+                    f.state = 'dead';
+                    f.el.classList.remove('visible');
+                }
+
+                // When no hover, non-blob fighters slowly die off
+                if (!activeHoverId && id !== 'blob' && f.energy <= 0.02) {
+                    f.state = 'dead';
+                    f.el.classList.remove('visible');
+                }
+
+                // When no hover and blob is dead, respawn blob
+                if (!activeHoverId && id === 'blob' && f.state === 'dead') {
+                    spawnFighter('blob');
+                    f.energy = 0.1; // Start low so it fades in
+                }
+
+                // Opacity: more energy -> more visible
+                const baseOpacity = id === 'blob' && !activeHoverId ? 1 : 0.25;
+                const extra = f.energy * 0.75;
+                const alpha = Math.max(0, Math.min(1, baseOpacity + extra));
+                f.el.style.opacity = alpha;
+
+                // Apply transform
+                f.el.style.transform =
+                    `translate3d(\${f.x}px, \${f.y}px, 0) scale(\${f.scaleX}, \${f.scaleY})`;
+            });
+
+            if (animationRunning) {
+                requestAnimationFrame(step);
+            }
+        }
+
+        // Create fighters: blob on the right, others slightly to the left
+        makeFighter('blob', 'icon-blob', 0);
+        makeFighter('github', 'icon-github', -110);
+        makeFighter('linkedin', 'icon-linkedin', -110);
+        makeFighter('amino', 'icon-amino', -110);
+        makeFighter('spotify', 'icon-spotify', -110);
+        makeFighter('mech', 'icon-mech', -110);
+
+        // First mouse move spawns blob and starts animation
+        document.addEventListener('mousemove', () => {
+            if (!hasSpawnedOnce) {
+                hasSpawnedOnce = true;
+                spawnFighter('blob');
+                startAnimationLoop();
+            }
+        }, { once: true });
+
+        // Hover events for links
+        document.querySelectorAll('a[data-fighter]').forEach(link => {
+            const id = link.dataset.fighter;
+            link.addEventListener('mouseenter', () => {
+                activeHoverId = id;
+                const f = fighters[id];
+                if (!f) return;
+                if (f.state === 'waiting' || f.state === 'dead') {
+                    // Re-position slightly left of blob each time we spawn
+                    f.x = window.innerWidth - BASE_RIGHT_OFFSET - 80; // Overlap for fight
+                    spawnFighter(id);
+                    f.energy = Math.max(f.energy, 0.3);
+                }
+            });
+            link.addEventListener('mouseleave', () => {
+                if (activeHoverId === id) {
+                    activeHoverId = null;
+                }
+            });
+        });
+
+        // Keep ground / arena aligned on resize
         window.addEventListener('resize', () => {
             groundY = window.innerHeight - 100 - GROUND_PAD;
-        });
-
-        class Mascot {
-            constructor(type, emoji = null) {
-                this.type = type;
-                this.element = mascotTemplate.content.cloneNode(true).querySelector('.mascot-container');
-                this.blob = this.element.querySelector('.blob');
-                document.body.appendChild(this.element);
-
-                // Setup Appearance
-                if (type !== 'default') {
-                    this.blob.classList.add(type, 'has-emoji');
-                    this.blob.querySelector('.blob-emoji').textContent = emoji;
+            Object.values(fighters).forEach(f => {
+                // Keep relative offsets
+                f.x = window.innerWidth - BASE_RIGHT_OFFSET + f.sideOffset;
+                if (f.state === 'idle' || f.state === 'dead') {
+                    f.y = groundY;
                 }
-
-                // Physics State
-                this.state = 'falling';
-                this.pos = { x: window.innerWidth - 150, y: -200 }; // Start above
-                this.vel = { x: 0, y: 0 };
-                this.scale = { x: 1, y: 1 };
-                this.spring = { target: { x: 1, y: 1 }, stiffness: 0.05, damping: 0.90, vel: { x: 0, y: 0 } };
-                this.active = true;
-
-                // Make visible immediately
-                requestAnimationFrame(() => this.element.classList.add('visible'));
-            }
-
-            update(targetY, otherMascot) {
-                if (!this.active) return;
-
-                // 1. Position Physics
-                if (this.state === 'falling') {
-                    this.vel.y += GRAVITY;
-                    this.pos.y += this.vel.y;
-
-                    // Stretch
-                    const stretch = Math.min(1.6, 1 + (Math.abs(this.vel.y) * 0.025));
-                    this.scale.y = stretch;
-                    this.scale.x = 1 / stretch;
-
-                    // Collision with Other Mascot (The Fight)
-                    if (otherMascot && otherMascot.state === 'idle' && this.pos.y + 100 >= otherMascot.pos.y + 20) {
-                        // HIT!
-                        this.pos.y = otherMascot.pos.y - 50; // Land slightly inside/on top
-                        this.vel.y = 0;
-                        this.state = 'slumped';
-                        this.triggerImpact();
-                        return 'hit_mascot'; // Signal manager to kill other
-                    }
-
-                    // Collision with Ground
-                    if (this.pos.y >= groundY) {
-                        this.pos.y = groundY;
-                        this.vel.y = 0;
-                        this.state = 'slumped';
-                        this.triggerImpact();
-                        return 'hit_ground';
-                    }
-                }
-
-                // 2. Spring Physics
-                if (this.state === 'recovering' || this.state === 'idle' || this.state === 'slumped') {
-                    const forceX = (this.spring.target.x - this.scale.x) * this.spring.stiffness;
-                    const forceY = (this.spring.target.y - this.scale.y) * this.spring.stiffness;
-                    this.spring.vel.x += forceX;
-                    this.spring.vel.y += forceY;
-                    this.spring.vel.x *= this.spring.damping;
-                    this.spring.vel.y *= this.spring.damping;
-                    this.scale.x += this.spring.vel.x;
-                    this.scale.y += this.spring.vel.y;
-
-                    if (this.state === 'recovering' && Math.abs(this.spring.vel.y) < 0.001) {
-                        this.state = 'idle';
-                        if (this.type === 'default') {
-                            this.blob.classList.add('happy');
-                            this.blob.classList.remove('squished');
-                        }
-                    }
-                }
-
-                // Render
-                this.element.style.transform = `translate3d(${this.pos.x}px, ${this.pos.y}px, 0)`;
-                this.blob.style.transform = `scale(${this.scale.x}, ${this.scale.y})`;
-                
-                return null;
-            }
-
-            triggerImpact() {
-                this.blob.classList.add('squished');
-                this.scale.y = 0.25; this.scale.x = 2.2;
-                this.spring.vel.y = -0.15; // Jiggle
-                setTimeout(() => {
-                    if (this.state === 'slumped') {
-                        this.state = 'recovering';
-                        if (this.type === 'default') this.blob.classList.remove('squished');
-                    }
-                }, 150);
-            }
-
-            die() {
-                this.active = false;
-                this.element.style.transition = 'transform 0.2s, opacity 0.2s';
-                this.element.style.transform = `translate3d(${this.pos.x}px, ${this.pos.y + 50}px, 0) scale(2, 0.1)`; // Flat pancake
-                this.element.style.opacity = '0';
-                setTimeout(() => this.element.remove(), 200);
-            }
-            
-            lookAt(mouseX, mouseY) {
-                if (this.type !== 'default') return; // Only default has eyes
-                const eyes = this.blob.querySelectorAll('.eye');
-                eyes.forEach(eye => {
-                    const pupil = eye.querySelector('.pupil');
-                    const rect = eye.getBoundingClientRect();
-                    const centerX = rect.left + rect.width / 2;
-                    const centerY = rect.top + rect.height / 2;
-                    const angle = Math.atan2(mouseY - centerY, mouseX - centerX);
-                    const distance = Math.min(3, Math.hypot(mouseX - centerX, mouseY - centerY) / 10);
-                    pupil.style.transform = `translate(${Math.cos(angle) * distance}px, ${Math.sin(angle) * distance}px)`;
-                });
-            }
-        }
-
-        // --- Manager ---
-        let currentMascot = null;
-        let incomingMascot = null;
-        let targetMascotType = 'default'; // The mascot we WANT to be showing
-        let mouseX = 0, mouseY = 0;
-        let hasStarted = false;
-
-        function spawnMascot(type, emoji) {
-            if (incomingMascot) return; // Busy falling
-            if (currentMascot && currentMascot.type === type) return; // Already current
-
-            incomingMascot = new Mascot(type, emoji);
-        }
-
-        function getEmojiForType(type) {
-            const link = document.querySelector(`a[data-type="${type}"]`);
-            return link ? link.getAttribute('data-emoji') : null;
-        }
-
-        function gameLoop() {
-            // 1. Check for Pending Spawns (Eventual Consistency)
-            // If we aren't busy, and the current mascot isn't what we want...
-            if (hasStarted && !incomingMascot) {
-                 if (!currentMascot || currentMascot.type !== targetMascotType) {
-                     spawnMascot(targetMascotType, getEmojiForType(targetMascotType));
-                 }
-            }
-
-            // 2. Update Incoming
-            if (incomingMascot) {
-                const result = incomingMascot.update(groundY, currentMascot);
-                
-                if (result === 'hit_mascot' || result === 'hit_ground') {
-                    // Success replacement
-                    if (currentMascot) currentMascot.die();
-                    currentMascot = incomingMascot;
-                    incomingMascot = null;
-                }
-            }
-
-            // 3. Update Current
-            if (currentMascot) {
-                currentMascot.update(groundY, null);
-                currentMascot.lookAt(mouseX, mouseY);
-            }
-
-            requestAnimationFrame(gameLoop);
-        }
-
-        gameLoop();
-
-        // --- Events ---
-        document.addEventListener('mousemove', (e) => {
-            mouseX = e.clientX;
-            mouseY = e.clientY;
-
-            if (!hasStarted) {
-                hasStarted = true;
-                // 'default' is already the initial targetMascotType
-            }
-        });
-
-        // Link Hover Logic
-        const links = document.querySelectorAll('a[data-type]');
-        links.forEach(link => {
-            link.addEventListener('mouseenter', () => {
-                const type = link.getAttribute('data-type');
-                targetMascotType = type;
-            });
-
-            link.addEventListener('mouseleave', () => {
-                targetMascotType = 'default';
             });
         });
 
-        // Resize Handling
-        window.addEventListener('resize', () => {
-            const newX = window.innerWidth - 150;
-            if (currentMascot) currentMascot.pos.x = newX;
-            if (incomingMascot) incomingMascot.pos.x = newX;
-        });
-
-        // Version Sensor Script
+        // -------- Version Sensor Script (unchanged) --------
         (function() {
             const REPO = 'nikhi1g/nikhi1g.github.io';
             const BRANCH = 'main';
@@ -269,11 +313,10 @@
             const POLL_INTERVAL = 60000;
 
             let currentHash = null;
-            let currentMsg = null;
 
             async function fetchLatestCommit() {
                 try {
-                    const response = await fetch(`https://api.github.com/repos/${REPO}/commits/${BRANCH}`);
+                    const response = await fetch(`https://api.github.com/repos/\${REPO}/commits/\${BRANCH}`);
                     if (!response.ok) throw new Error('API Error');
                     const data = await response.json();
                     return {
@@ -289,7 +332,7 @@
                     currentHash = commit.hash;
                     SENSOR_EL.classList.remove('sensor-loading');
                     SENSOR_EL.classList.add('sensor-active');
-                    TEXT_EL.textContent = `v: ${currentHash}`;
+                    TEXT_EL.textContent = `v: \${currentHash}`;
                 } else {
                     TEXT_EL.textContent = 'Offline';
                 }
@@ -300,12 +343,11 @@
                 const latest = await fetchLatestCommit();
                 if (latest && latest.hash !== currentHash) {
                     SENSOR_EL.classList.add('sensor-update');
-                    // Update text only
                     TEXT_EL.innerHTML = `
-                        <span class="old-version">(${currentHash})</span> 
+                        <span class="old-version">(\${currentHash})</span> 
                         <span class="arrow">→</span> 
-                        <span class="new-version">(${latest.hash})</span>
-                        <span class="update-msg">New: ${latest.msg}</span>
+                        <span class="new-version">(\${latest.hash})</span>
+                        <span class="update-msg">New: \${latest.msg}</span>
                     `;
                     // Check if button already exists to avoid duplicates
                     if (!SENSOR_EL.querySelector('.sensor-reload-btn')) {
