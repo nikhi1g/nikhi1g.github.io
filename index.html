@@ -64,7 +64,7 @@
 </head>
 <body>
     <main>
-        <h1>Nikhil Gupta</h1>
+        <h1>Nikhil Gupta <small id="commit-hash" style="font-size: 0.8rem; font-weight: normal; color: #666;"></small></h1>
         <nav>
             <a href="https://github.com/nikhi1g?tab=repositories">GitHub</a>
             <a href="https://www.linkedin.com/in/nikhil---gupta/">LinkedIn</a>
@@ -75,5 +75,90 @@
             <li><a href="https://2022mechatronicsnikhilgupta.weebly.com/">Mechatronics Portfolio</a></li>
         </ul>
     </main>
+
+    <script>
+    /* ===============================
+       GitHub Pages Commit Watcher
+       =============================== */
+
+    const COMMIT_POLL_MS = 5 * 60 * 1000; // 5 minutes
+    let currentCommitHash = null;
+    let currentCommitMeta = null;
+    let initialCommitPromise = null;
+
+    // ---------- Utilities ----------
+    function getShortCommitHash(meta) {
+        if (!meta || !meta.commit) return '';
+        return meta.commit.slice(0, 7);
+    }
+
+    function parseCommitJson(text) {
+        if (!text) return null;
+        try { return JSON.parse(text); } catch { return null; }
+    }
+
+    // ---------- Fetch ----------
+    async function fetchLocalCommitMeta() {
+        try {
+            const response = await fetch(`commit.json?t=${Date.now()}`, { cache: 'no-store' });
+            if (!response.ok) return null;
+            const data = await response.json();
+            return {
+                commit: data.commit,
+                commit_date: data.commit_date,
+                message: data.message
+            };
+        } catch { return null; }
+    }
+
+    // ---------- UI ----------
+    function updateHeaderCommit(meta) {
+        const el = document.getElementById('commit-hash');
+        if (!el || !meta) return;
+
+        const hash = getShortCommitHash(meta);
+        el.textContent = `v:${hash}`;
+        el.title = meta.message || '';
+    }
+
+    function showInlineCommitUpdate(oldMeta, newMeta) {
+        const el = document.getElementById('commit-hash');
+        if (!el) return;
+
+        const oldLabel = getShortCommitHash(oldMeta);
+        const newLabel = getShortCommitHash(newMeta);
+
+        el.innerHTML = `
+            <span>${oldLabel} → ${newLabel}</span>
+            <span style="background: #007bff; color: white; padding: 2px 6px; border-radius: 10px; font-size: 10px; font-weight: bold; margin-left: 5px;">New</span>
+            <button onclick="window.location.reload()" style="margin-left: 5px; cursor: pointer; border: 1px solid #ccc; background: #fff; border-radius: 4px; padding: 1px 5px; font-size: 10px;">↻</button>
+        `;
+    }
+
+    // ---------- Polling ----------
+    async function checkForCommitUpdate() {
+        const latestMeta = await fetchLocalCommitMeta();
+        if (!latestMeta || !latestMeta.commit) return;
+
+        if (!currentCommitHash) {
+            currentCommitHash = latestMeta.commit;
+            updateHeaderCommit(latestMeta);
+            return;
+        }
+
+        if (latestMeta.commit !== currentCommitHash) {
+            const oldMeta = currentCommitMeta || { commit: currentCommitHash };
+            showInlineCommitUpdate(oldMeta, latestMeta);
+            currentCommitHash = latestMeta.commit;
+        }
+    }
+
+    // ---------- Init ----------
+    window.addEventListener('load', () => {
+        checkForCommitUpdate();
+        setInterval(checkForCommitUpdate, COMMIT_POLL_MS);
+        window.addEventListener('focus', checkForCommitUpdate);
+    });
+    </script>
 </body>
 </html>

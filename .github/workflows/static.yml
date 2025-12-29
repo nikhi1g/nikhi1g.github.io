@@ -31,6 +31,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        
+      - name: Generate commit.json
+        run: |
+          echo "{\"commit\": \"$GITHUB_SHA\", \"commit_date\": \"$(date -u +\"%Y-%m-%d %H:%M:%S UTC\")\", \"message\": \"$(git log -1 --pretty=%B | tr -d '\n' | sed 's/\"/\\\"/g')\"}" > commit.json
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
