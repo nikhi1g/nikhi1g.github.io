@@ -1,263 +1,191 @@
-body{
-    /* text-align: left; */
-    text-align: center;
-    background-image: url("tree.jpg");
-    /* background-size: cover; */
-    background-repeat: no-repeat;
-    background-size:100%;
-   
+:root {
+    --bg-color: #0f172a;
+    --card-bg: #1e293b;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --accent: #38bdf8;
+    --accent-hover: #0ea5e9;
+    --card-hover-bg: #334155;
 }
 
-h1 {
-  text-align: center;
-  /* animation-timing-function: cubic-bezier(0.075, 0.82, 0.165, 1000); */
-  transition-duration: 3s; transform: translateY(-20px); transform: scale(100%);
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
 }
 
-/* a:hover {
-    background-color: rgba(0, 162, 255, 0.568);
-    text-decoration-style:dotted;
-    font-size:33px;
-  } */
-
-h1:hover {
-    animation: hopupdown 0.5s, hopdownup 0.5s 0.5s, hopupdown 0.5s 1s, hopdownup 0.5s 1.5s, flippy 1s 2s, headerscaleup 2s 3s;
-    background: #e1e1e100;
-    /* border: 10px solid #1a047c5e; */
-    transition-duration: 5s; transform: scale(200%);
-    color: #000;
-    /* box-shadow: 0 12px 16px 0 rgba(0, 0, 0, 0.808), 0 17px 50px 0 rgb(0, 0, 0); */
-
-                                                
-}
-@keyframes hopupdown {
-  from {
-    transform: translateY(0px);
-  }
-  to {
-    transform: translateY(-30px);
-  }
-}
-@keyframes hopdownup {
-  from {
-    transform: translateY(-30px);
-  }
-  to {
-    transform: translateY(0px);
-  }
-}
-@keyframes headerscaleup {
-  from {
-    transform: translateY(0px);
-    transform: scale(100%);
-  }
-  to {
-    transform: translateY(-20px);
-    transform: scale(200%);
-  }
-}
-@keyframes flippy {
-  from {
-
-    transform: rotate(0deg);
-  }
-  to {
-
-    transform: rotate(360deg);
-  }
-}
-a:visited {
-    color: blue;
-  }
-
-a:active {
-color: yellow;
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    line-height: 1.6;
+    overflow-x: hidden;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
-p {
-  animation: slidein 4.5s, flipp 4.2s;
-}
-
-@keyframes slidein {
-  from {
-    margin-left: 100%;
+/* Background Animation */
+.background-animation {
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 100%;
-  }
+    height: 100%;
+    z-index: -1;
+    background: #000 url('tree.jpg') repeat top center;
+    background-size: cover;
+    opacity: 0.3; /* Dim the original tree image to make text pop */
+}
 
-  to {
-    margin-left: 0%;
+/* You could add a gradient overlay if tree.jpg is too busy */
+.background-animation::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
+    height: 100%;
+    background: linear-gradient(to bottom, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.95));
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+    position: relative;
+    z-index: 1;
+}
+
+/* Header */
+.profile-header {
     text-align: center;
-    /* transition-delay: 2000ms;
-    animation-duration: 1000ms; */
-  }
+    margin-bottom: 4rem;
+    animation: fadeInDown 1s ease-out;
 }
 
-@keyframes flipp {
-  from {
-    transform: rotate(0);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-@keyframes expand {
-  from {
-    transform: scale(100%);
-  }
-  to {
-    transform: scale(200%);
-    
-  }
-}
-@keyframes spin { 
-  0% { 
-      transform: rotate(-180deg);
-  } 
-  100% {
-      transform: rotate(0deg);
-  }
+.name {
+    font-size: 3.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(45deg, var(--text-primary), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
-@keyframes scale {
-  100% {
-       transform: scale(1%);
-  }
-}
-@keyframes scale2 {
-  from{
-       transform: scale(1%);
-  }
-  to {
-    transform: scale(200%)
-  }
-}
-@keyframes ccolor {
-  from {
-    color: #f5eeee;
-  }
-  to {
-    color: rgba(0, 0, 0, 0.527);
-  } 
-}
-@keyframes ccolor2 {
-  from {
-    color: rgba(0, 0, 0, 0.527);
-  }
-  to {
-    color: #f5eeee;
-  }
+.tagline {
+    font-size: 1.25rem;
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
 }
 
-.button2 {
-  animation: spin 1s; 
-  animation: scale2  3s, ccolor2 5s, ccolor 2s 5s;
-  /* animation: color 3s; */
-  transition-duration: 1.5s; transform: translateY(6px); transform: scale(200%);
-  background-color: #b403033a; /* Green */
-  border: none;
-  color: rgba(0, 0, 0, 0.527);
-  padding: 15px 5px;
-  text-align: center;
-  text-decoration: none;
-  display: inline-block;
-  font-size: 16px;
-  border-radius: 33px;
-  font: message-box;
-  position: absolute;
-  margin-top: 580px;
-  margin-left: 32px;
-  /* animation-name: glow; animation-iteration-count: 1; animation-delay: 1.2s;  */
-
-  /* border: 2px solid #4CAF50; Green */
+.social-links {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
 }
 
-
-.button2:hover {
-  background-color: #3a3a3a33; /* Green */
-  color: #f5eeee;
-  padding: 15px 15px;
-  box-shadow: 0 12px 16px 0 rgba(0, 0, 0, 0.808), 0 17px 50px 0 rgb(0, 0, 0);
-  /* transition-duration: 1s; transform: translateY(50px); */
-  transition-duration: 1s; transform: translateY(-6px); transform: scale(300%); 
-  /* transition-duration: 2s; transform: rotate(360deg); */
+.social-links a {
+    color: var(--text-secondary);
+    font-size: 1.5rem;
+    transition: color 0.3s ease, transform 0.3s ease;
 }
 
-
-.button2:active {
-  background-color: #3a3a3a33; /* Green */
-  color: #000000;
-  padding: 15px 15px;
-  box-shadow: 0 12px 16px 0 rgba(0, 0, 0, 0), 0 17px 50px 0 rgba(0, 0, 0, 0);
+.social-links a:hover {
+    color: var(--accent);
+    transform: translateY(-3px);
 }
 
-.img {
-  transition-duration: 1s; transform: scale(100%);
-  max-width: 33%;
-  height: auto;
-  margin-top: 260px;
-  margin-left: -10px;
-  opacity: 0.0;
-  border-radius: 144px;
-
+/* Projects Grid */
+.projects-section {
+    animation: fadeInUp 1s ease-out 0.5s both;
 }
 
-.img:hover {
-  animation: spinning 4s;
+.section-title {
+    text-align: center;
+    font-size: 2rem;
+    margin-bottom: 2rem;
+    color: var(--text-primary);
+    position: relative;
+    display: inline-block;
+    width: 100%;
 }
 
-.img2 {
-  max-width: 7%;
-  height: auto;
-  opacity: 0.3;
-  animation: expshrink 2s 2s, shrinkexp 2s;
-  animation-iteration-count: infinite;
-  border-radius: 111px;
-
+.projects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    padding: 0 1rem;
 }
 
-@keyframes expshrink {
-  from {
-    transform: scale(1);
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-    transform: scale(4);
-  }
-  
-}
-@keyframes shrinkexp {
-  100%{
-    opacity: 0.0;
-    transform: scale(1);
-  }
-   
+.project-card {
+    background-color: rgba(30, 41, 59, 0.7); /* Semi-transparent card */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 2rem;
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(10px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
 }
 
-@keyframes glow {
-  0% {
-    color: rgba(0, 0, 0, 0.527);
-  }
-  5% {
-    color: #a1a1a186;
-  }
-  10% {
-    color: #c0c0c086;
-  }
-  100% {
-    color: #f5eeee;
-  }
-  
+.project-card:hover {
+    transform: translateY(-5px);
+    background-color: var(--card-hover-bg);
+    border-color: var(--accent);
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
 }
 
-@keyframes spinning {
-  0% {
-    transform: rotate(0);
-    opacity: 0.3;
-  }
-  100% {
-    transform: rotate(360deg);
-    opacity: 0;
-  }
+.card-content .icon {
+    font-size: 2.5rem;
+    color: var(--accent);
+    margin-bottom: 1rem;
+}
+
+.project-card h3 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.project-card p {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .name {
+        font-size: 2.5rem;
+    }
+    .container {
+        padding: 1rem;
+    }
+}
+
+/* Animations */
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
