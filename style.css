@@ -157,20 +157,73 @@
 }
 
 /* Props */
+.blob-arm {
+    position: absolute;
+    width: 15px;
+    height: 0; /* Initially hidden/retracted */
+    background: #ff9f43; /* Same as blob */
+    right: 5px;
+    top: 40%;
+    transform-origin: top center;
+    border-radius: 10px;
+    z-index: 10;
+    transition: all 0.5s ease-out;
+}
+
+/* Basketball is now positioned relative to the arm if possible, or just manipulated by JS */
 .basketball {
     position: absolute;
-    width: 40px;
-    height: 40px;
+    width: 30px;
+    height: 30px;
     background: #e65100;
     border-radius: 50%;
     border: 2px solid #333;
-    z-index: 10;
-    display: none; /* Hidden by default */
-    right: -10px;
+    z-index: 11;
+    display: none; 
+    /* Default pos relative to blob center/bottom */
+    right: -15px;
     bottom: 0px;
     background-image: radial-gradient(circle at 30% 30%, #ffcc80 2px, transparent 0),
                       linear-gradient(to right, transparent 48%, #333 48%, #333 52%, transparent 52%),
                       linear-gradient(to bottom, transparent 48%, #333 48%, #333 52%, transparent 52%);
+    transition: transform 0.3s;
+}
+
+/* State: Holding the ball (Arm grows) */
+.blob.prep-dunk .blob-arm {
+    height: 50px;
+    transform: rotate(-130deg); /* Raised up and back */
+}
+
+/* State: Slam (Arm swings down) */
+.blob.slam-dunk .blob-arm {
+    transform: rotate(-10deg); /* Slammed down forward */
+    transition: transform 0.15s cubic-bezier(0.1, 0.7, 1.0, 0.1); /* Fast slam */
+}
+
+/* Independent Physics Ball (cloned to body) */
+.physics-ball {
+    position: fixed;
+    z-index: 9999;
+    width: 30px;
+    height: 30px;
+    background: #e65100;
+    border-radius: 50%;
+    border: 2px solid #333;
+    background-image: radial-gradient(circle at 30% 30%, #ffcc80 2px, transparent 0),
+                      linear-gradient(to right, transparent 48%, #333 48%, #333 52%, transparent 52%),
+                      linear-gradient(to bottom, transparent 48%, #333 48%, #333 52%, transparent 52%);
+    animation: ball-gravity 1.5s linear forwards;
+}
+
+@keyframes ball-gravity {
+    0% { transform: translate(0, 0); animation-timing-function: ease-in; }
+    25% { transform: translate(0, var(--floor-dist)); animation-timing-function: ease-out; } /* Hit floor */
+    40% { transform: translate(10px, calc(var(--floor-dist) - 100px)); animation-timing-function: ease-in; } /* Bounce Up */
+    55% { transform: translate(20px, var(--floor-dist)); animation-timing-function: ease-out; } /* Floor */
+    70% { transform: translate(25px, calc(var(--floor-dist) - 40px)); animation-timing-function: ease-in; } /* Small Bounce */
+    85% { transform: translate(30px, var(--floor-dist)); } /* Floor */
+    100% { transform: translate(60px, var(--floor-dist)) rotate(360deg); opacity: 0; } /* Roll away */
 }
 
 .speech-bubble {

@@ -35,6 +35,7 @@
                 <div class="pupil"></div>
             </div>
             <div class="mouth"></div>
+            <div class="blob-arm"></div> <!-- Added Arm -->
             <div class="basketball"></div>
         </div>
     </div>
@@ -47,9 +48,11 @@
     <script>
         // Blob Animation Script
         const blobContainer = document.getElementById('blob-container');
+        const blobElement = blobContainer.querySelector('.blob');
         const speechBubble = document.querySelector('.speech-bubble');
         const basketball = document.querySelector('.basketball');
-        let blobState = 'idle'; // idle, falling, recovering, active, begging, dunking, pointing
+        const blobArm = document.querySelector('.blob-arm');
+        let blobState = 'idle'; 
 
         function triggerBlobEntrance() {
             if (blobState !== 'idle') return;
@@ -67,7 +70,6 @@
                     blobContainer.classList.remove('recovering');
                     blobContainer.classList.add('active');
                     
-                    // Start begging sequence shortly after activating
                     setTimeout(startBegging, 1000);
                 }, 1500);
             }, 1000);
@@ -77,8 +79,6 @@
             blobState = 'begging';
             blobContainer.classList.remove('active');
             blobContainer.classList.add('begging');
-            
-            // Listen for interaction
             blobContainer.addEventListener('mouseenter', startDunkSequence, { once: true });
         }
 
@@ -86,74 +86,107 @@
             if (blobState !== 'begging') return;
             blobState = 'dunking';
             
-            // 1. Visual Changes
-            document.body.style.cursor = 'none'; // Hide cursor
+            // 1. Setup Scene
+            document.body.style.cursor = 'none';
             blobContainer.classList.remove('begging');
             blobContainer.classList.add('dunking');
             speechBubble.style.opacity = '0';
-            basketball.style.display = 'block'; // Show ball
+            basketball.style.display = 'block';
 
-            // 2. Identify Target Link
+            // Find Target
             const links = document.querySelectorAll('main ul li a');
-            if (links.length === 0) return; // Fail safe
+            if (links.length === 0) return;
             const targetLink = links[Math.floor(Math.random() * links.length)];
             
-            // 3. Create Hoop
+            // Create Hoop
             const hoop = document.createElement('div');
             hoop.className = 'hoop-container';
-            hoop.innerHTML = `
-                <div class="hoop-backboard"></div>
-                <div class="hoop-rim"></div>
-                <div class="hoop-net"></div>
-            `;
-            targetLink.parentElement.style.position = 'relative'; // Ensure positioning relative to LI
+            hoop.innerHTML = `<div class="hoop-backboard"></div><div class="hoop-rim"></div><div class="hoop-net"></div>`;
+            targetLink.parentElement.style.position = 'relative';
             targetLink.parentElement.appendChild(hoop);
-            
-            // Trigger reflow/animation
             requestAnimationFrame(() => hoop.classList.add('show-hoop'));
 
-            // 4. Calculate Positions
+            // Calculations
             const blobRect = blobContainer.getBoundingClientRect();
             const hoopRect = hoop.getBoundingClientRect();
-            const linkRect = targetLink.getBoundingClientRect();
+            // Move to "Dunk Position" (slightly above and left of hoop rim)
+            const deltaX = (hoopRect.left - blobRect.left) - 40; 
+            const deltaY = (hoopRect.top - blobRect.top) - 80; 
 
-            // Calculate translation needed to get to hoop
-            // Position relative to viewport, but we need to move the fixed element
-            const deltaX = (hoopRect.left - blobRect.left) - 60; // Offset to be "dunking" position
-            const deltaY = (hoopRect.top - blobRect.top) - 50;
-
-            // 5. Animate to Hoop
-            // Use transform directly for movement
-            blobContainer.style.transition = 'transform 1s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+            // 2. Slow Approach (2.5s)
+            blobContainer.style.transition = 'transform 2.5s ease-in-out';
             blobContainer.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(1.2)`;
 
-            // 6. Dunk Action (at end of movement)
+            // Attach ball to arm visually for the flight
+            // We just move the ball to where the arm will be
+            basketball.style.right = '-5px';
+            basketball.style.bottom = '40px'; 
+            basketball.style.transition = 'all 2.5s ease-in-out';
+
+            // 3. Prepare Dunk (Windup) - Happens near end of flight
             setTimeout(() => {
-                // Ball goes through hoop animation could go here
+                blobElement.classList.add('prep-dunk');
+                // Move ball with arm
+                basketball.style.transition = 'transform 0.5s ease-out';
+                basketball.style.transform = 'translate(10px, -60px)'; // Visual guess to match arm tip
+            }, 2000);
+
+            // 4. The Slam (Impact)
+            setTimeout(() => {
+                blobElement.classList.remove('prep-dunk');
+                blobElement.classList.add('slam-dunk');
                 
-                // 7. Celebrate & Highlight
-                blobContainer.classList.add('celebrating');
+                // Move ball down with slam
+                basketball.style.transition = 'transform 0.15s ease-in';
+                basketball.style.transform = 'translate(25px, -10px)'; // Slam position
                 
+                // 5. Release Ball (Physics)
                 setTimeout(() => {
-                    // 8. Move to resting pointing position (next to link)
-                    const pointX = deltaX - 50; // Move slightly left of hoop
-                    const pointY = deltaY + 50; // Move down
+                    // Hide original ball
+                    basketball.style.display = 'none';
                     
-                    blobContainer.style.transform = `translate(${pointX}px, ${pointY}px) scale(0.8)`;
-                    blobContainer.classList.remove('dunking', 'celebrating');
-                    blobContainer.classList.add('pointing');
+                    // Create Physics Ball
+                    const slamRect = basketball.getBoundingClientRect();
+                    const physicsBall = document.createElement('div');
+                    physicsBall.className = 'physics-ball';
+                    physicsBall.style.left = slamRect.left + 'px';
+                    physicsBall.style.top = slamRect.top + 'px';
                     
-                    // Highlight Link
-                    targetLink.classList.add('link-highlight');
+                    // Calculate distance to floor (viewport bottom)
+                    const distToFloor = (window.innerHeight - slamRect.top) - 30; // 30 is ball height
+                    physicsBall.style.setProperty('--drop-height', `${distToFloor}px`); // Fallback
+                    physicsBall.style.setProperty('--floor-dist', `${distToFloor}px`);
                     
-                    // Show cursor again
-                    document.body.style.cursor = 'auto';
-                    
-                }, 1000); // Celebration duration
-            }, 1000); // Movement duration
+                    document.body.appendChild(physicsBall);
+
+                    // 6. Celebration
+                    setTimeout(() => {
+                        blobElement.classList.remove('slam-dunk');
+                        blobContainer.classList.add('celebrating');
+                        
+                        // Cleanup Physics Ball
+                        setTimeout(() => physicsBall.remove(), 2000);
+
+                        // 7. Point at Link
+                        setTimeout(() => {
+                            const pointX = deltaX - 50; 
+                            const pointY = deltaY + 100; // Move down to point up at it
+                            
+                            blobContainer.style.transition = 'transform 1s ease-out';
+                            blobContainer.style.transform = `translate(${pointX}px, ${pointY}px) scale(0.8)`;
+                            blobContainer.classList.remove('dunking', 'celebrating');
+                            blobContainer.classList.add('pointing');
+                            
+                            targetLink.classList.add('link-highlight');
+                            document.body.style.cursor = 'auto';
+                        }, 1000);
+                    }, 500);
+                }, 150); // Wait for slam to finish
+            }, 2700); // 2.5s flight + 0.2s pause
         }
 
         document.addEventListener('mousemove', (e) => {
+
             if (blobState === 'idle') {
                 triggerBlobEntrance();
             }
