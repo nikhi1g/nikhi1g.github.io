@@ -181,34 +181,44 @@
         // --- Manager ---
         let currentMascot = null;
         let incomingMascot = null;
+        let targetMascotType = 'default'; // The mascot we WANT to be showing
         let mouseX = 0, mouseY = 0;
         let hasStarted = false;
 
         function spawnMascot(type, emoji) {
-            if (incomingMascot) return; // Busy
-            if (currentMascot && currentMascot.type === type) return; // Already here
+            if (incomingMascot) return; // Busy falling
+            if (currentMascot && currentMascot.type === type) return; // Already current
 
             incomingMascot = new Mascot(type, emoji);
         }
 
+        function getEmojiForType(type) {
+            const link = document.querySelector(`a[data-type="${type}"]`);
+            return link ? link.getAttribute('data-emoji') : null;
+        }
+
         function gameLoop() {
+            // 1. Check for Pending Spawns (Eventual Consistency)
+            // If we aren't busy, and the current mascot isn't what we want...
+            if (hasStarted && !incomingMascot) {
+                 if (!currentMascot || currentMascot.type !== targetMascotType) {
+                     spawnMascot(targetMascotType, getEmojiForType(targetMascotType));
+                 }
+            }
+
+            // 2. Update Incoming
             if (incomingMascot) {
-                // Update Incoming
                 const result = incomingMascot.update(groundY, currentMascot);
                 
-                if (result === 'hit_mascot') {
-                    // Fight Won: Incoming crushes Current
-                    if (currentMascot) currentMascot.die();
-                    currentMascot = incomingMascot;
-                    incomingMascot = null;
-                } else if (result === 'hit_ground') {
-                    // Clean replacement (e.g. first load)
+                if (result === 'hit_mascot' || result === 'hit_ground') {
+                    // Success replacement
                     if (currentMascot) currentMascot.die();
                     currentMascot = incomingMascot;
                     incomingMascot = null;
                 }
             }
 
+            // 3. Update Current
             if (currentMascot) {
                 currentMascot.update(groundY, null);
                 currentMascot.lookAt(mouseX, mouseY);
@@ -226,7 +236,7 @@
 
             if (!hasStarted) {
                 hasStarted = true;
-                spawnMascot('default');
+                // 'default' is already the initial targetMascotType
             }
         });
 
@@ -234,17 +244,20 @@
         const links = document.querySelectorAll('a[data-type]');
         links.forEach(link => {
             link.addEventListener('mouseenter', () => {
-                if (!hasStarted) return;
                 const type = link.getAttribute('data-type');
-                const emoji = link.getAttribute('data-emoji');
-                spawnMascot(type, emoji);
+                targetMascotType = type;
             });
 
             link.addEventListener('mouseleave', () => {
-                // Revert to default
-                // Delay slightly to avoid rapid flicker? No, snappy is better.
-                spawnMascot('default');
+                targetMascotType = 'default';
             });
+        });
+
+        // Resize Handling
+        window.addEventListener('resize', () => {
+            const newX = window.innerWidth - 150;
+            if (currentMascot) currentMascot.pos.x = newX;
+            if (incomingMascot) incomingMascot.pos.x = newX;
         });
 
         // Version Sensor Script
