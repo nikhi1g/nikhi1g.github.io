@@ -25,8 +25,10 @@
             </ul>
         </section>
     </main>
+
+    <div id="ground"></div>
+
     <div id="blob-container">
-        <div class="speech-bubble">Gimme your cursor!</div>
         <div class="blob">
             <div class="eye" id="eye-left">
                 <div class="pupil"></div>
@@ -35,8 +37,6 @@
                 <div class="pupil"></div>
             </div>
             <div class="mouth"></div>
-            <div class="blob-arm"></div> <!-- Added Arm -->
-            <div class="basketball"></div>
         </div>
     </div>
 
@@ -48,249 +48,43 @@
     <script>
         // Blob Animation Script
         const blobContainer = document.getElementById('blob-container');
-        const blobElement = blobContainer.querySelector('.blob');
-        const speechBubble = document.querySelector('.speech-bubble');
-        const basketball = document.querySelector('.basketball');
-        const blobArm = document.querySelector('.blob-arm');
-        let blobState = 'idle'; 
+        let blobState = 'hidden'; // hidden, falling, slumping, recovering, idle
 
         function triggerBlobEntrance() {
-            if (blobState !== 'idle') return;
+            if (blobState !== 'hidden') return;
             
             blobState = 'falling';
             blobContainer.classList.add('falling');
 
+            // Fall duration approx 0.8s
             setTimeout(() => {
-                blobState = 'recovering';
+                blobState = 'slumping';
                 blobContainer.classList.remove('falling');
-                blobContainer.classList.add('recovering');
+                blobContainer.classList.add('slumping');
 
+                // Stay slumped for a bit (1s)
                 setTimeout(() => {
-                    blobState = 'active';
-                    blobContainer.classList.remove('recovering');
-                    blobContainer.classList.add('active');
-                    
-                    setTimeout(startBegging, 1000);
-                }, 1500);
-            }, 1000);
-        }
+                    blobState = 'recovering';
+                    blobContainer.classList.remove('slumping');
+                    blobContainer.classList.add('recovering');
 
-        function startBegging() {
-            blobState = 'begging';
-            blobContainer.classList.remove('active');
-            blobContainer.classList.add('begging');
-            blobContainer.addEventListener('mouseenter', startDunkSequence, { once: true });
-        }
-
-        function startDunkSequence() {
-            if (blobState !== 'begging') return;
-            blobState = 'dunking';
-            
-            // 1. Setup Scene
-            document.body.style.cursor = 'none';
-            blobContainer.classList.remove('begging');
-            blobContainer.classList.add('dunking');
-            speechBubble.style.opacity = '0';
-            basketball.style.display = 'block';
-
-            // Find Target
-            const links = document.querySelectorAll('main ul li a');
-            if (links.length === 0) return;
-            const targetLink = links[Math.floor(Math.random() * links.length)];
-            
-            // Create Hoop
-            const hoop = document.createElement('div');
-            hoop.className = 'hoop-container';
-            hoop.innerHTML = `<div class="hoop-backboard"></div><div class="hoop-rim"></div><div class="hoop-net"></div>`;
-            targetLink.parentElement.style.position = 'relative';
-            targetLink.parentElement.appendChild(hoop);
-            requestAnimationFrame(() => hoop.classList.add('show-hoop'));
-
-            // Calculations
-            const blobRect = blobContainer.getBoundingClientRect();
-            const hoopRect = hoop.getBoundingClientRect();
-            // Move to "Dunk Position" (slightly above and left of hoop rim)
-            const deltaX = (hoopRect.left - blobRect.left) - 40; 
-            const deltaY = (hoopRect.top - blobRect.top) - 80; 
-
-            // 2. Slow Approach (3s for more anticipation)
-            blobContainer.style.transition = 'transform 3s ease-in-out';
-            blobContainer.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(1.2)`;
-
-            // Attach ball to arm visually
-            basketball.style.right = '-5px';
-            basketball.style.bottom = '40px'; 
-            basketball.style.transition = 'all 3s ease-in-out';
-
-            // 3. Prepare Dunk (Windup)
-            setTimeout(() => {
-                blobElement.classList.add('prep-dunk');
-                basketball.style.transition = 'transform 0.5s ease-out';
-                basketball.style.transform = 'translate(10px, -60px)';
-            }, 2500);
-
-            // 4. The Slam (Impact)
-            setTimeout(() => {
-                blobElement.classList.remove('prep-dunk');
-                blobElement.classList.add('slam-dunk');
-                
-                basketball.style.transition = 'transform 0.15s ease-in';
-                basketball.style.transform = 'translate(25px, -10px)';
-                
-                // 5. Release Ball (JS Physics)
-                setTimeout(() => {
-                    basketball.style.display = 'none';
-                    
-                    const slamRect = basketball.getBoundingClientRect();
-                    // Dunk Velocity: Hard down, slightly forward
-                    spawnPhysicsBall(slamRect.left, slamRect.top, 2, 15);
-
-                    // 6. Celebration & Setup Shooting
+                    // Recovery duration approx 1.5s
                     setTimeout(() => {
-                        blobElement.classList.remove('slam-dunk');
-                        blobContainer.classList.add('celebrating');
-                        
-                        setTimeout(() => {
-                            // Move to pointing/shooting spot
-                            const pointX = deltaX - 100; // Further back for shooting
-                            const pointY = deltaY + 100; 
-                            
-                            blobContainer.style.transition = 'transform 1s ease-out';
-                            blobContainer.style.transform = `translate(${pointX}px, ${pointY}px) scale(0.9)`;
-                            blobContainer.classList.remove('dunking', 'celebrating');
-                            blobContainer.classList.add('pointing'); // Use pointing pose as idle shooting pose
-                            
-                            targetLink.classList.add('link-highlight');
-                            document.body.style.cursor = 'auto';
-
-                            // Start Shooting Loop
-                            startShootingLoop(hoop);
-
-                        }, 1000);
-                    }, 500);
-                }, 150); 
-            }, 3200); // adjusted for 3s flight
-        }
-
-        // --- Physics Engine ---
-        const GRAVITY = 0.8;
-        const BOUNCE_DAMPING = 0.6;
-        const FLOOR_Y = window.innerHeight - 20; // 20px padding
-
-        function spawnPhysicsBall(x, y, vx, vy) {
-            const ball = document.createElement('div');
-            ball.className = 'physics-ball';
-            ball.style.left = '0px'; 
-            ball.style.top = '0px';
-            ball.style.transform = `translate(${x}px, ${y}px)`;
-            document.body.appendChild(ball);
-
-            let posX = x;
-            let posY = y;
-            let velX = vx;
-            let velY = vy;
-            let rotation = 0;
-            let rotSpeed = (Math.random() - 0.5) * 20;
-
-            function update() {
-                // Apply Gravity
-                velY += GRAVITY;
-                
-                // Update Position
-                posX += velX;
-                posY += velY;
-                rotation += rotSpeed;
-
-                // Floor Collision
-                if (posY > FLOOR_Y - 30) { // 30 is ball size
-                    posY = FLOOR_Y - 30;
-                    velY *= -BOUNCE_DAMPING;
-                    velX *= 0.95; // Friction
-                    rotSpeed *= 0.9;
-                    
-                    // Stop if slow enough
-                    if (Math.abs(velY) < 1) velY = 0;
-                }
-
-                // Render
-                ball.style.transform = `translate(${posX}px, ${posY}px) rotate(${rotation}deg)`;
-
-                // Cleanup if off screen or stopped
-                if (posX > window.innerWidth + 50 || (Math.abs(velX) < 0.1 && Math.abs(velY) < 0.1)) {
-                    if (Math.abs(velX) < 0.1) {
-                         // Fade out
-                         ball.style.transition = 'opacity 1s';
-                         ball.style.opacity = '0';
-                         setTimeout(() => ball.remove(), 1000);
-                    } else {
-                        ball.remove();
-                    }
-                } else {
-                    requestAnimationFrame(update);
-                }
-            }
-            requestAnimationFrame(update);
-        }
-
-        function startShootingLoop(hoopElement) {
-            function scheduleShot() {
-                const delay = Math.random() * 5000 + 5000; // 5-10 seconds
-                setTimeout(() => {
-                    shootBallAtHoop(hoopElement);
-                    scheduleShot();
-                }, delay);
-            }
-            scheduleShot();
-        }
-
-        function shootBallAtHoop(hoopElement) {
-            // 1. Calculate trajectory
-            const blobRect = blobContainer.getBoundingClientRect();
-            const hoopRect = hoopElement.getBoundingClientRect();
-            
-            // Start pos (from blob's hand area)
-            const startX = blobRect.left + blobRect.width / 2;
-            const startY = blobRect.top + blobRect.height / 3;
-            
-            // Target pos (hoop net center)
-            const targetX = hoopRect.left + hoopRect.width / 2 - 15; // center ball
-            const targetY = hoopRect.top + 10;
-            
-            // Physics solver: projectile motion
-            // x = x0 + vx*t
-            // y = y0 + vy*t + 0.5*g*t^2
-            // We choose a flight time based on distance to make it look realistic
-            const dist = Math.hypot(targetX - startX, targetY - startY);
-            const flightTime = dist / 350 * 60; // rough heuristic: frames
-            
-            const vx = (targetX - startX) / flightTime;
-            const vy = (targetY - startY - 0.5 * GRAVITY * flightTime * flightTime) / flightTime;
-
-            // 2. Animate Throw
-            blobContainer.style.transition = 'transform 0.2s';
-            blobContainer.style.transform = blobContainer.style.transform.replace('scale(0.9)', 'scale(0.8)'); // Squash
-            
-            setTimeout(() => {
-                blobContainer.style.transform = blobContainer.style.transform.replace('scale(0.8)', 'scale(1.0)'); // Stretch/Throw
-                
-                // Spawn Ball
-                spawnPhysicsBall(startX, startY, vx, vy);
-                
-                // Settle back
-                setTimeout(() => {
-                    blobContainer.style.transform = blobContainer.style.transform.replace('scale(1.0)', 'scale(0.9)');
-                }, 200);
-            }, 200);
+                        blobState = 'idle';
+                        blobContainer.classList.remove('recovering');
+                        blobContainer.classList.add('idle');
+                    }, 1500);
+                }, 1000);
+            }, 800);
         }
 
         document.addEventListener('mousemove', (e) => {
-
-            if (blobState === 'idle') {
+            if (blobState === 'hidden') {
                 triggerBlobEntrance();
             }
 
-            // Track eyes (only when active or begging)
-            if (['active', 'begging', 'pointing'].includes(blobState)) {
+            // Always track eyes if visible
+            if (blobState !== 'hidden') {
                 const eyes = document.querySelectorAll('.eye');
                 eyes.forEach(eye => {
                     const pupil = eye.querySelector('.pupil');
@@ -351,7 +145,6 @@
                 const latest = await fetchLatestCommit();
                 if (latest && latest.hash !== currentHash) {
                     SENSOR_EL.classList.add('sensor-update');
-                    // Format: (hash123) (msg) --> (hash456) (msg)
                     TEXT_EL.innerHTML = `
                         <span class="old-version">(${currentHash})</span> 
                         <span class="arrow">→</span> 
