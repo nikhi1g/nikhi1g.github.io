@@ -174,6 +174,34 @@ toggle.onclick = () => {
 };
 
 // Version Watcher
+(async()=>{
+    const el = document.getElementById('version');
+    const dot = document.querySelector('.dot');
+    const update = (d) => {
+        if(!d||!d.commit) return;
+        const h = d.commit.slice(0,7);
+        el.textContent = h;
+        el.title = d.message || '';
+        
+        const stored = sessionStorage.getItem('v');
+        if(stored && stored !== h) {
+            // Update available: Orange dot + Refresh text
+            el.innerHTML = `${stored.slice(0,7)}&rarr;${h} <span style="font-size:12px">↻</span>`;
+            el.onclick = (e) => {
+                e.preventDefault();
+                location.reload();
+            };
+            el.style.opacity = 1;
+            el.style.color = '#f97316'; // Orange text
+            dot.style.backgroundColor = '#f97316'; // Orange dot
+        }
+        sessionStorage.setItem('v', h);
+    };
+    try {
+        const res = await fetch('commit.json?t='+Date.now());
+        if(res.ok) update(await res.json());
+    } catch(e){}
+})();
 </script>
 </body>
 </html>
