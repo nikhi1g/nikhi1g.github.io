@@ -34,7 +34,7 @@
     <svg id="fighter-sprites"
          xmlns="http://www.w3.org/2000/svg"
          xmlns:xlink="http://www.w3.org/1999/xlink"
-         style="display:none">
+         width="0" height="0" style="position:absolute; overflow:hidden;">
         <!-- Default orange blob -->
         <symbol id="icon-blob" viewBox="0 0 80 80">
             <defs>
@@ -263,6 +263,11 @@
         makeFighter('mech', 'icon-mech', -110);
 
         // First mouse move spawns blob and starts animation
+        // Also spawn immediately on load just in case
+        spawnFighter('blob');
+        startAnimationLoop();
+        hasSpawnedOnce = true;
+
         document.addEventListener('mousemove', () => {
             if (!hasSpawnedOnce) {
                 hasSpawnedOnce = true;
