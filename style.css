@@ -213,17 +213,7 @@
     background-image: radial-gradient(circle at 30% 30%, #ffcc80 2px, transparent 0),
                       linear-gradient(to right, transparent 48%, #333 48%, #333 52%, transparent 52%),
                       linear-gradient(to bottom, transparent 48%, #333 48%, #333 52%, transparent 52%);
-    animation: ball-gravity 1.5s linear forwards;
-}
-
-@keyframes ball-gravity {
-    0% { transform: translate(0, 0); animation-timing-function: ease-in; }
-    25% { transform: translate(0, var(--floor-dist)); animation-timing-function: ease-out; } /* Hit floor */
-    40% { transform: translate(10px, calc(var(--floor-dist) - 100px)); animation-timing-function: ease-in; } /* Bounce Up */
-    55% { transform: translate(20px, var(--floor-dist)); animation-timing-function: ease-out; } /* Floor */
-    70% { transform: translate(25px, calc(var(--floor-dist) - 40px)); animation-timing-function: ease-in; } /* Small Bounce */
-    85% { transform: translate(30px, var(--floor-dist)); } /* Floor */
-    100% { transform: translate(60px, var(--floor-dist)) rotate(360deg); opacity: 0; } /* Roll away */
+    /* Animation removed, controlled by JS */
 }
 
 .speech-bubble {
