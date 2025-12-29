@@ -46,45 +46,120 @@
     </div>
 
     <script>
-        // Blob Animation Script
+        // --- Custom Physics Engine ---
         const blobContainer = document.getElementById('blob-container');
-        let blobState = 'hidden'; // hidden, falling, slumping, recovering, idle
+        const blob = blobContainer.querySelector('.blob');
+        const groundElement = document.getElementById('ground');
+        
+        // Physics State
+        let state = 'waiting'; // waiting, falling, slumped, recovering, idle
+        let pos = { x: 0, y: -200 }; // Start off screen
+        let vel = { x: 0, y: 0 };
+        let scale = { x: 1, y: 1 };
+        
+        // Configuration
+        const GRAVITY = 0.6;
+        const GROUND_PAD = 20; // Height of ground element
+        
+        // Spring Physics for Shape
+        let spring = {
+            target: { x: 1, y: 1 },
+            stiffness: 0.1,
+            damping: 0.6,
+            vel: { x: 0, y: 0 } // Scale velocity
+        };
 
-        function triggerBlobEntrance() {
-            if (blobState !== 'hidden') return;
-            
-            blobState = 'falling';
-            blobContainer.classList.add('falling');
+        // Screen dimensions for ground calc
+        let groundY = window.innerHeight - 100 - GROUND_PAD; // 100 is blob height
 
-            // Fall duration approx 0.8s
-            setTimeout(() => {
-                blobState = 'slumping';
-                blobContainer.classList.remove('falling');
-                blobContainer.classList.add('slumping');
+        window.addEventListener('resize', () => {
+            groundY = window.innerHeight - 100 - GROUND_PAD;
+        });
 
-                // Stay slumped for a bit (1s)
-                setTimeout(() => {
-                    blobState = 'recovering';
-                    blobContainer.classList.remove('slumping');
-                    blobContainer.classList.add('recovering');
+        function updatePhysics() {
+            if (state === 'waiting') return;
 
-                    // Recovery duration approx 1.5s
+            // 1. Position Physics (Gravity)
+            if (state === 'falling') {
+                vel.y += GRAVITY;
+                pos.y += vel.y;
+
+                // Stretch while falling based on velocity
+                // The faster it falls, the thinner/taller it gets
+                const stretchFactor = 1 + (Math.abs(vel.y) * 0.015); 
+                scale.y = stretchFactor;
+                scale.x = 1 / stretchFactor; // Maintain volume
+
+                // Ground Collision
+                if (pos.y >= groundY) {
+                    pos.y = groundY;
+                    vel.y = 0;
+                    
+                    // IMPACT!
+                    state = 'slumped';
+                    
+                    // Force hard squash
+                    scale.y = 0.4;
+                    scale.x = 1.6;
+                    
+                    // Trigger recovery after delay
                     setTimeout(() => {
-                        blobState = 'idle';
-                        blobContainer.classList.remove('recovering');
-                        blobContainer.classList.add('idle');
-                    }, 1500);
-                }, 1000);
-            }, 800);
-        }
-
-        document.addEventListener('mousemove', (e) => {
-            if (blobState === 'hidden') {
-                triggerBlobEntrance();
+                        state = 'recovering';
+                    }, 1000);
+                }
             }
 
-            // Always track eyes if visible
-            if (blobState !== 'hidden') {
+            // 2. Shape Physics (Spring System)
+            if (state === 'recovering' || state === 'idle') {
+                // Hooke's Law: F = -k * x
+                const forceX = (spring.target.x - scale.x) * spring.stiffness;
+                const forceY = (spring.target.y - scale.y) * spring.stiffness;
+
+                spring.vel.x += forceX;
+                spring.vel.y += forceY;
+
+                // Damping
+                spring.vel.x *= spring.damping;
+                spring.vel.y *= spring.damping;
+
+                scale.x += spring.vel.x;
+                scale.y += spring.vel.y;
+                
+                // Transition to idle when stable
+                if (state === 'recovering' && 
+                    Math.abs(spring.vel.y) < 0.001 && 
+                    Math.abs(scale.y - 1) < 0.01) {
+                    state = 'idle';
+                }
+            }
+
+            // 3. Render
+            blobContainer.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
+            blob.style.transform = `scale(${scale.x}, ${scale.y})`;
+
+            requestAnimationFrame(updatePhysics);
+        }
+
+        // Start loop
+        requestAnimationFrame(updatePhysics);
+
+        // Input Trigger
+        document.addEventListener('mousemove', (e) => {
+            if (state === 'waiting') {
+                state = 'falling';
+                // Set initial X position relative to window but keep fixed right margin logic?
+                // The CSS had right: 50px. JS needs exact coords for transform.
+                // Let's calculate the "Right 50px" equivalent in pixels
+                pos.x = window.innerWidth - 150; // 100 width + 50 margin
+                // Update groundY in case of load resize
+                groundY = window.innerHeight - 100 - GROUND_PAD; 
+                
+                // Start Loop
+                updatePhysics();
+            }
+
+            // Eye Tracking
+            if (state !== 'waiting') {
                 const eyes = document.querySelectorAll('.eye');
                 eyes.forEach(eye => {
                     const pupil = eye.querySelector('.pupil');
@@ -93,9 +168,23 @@
                     const centerY = rect.top + rect.height / 2;
                     const angle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
                     const distance = Math.min(3, Math.hypot(e.clientX - centerX, e.clientY - centerY) / 10);
+                    
+                    // Adjust pupil for the scale of the parent blob
+                    // If blob is squashed (scale.y = 0.5), local Y movement needs to be inverted/scaled? 
+                    // CSS transform nesting handles visual, but input coords are global.
+                    // Simple offset is usually fine.
                     pupil.style.transform = `translate(${Math.cos(angle) * distance}px, ${Math.sin(angle) * distance}px)`;
                 });
             }
+        });
+
+        // Window resize handler to keep blob on right
+        window.addEventListener('resize', () => {
+             if (state !== 'waiting') {
+                 pos.x = window.innerWidth - 150;
+                 groundY = window.innerHeight - 100 - GROUND_PAD;
+                 if (state === 'idle') pos.y = groundY;
+             }
         });
 
         // Version Sensor Script
@@ -104,7 +193,7 @@
             const BRANCH = 'main';
             const SENSOR_EL = document.getElementById('version-sensor');
             const TEXT_EL = SENSOR_EL.querySelector('.sensor-text');
-            const POLL_INTERVAL = 60000; // 60 seconds
+            const POLL_INTERVAL = 60000;
 
             let currentHash = null;
             let currentMsg = null;
@@ -116,24 +205,18 @@
                     const data = await response.json();
                     return {
                         hash: data.sha.substring(0, 7),
-                        msg: data.commit.message,
-                        fullHash: data.sha
+                        msg: data.commit.message
                     };
-                } catch (error) {
-                    console.error('Sensor error:', error);
-                    return null;
-                }
+                } catch (error) { return null; }
             }
 
             async function initSensor() {
                 const commit = await fetchLatestCommit();
                 if (commit) {
                     currentHash = commit.hash;
-                    currentMsg = commit.msg;
                     SENSOR_EL.classList.remove('sensor-loading');
                     SENSOR_EL.classList.add('sensor-active');
                     TEXT_EL.textContent = `v: ${currentHash}`;
-                    TEXT_EL.title = currentMsg;
                 } else {
                     TEXT_EL.textContent = 'Offline';
                 }
@@ -141,7 +224,6 @@
 
             async function checkForUpdates() {
                 if (!currentHash) return;
-                
                 const latest = await fetchLatestCommit();
                 if (latest && latest.hash !== currentHash) {
                     SENSOR_EL.classList.add('sensor-update');
@@ -154,7 +236,6 @@
                     `;
                 }
             }
-
             initSensor();
             setInterval(checkForUpdates, POLL_INTERVAL);
         })();

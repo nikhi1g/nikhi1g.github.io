@@ -63,13 +63,14 @@ a:hover {
 /* Blob Styles */
 #blob-container {
     position: fixed;
-    bottom: 20px; /* Sits on ground (height 20px) */
-    right: 50px;
+    top: 0; /* Position controlled by JS */
+    left: 0; /* Position controlled by JS */
     width: 100px;
     height: 100px;
     z-index: 10;
-    /* Initial: Hidden above */
-    transform: translateY(-120vh);
+    /* Will-change for performance */
+    will-change: transform;
+    /* Initial hidden state handled by JS start pos */
 }
 
 .blob {
@@ -83,47 +84,8 @@ a:hover {
     justify-content: center;
     align-items: center;
     box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-    transition: all 0.5s ease;
-}
-
-/* 1. Falling */
-#blob-container.falling {
-    animation: drop-in 0.8s cubic-bezier(0.6, 0.04, 0.98, 0.335) forwards;
-}
-
-/* 2. Slumping (Impact/Lying on ground) */
-#blob-container.slumping .blob {
-    transform: scale(1.6, 0.4); /* Very flat */
-    border-radius: 40% 40% 40% 40% / 90% 90% 10% 10%; /* Puddle */
-}
-#blob-container.slumping .mouth {
-    border-bottom: 2px solid #333; /* Flat mouth */
-    width: 20px;
-    height: 5px;
-}
-
-/* 3. Recovering (Picking self up) */
-#blob-container.recovering {
-    animation: recover-up 1.5s ease-in-out forwards;
-}
-
-/* 4. Idle */
-#blob-container.idle {
-    transform: translateY(0);
-}
-
-@keyframes drop-in {
-    0% { transform: translateY(-120vh) scale(0.8, 1.2); } /* Stretch down */
-    100% { transform: translateY(0) scale(1, 1); }
-}
-
-@keyframes recover-up {
-    0% { transform: translateY(15px) scale(1.6, 0.4); } /* Start from slumping state visually */
-    30% { transform: translateY(10px) scale(1.2, 0.8); } /* Gathering strength */
-    50% { transform: translateY(0) scale(0.9, 1.1) skewX(-5deg); } /* Wobble up */
-    70% { transform: translateY(0) scale(1.05, 0.95) skewX(3deg); }
-    90% { transform: translateY(0) scale(0.98, 1.02); }
-    100% { transform: translateY(0) scale(1, 1); }
+    /* JS controls transform (scale) */
+    transform-origin: bottom center; /* Scale from bottom */
 }
 
 .eye {
@@ -137,11 +99,6 @@ a:hover {
     justify-content: center;
     align-items: center;
     z-index: 2;
-    transition: top 0.3s;
-}
-
-#blob-container.slumping .eye {
-    top: 45%; /* Eyes lower when slumped */
 }
 
 #eye-left { left: 30%; }
@@ -163,7 +120,7 @@ a:hover {
     bottom: 20%;
     left: 50%;
     transform: translateX(-50%);
-    transition: all 0.5s;
+    transition: all 0.3s; /* Mouth can still transition with CSS */
 }
 
 /* Version Sensor Styles */
