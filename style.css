@@ -69,8 +69,14 @@ a:hover {
     height: 100px;
     z-index: 10;
     will-change: transform;
-    /* Fix: Ensure it starts off-screen visually to avoid top-left flash */
-    transform: translate3d(0, -200vh, 0); 
+    /* Fix: Start invisible and fully off-screen */
+    opacity: 0; 
+    transform: translate3d(0, -200vh, 0);
+    transition: opacity 0.2s;
+}
+
+#blob-container.visible {
+    opacity: 1;
 }
 
 .blob {
