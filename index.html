@@ -10,13 +10,13 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%233b82f6%22/></svg>">
 <style>
 :root {
-    /* GitHub Light */
+    /* GitHub Light (Default) */
     --bg: #ffffff;
     --fg: #24292f;
     --acc: #0969da;
     --sub: #57606a;
 }
-[data-theme="dark"] {
+html[data-theme="dark"] {
     /* GitHub Dark Dimmed */
     --bg: #22272e;
     --fg: #adbac7;
@@ -153,6 +153,8 @@ const root = document.documentElement;
 const setTheme = (theme) => {
     root.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
+    
+    // Logic: If Dark, show Sun (to switch to Light). If Light, show Moon (to switch to Dark).
     if (theme === 'dark') {
         sun.style.display = 'block';
         moon.style.display = 'none';
@@ -172,30 +174,6 @@ toggle.onclick = () => {
 };
 
 // Version Watcher
-    const el = document.getElementById('version');
-    const dot = document.querySelector('.dot');
-    const update = (d) => {
-        if(!d||!d.commit) return;
-        const h = d.commit.slice(0,7);
-        el.textContent = h;
-        el.title = d.message || '';
-        
-        const stored = sessionStorage.getItem('v');
-        if(stored && stored !== h) {
-            // Update available: Orange dot + Refresh text
-            el.textContent = `${stored.slice(0,7)}→${h} ↻`;
-            el.onclick = () => location.reload();
-            el.style.opacity = 1;
-            el.style.color = '#f97316'; // Orange text
-            dot.style.backgroundColor = '#f97316'; // Orange dot
-        }
-        sessionStorage.setItem('v', h);
-    };
-    try {
-        const res = await fetch('commit.json?t='+Date.now());
-        if(res.ok) update(await res.json());
-    } catch(e){}
-})();
 </script>
 </body>
 </html>
