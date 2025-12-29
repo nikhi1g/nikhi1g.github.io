@@ -68,9 +68,7 @@ a:hover {
     width: 100px;
     height: 100px;
     z-index: 10;
-    /* Will-change for performance */
     will-change: transform;
-    /* Initial hidden state handled by JS start pos */
 }
 
 .blob {
@@ -84,8 +82,8 @@ a:hover {
     justify-content: center;
     align-items: center;
     box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-    /* JS controls transform (scale) */
     transform-origin: bottom center; /* Scale from bottom */
+    transition: background-color 0.3s;
 }
 
 .eye {
@@ -99,6 +97,7 @@ a:hover {
     justify-content: center;
     align-items: center;
     z-index: 2;
+    transition: top 0.2s;
 }
 
 #eye-left { left: 30%; }
@@ -120,7 +119,28 @@ a:hover {
     bottom: 20%;
     left: 50%;
     transform: translateX(-50%);
-    transition: all 0.3s; /* Mouth can still transition with CSS */
+    transition: all 0.3s;
+}
+
+/* Expressions */
+.blob.squished .mouth {
+    width: 15px;
+    height: 4px;
+    border-bottom: none;
+    background: #333;
+    border-radius: 4px; /* Flat line */
+    bottom: 15%;
+}
+
+.blob.squished .eye {
+    top: 45%; /* Eyes shrink down */
+}
+
+.blob.happy .mouth {
+    width: 30px;
+    height: 15px;
+    border-bottom: 4px solid #333; /* Big smile */
+    border-radius: 50%;
 }
 
 /* Version Sensor Styles */
