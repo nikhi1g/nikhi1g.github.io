@@ -63,12 +63,14 @@ a:hover {
 /* Blob Styles */
 #blob-container {
     position: fixed;
-    top: 0; /* Position controlled by JS */
-    left: 0; /* Position controlled by JS */
+    top: 0;
+    left: 0;
     width: 100px;
     height: 100px;
     z-index: 10;
     will-change: transform;
+    /* Fix: Ensure it starts off-screen visually to avoid top-left flash */
+    transform: translate3d(0, -200vh, 0); 
 }
 
 .blob {

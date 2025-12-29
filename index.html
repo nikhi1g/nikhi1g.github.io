@@ -51,24 +51,23 @@
         const groundElement = document.getElementById('ground');
         
         // Physics State
-        let state = 'waiting'; // waiting, falling, slumped, recovering, idle
-        let pos = { x: 0, y: -400 }; // Start fully off screen (blob height 100 + pad)
+        let state = 'waiting'; 
+        let pos = { x: 0, y: -400 }; 
         let vel = { x: 0, y: 0 };
         let scale = { x: 1, y: 1 };
         
-        // Configuration
-        const GRAVITY = 0.8; // Slightly heavier
+        const GRAVITY = 0.5; // Lower gravity for floatier fall
         const GROUND_PAD = 20; 
         
-        // Spring Physics (Jelly)
+        // Jelly Spring Physics
+        // Low stiffness = soft, High damping (close to 1) = wiggly
         let spring = {
             target: { x: 1, y: 1 },
-            stiffness: 0.08, // Softer spring
-            damping: 0.75,   // More wobble/bounce
+            stiffness: 0.05, 
+            damping: 0.90, 
             vel: { x: 0, y: 0 } 
         };
 
-        // Screen dimensions
         let groundY = window.innerHeight - 100 - GROUND_PAD; 
 
         window.addEventListener('resize', () => {
@@ -76,41 +75,42 @@
         });
 
         function updatePhysics() {
-            if (state === 'waiting') return;
-
-            // 1. Position Physics (Gravity)
+            // 1. Position Physics
             if (state === 'falling') {
                 vel.y += GRAVITY;
                 pos.y += vel.y;
 
-                // Stretch based on velocity
-                const stretchFactor = 1 + (Math.abs(vel.y) * 0.02); 
-                scale.y = stretchFactor;
-                scale.x = 1 / stretchFactor; 
+                // Air resistance / Jelly stretch
+                // Limit max stretch to avoid breaking visual
+                const stretch = Math.min(1.5, 1 + (Math.abs(vel.y) * 0.02)); 
+                scale.y = stretch;
+                scale.x = 1 / stretch; 
 
                 // Ground Collision
                 if (pos.y >= groundY) {
                     pos.y = groundY;
                     vel.y = 0;
                     
-                    // IMPACT!
                     state = 'slumped';
-                    blob.classList.add('squished'); // Expression change
+                    blob.classList.add('squished');
                     
-                    // Violent squash on impact
-                    scale.y = 0.3;
-                    scale.x = 1.8;
+                    // Violent impact squash
+                    scale.y = 0.5; 
+                    scale.x = 1.5;
                     
-                    // Wait briefly in squished state, then recover
+                    // Set spring velocity to kickstart the wobble
+                    spring.vel.x = 0;
+                    spring.vel.y = -0.1; // Kick up
+                    
                     setTimeout(() => {
                         state = 'recovering';
                         blob.classList.remove('squished');
-                        blob.classList.add('happy'); // Expression change
-                    }, 500);
+                        blob.classList.add('happy');
+                    }, 200); // Shorter slump for bouncier feel
                 }
             }
 
-            // 2. Shape Physics (Spring System)
+            // 2. Spring Physics (The Jiggle)
             if (state === 'recovering' || state === 'idle') {
                 const forceX = (spring.target.x - scale.x) * spring.stiffness;
                 const forceY = (spring.target.y - scale.y) * spring.stiffness;
@@ -124,7 +124,7 @@
                 scale.x += spring.vel.x;
                 scale.y += spring.vel.y;
                 
-                // Transition to idle when stable
+                // Allow state transition but keep simulating minor jiggles if needed
                 if (state === 'recovering' && 
                     Math.abs(spring.vel.y) < 0.001 && 
                     Math.abs(scale.y - 1) < 0.01) {
@@ -133,13 +133,19 @@
             }
 
             // 3. Render
-            blobContainer.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
+            // Use translate3d for GPU acceleration
+            blobContainer.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0)`;
             blob.style.transform = `scale(${scale.x}, ${scale.y})`;
 
-            requestAnimationFrame(updatePhysics);
+            if (state !== 'waiting') {
+                 requestAnimationFrame(updatePhysics);
+            }
         }
 
-        requestAnimationFrame(updatePhysics);
+        // Initialize position visually immediately to prevent jump
+        // (Though CSS handles the off-screen, this ensures JS state matches)
+        pos.x = window.innerWidth - 150; 
+        updatePhysics(); // Run once to set initial transform
 
         // Input Trigger
         document.addEventListener('mousemove', (e) => {
@@ -147,6 +153,8 @@
                 state = 'falling';
                 pos.x = window.innerWidth - 150; 
                 groundY = window.innerHeight - 100 - GROUND_PAD; 
+                
+                // Restart loop
                 updatePhysics();
             }
 
