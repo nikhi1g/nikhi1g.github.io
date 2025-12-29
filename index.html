@@ -287,13 +287,21 @@
                 const latest = await fetchLatestCommit();
                 if (latest && latest.hash !== currentHash) {
                     SENSOR_EL.classList.add('sensor-update');
+                    // Update text only
                     TEXT_EL.innerHTML = `
                         <span class="old-version">(${currentHash})</span> 
                         <span class="arrow">→</span> 
                         <span class="new-version">(${latest.hash})</span>
                         <span class="update-msg">New: ${latest.msg}</span>
-                        <button class="sensor-reload-btn" onclick="window.location.reload()">Reload</button>
                     `;
+                    // Check if button already exists to avoid duplicates
+                    if (!SENSOR_EL.querySelector('.sensor-reload-btn')) {
+                        const btn = document.createElement('button');
+                        btn.className = 'sensor-reload-btn';
+                        btn.onclick = () => window.location.reload();
+                        btn.textContent = 'Reload';
+                        SENSOR_EL.appendChild(btn);
+                    }
                 }
             }
             initSensor();

@@ -245,8 +245,23 @@ a:hover {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    display: flex;
-    align-items: center;
+    flex-grow: 1; /* Allow text to take remaining space */
+    min-width: 0; /* Critical for ellipsis in flexbox */
+}
+
+.sensor-reload-btn {
+    flex-shrink: 0; /* Prevent button from being squashed */
+    margin-left: 4px;
+    padding: 4px 8px;
+    background: #ff9800;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    font-family: inherit;
+    font-weight: bold;
+    transition: background 0.2s;
 }
 
 .old-version { color: #757575; text-decoration: line-through; }
