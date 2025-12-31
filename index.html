@@ -178,30 +178,41 @@ toggle.onclick = () => {
 (async()=>{
     const el = document.getElementById('version');
     const dot = document.querySelector('.dot');
-    const update = (d) => {
-        if(!d||!d.commit) return;
-        const h = d.commit.slice(0,7);
-        el.textContent = h;
-        el.title = d.message || '';
-        
-        const stored = sessionStorage.getItem('v');
-        if(stored && stored !== h) {
-            // Update available: Orange dot + Refresh text
-            el.innerHTML = `${stored.slice(0,7)}&rarr;${h} <span style="font-size:12px">↻</span>`;
-            el.onclick = (e) => {
-                e.preventDefault();
-                location.reload();
-            };
-            el.style.opacity = 1;
-            el.style.color = '#f97316'; // Orange text
-            dot.style.backgroundColor = '#f97316'; // Orange dot
-        }
-        sessionStorage.setItem('v', h);
+    let localCommit = null;
+
+    const check = async () => {
+        try {
+            const res = await fetch('commit.json?t='+Date.now());
+            if(!res.ok) return;
+            const d = await res.json();
+            const remote = d.commit.slice(0,7);
+
+            if(!localCommit) {
+                // First load
+                localCommit = remote;
+                el.textContent = localCommit;
+                el.title = d.message || '';
+                sessionStorage.setItem('v', localCommit);
+            } else if(localCommit !== remote) {
+                // Update detected
+                el.innerHTML = `${localCommit}&rarr;${remote} <span style="font-size:12px">↻</span>`;
+                el.onclick = (e) => {
+                    e.preventDefault();
+                    location.reload();
+                };
+                el.style.opacity = 1;
+                el.style.color = '#f97316'; // Orange text
+                dot.style.backgroundColor = '#f97316'; // Orange dot
+                dot.classList.add('pulse'); // Optional: add pulse if we had css
+            }
+        } catch(e){}
     };
-    try {
-        const res = await fetch('commit.json?t='+Date.now());
-        if(res.ok) update(await res.json());
-    } catch(e){}
+
+    await check();
+    setInterval(check, 30000); // Poll every 30s
+    document.addEventListener('visibilitychange', () => {
+        if(document.visibilityState === 'visible') check();
+    });
 })();
 </script>
 </body>
