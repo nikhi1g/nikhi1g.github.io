@@ -134,7 +134,7 @@ nav a::after, li a::after, #version::after {
     width: 100%;
     transform: scaleX(0);
     height: 2px; /* Thicker line */
-    bottom: -2px;
+    bottom: 4px; /* Move up slightly to underline text directly */
     left: 0;
     background-color: var(--acc);
     transform-origin: bottom right;
@@ -143,6 +143,9 @@ nav a::after, li a::after, #version::after {
 nav a:hover::after, li a:hover::after, #version:hover::after {
     transform: scaleX(1);
     transform-origin: bottom left;
+}
+#version {
+    position: relative; /* Ensure ::after is positioned relative to this */
 }
 #version:hover {
     color: var(--acc) !important;
