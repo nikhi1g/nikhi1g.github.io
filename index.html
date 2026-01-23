@@ -221,6 +221,7 @@ toggle.onclick = () => {
                 localCommit = remote;
                 el.textContent = localCommit;
                 el.title = d.message || '';
+                el.onclick = () => window.location.href = `https://github.com/nikhi1g/nikhi1g.github.io/commit/${d.commit}`;
                 sessionStorage.setItem('v', localCommit);
             } else if(localCommit !== remote) {
                 // Update detected
