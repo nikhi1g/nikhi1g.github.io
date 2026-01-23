@@ -128,7 +128,7 @@ a:hover {
     color: var(--acc);
 }
 /* Subtle underline animation */
-nav a::after, li a::after {
+nav a::after, li a::after, #version::after {
     content: '';
     position: absolute;
     width: 100%;
@@ -140,9 +140,12 @@ nav a::after, li a::after {
     transform-origin: bottom right;
     transition: transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
-nav a:hover::after, li a:hover::after {
+nav a:hover::after, li a:hover::after, #version:hover::after {
     transform: scaleX(1);
     transform-origin: bottom left;
+}
+#version:hover {
+    color: var(--acc) !important;
 }
 </style>
 </head>
