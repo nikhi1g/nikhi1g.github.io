@@ -38,7 +38,7 @@ const normalized = {
     title: clean(paper.title, 180),
     url: validUrl(paper.url, true),
     doi: validUrl(paper.doi),
-    author: clean(paper.author, 160),
+    author: clean(paper.author, 1000),
     company: clean(paper.company, 120),
     year: String(year),
     sector: clean(paper.sector, 80),
