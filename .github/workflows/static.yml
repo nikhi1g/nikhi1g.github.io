@@ -34,7 +34,12 @@ jobs:
         
       - name: Generate commit.json
         run: |
-          echo "{\"commit\": \"$GITHUB_SHA\", \"commit_date\": \"$(date -u +\"%Y-%m-%d %H:%M:%S UTC\")\", \"message\": \"$(git log -1 --pretty=%B | tr -d '\n' | sed 's/\"/\\\"/g')\"}" > commit.json
+          jq -n \
+            --arg commit "$GITHUB_SHA" \
+            --arg commit_date "$(git show -s --format=%cI)" \
+            --arg message "$(git show -s --format=%s)" \
+            '{commit: $commit, commit_date: $commit_date, message: $message}' > commit.json
+          jq -e '.commit and .commit_date and .message' commit.json > /dev/null
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

@@ -50,5 +50,5 @@ jobs:
             --base main \
             --head "paper-submission/issue-${ISSUE_NUMBER}" \
             --title "${ISSUE_TITLE}" \
-            --body "Adds the structured paper submission from #${ISSUE_NUMBER}. Review the title, destination, and metadata before merging.")
-          gh issue comment "${ISSUE_NUMBER}" --body "Created ${PR_URL} for review."
+            --body "Adds the structured paper submission from #${ISSUE_NUMBER}. Review the title, destination, and metadata before merging. The site updates automatically after this pull request is merged.")
+          gh issue comment "${ISSUE_NUMBER}" --body "Created ${PR_URL} for review. This submission is not live yet; merge the pull request to update the site."
