@@ -41,6 +41,9 @@ jobs:
         if: steps.validate.outcome == 'failure'
         run: exit 1
 
+      - name: Build and validate proposed site
+        run: node .github/scripts/build-site.mjs _site
+
       - name: Create submission branch
         env:
           ISSUE_NUMBER: ${{ github.event.issue.number }}
