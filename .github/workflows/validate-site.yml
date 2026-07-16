@@ -1,0 +1,22 @@
+name: Validate site
+
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'seminal_papers/**'
+      - '.github/scripts/**'
+      - '.github/workflows/**'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build and validate site
+        run: node .github/scripts/build-site.mjs _site

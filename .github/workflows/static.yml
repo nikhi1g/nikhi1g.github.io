@@ -15,11 +15,9 @@ permissions:
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
 concurrency:
   group: "pages"
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   # Single deploy job since we're just deploying
@@ -32,22 +30,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         
-      - name: Generate commit.json
-        run: |
-          jq -n \
-            --arg commit "$GITHUB_SHA" \
-            --arg commit_date "$(git show -s --format=%cI)" \
-            --arg message "$(git show -s --format=%s)" \
-            '{commit: $commit, commit_date: $commit_date, message: $message}' > commit.json
-          jq -e '.commit and .commit_date and .message' commit.json > /dev/null
+      - name: Build and validate site
+        run: node .github/scripts/build-site.mjs _site
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
-          # Upload entire repository
-          path: '.'
+          path: '_site'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
