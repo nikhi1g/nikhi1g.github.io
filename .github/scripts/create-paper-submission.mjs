@@ -7,10 +7,30 @@ function setOutput(name, value) {
     fs.appendFileSync(process.env.GITHUB_OUTPUT, `${name}=${String(value).replace(/[\r\n]+/g, ' ')}\n`);
 }
 
+function decodeIssueText(value) {
+    let decoded = String(value || '');
+    for (let attempt = 0; attempt < 2 && /%[0-9a-f]{2}/i.test(decoded); attempt += 1) {
+        try {
+            const next = decodeURIComponent(decoded.replace(/\+/g, ' '));
+            if (next === decoded) break;
+            decoded = next;
+        } catch {
+            break;
+        }
+    }
+    return decoded;
+}
+
+function normalizeMarkers(value) {
+    return value
+        .replace(/<![\-\u2013\u2014]{1,2}\s*seminal-paper-submission:start\s*[\-\u2013\u2014]{1,2}>/gi, '<!-- seminal-paper-submission:start -->')
+        .replace(/<![\-\u2013\u2014]{1,2}\s*seminal-paper-submission:end\s*[\-\u2013\u2014]{1,2}>/gi, '<!-- seminal-paper-submission:end -->');
+}
+
 function createSubmission() {
     const event = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8'));
     const issueNumber = Number(event.issue?.number);
-    const body = event.issue?.body || '';
+    const body = normalizeMarkers(decodeIssueText(event.issue?.body));
     const match = body.match(/<!-- seminal-paper-submission:start -->\s*```json\s*([\s\S]*?)\s*```\s*<!-- seminal-paper-submission:end -->/);
     if (!Number.isInteger(issueNumber) || issueNumber < 1) throw new Error('Issue number is missing.');
     if (!match) throw new Error('Issue does not contain a structured paper submission.');
@@ -31,6 +51,7 @@ function createSubmission() {
     fs.mkdirSync(path.dirname(submissionPath), {recursive: true});
     fs.writeFileSync(submissionPath, `${JSON.stringify(paper, null, 2)}\n`);
     setOutput('submission_path', submissionPath);
+    setOutput('issue_title', `[Paper Submission] ${paper.title}`);
 }
 
 try {

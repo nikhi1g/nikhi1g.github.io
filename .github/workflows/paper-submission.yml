@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   create-pull-request:
-    if: startsWith(github.event.issue.title, '[Paper Submission] ')
+    if: startsWith(github.event.issue.title, '[Paper Submission] ') || startsWith(github.event.issue.title, '%5BPaper%20Submission%5D')
     runs-on: ubuntu-latest
     steps:
       - name: Check out main
@@ -57,7 +57,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
-          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_TITLE: ${{ steps.validate.outputs.issue_title }}
         run: |
           PR_URL=$(gh pr create \
             --base main \
