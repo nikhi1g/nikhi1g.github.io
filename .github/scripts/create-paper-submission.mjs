@@ -9,7 +9,6 @@ if (!match) throw new Error('Issue does not contain a structured paper submissio
 const paper = JSON.parse(match[1]);
 const required = ['title', 'url', 'author', 'year', 'sector', 'format'];
 const allowed = [...required, 'company', 'doi'];
-const sectors = ['AI Essay', 'Crypto', 'Macro Memo', 'Pitch Deck', 'Sector Report', 'Short / Activist', 'Technical Paper', 'VC Doctrine', 'Worldview'];
 const formats = ['Book', 'Deck', 'Essay', 'Essay Series', 'Letter', 'Manifesto', 'Memo', 'Op-Ed', 'Paper', 'Presentation', 'Report', 'Research', 'Whitepaper'];
 
 if (Object.keys(paper).some(key => !allowed.includes(key))) throw new Error('Submission contains an unsupported field.');
@@ -33,7 +32,6 @@ function validUrl(value, required = false) {
 
 const year = Number(paper.year);
 if (!Number.isInteger(year) || year < 1800 || year > 2100) throw new Error('Year must be between 1800 and 2100.');
-if (!sectors.includes(paper.sector)) throw new Error('Invalid sector.');
 if (!formats.includes(paper.format)) throw new Error('Invalid format.');
 
 const normalized = {
@@ -43,7 +41,7 @@ const normalized = {
     author: clean(paper.author, 160),
     company: clean(paper.company, 120),
     year: String(year),
-    sector: paper.sector,
+    sector: clean(paper.sector, 80),
     format: paper.format,
 };
 
