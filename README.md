@@ -14,4 +14,4 @@ Published from other repos under the same GitHub Pages domain:
 - `/mcat/` — [nikhi1g/mcat](https://github.com/nikhi1g/mcat)
 - `/153b/` — [nikhi1g/153b](https://github.com/nikhi1g/153b)
 - `/ucla-emt-course/` — [nikhi1g/ucla-emt-course](https://github.com/nikhi1g/ucla-emt-course)
-- `/SpotifyAdSkipper/` — [nikhi1g/SpotifyAdSkipper](https://github.com/nikhi1g/SpotifyAdSkipper) (not linked from the home page)
+- `/SpotifyAdSkipper/` — [nikhi1g/SpotifyAdSkipper](https://github.com/nikhi1g/SpotifyAdSkipper)
