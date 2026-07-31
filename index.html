@@ -113,6 +113,13 @@ ul {
     padding: 0;
     margin: 0;
 }
+.links-grid {
+    display: flex;
+    gap: 2rem;
+}
+.links-grid ul {
+    flex: 1;
+}
 li {
     margin-bottom: 1rem;
     font-size: 1.1rem;
@@ -171,12 +178,15 @@ nav a:hover::after, li a:hover::after, #version:hover::after {
         <a href="https://www.linkedin.com/in/nikhil---gupta/">LinkedIn</a>
     </nav>
 
-    <section>
+    <section class="links-grid">
         <ul>
             <li><a href="https://nikhi1g.github.io/mcat/index.html">MCAT</a></li>
             <li><a href="https://nikhi1g.github.io/153b/">153B</a></li>
             <li><a href="https://nikhi1g.github.io/ucla-emt-course/">UCLA EMT Course</a></li>
             <li><a href="https://nikhi1g.github.io/seminal_papers/">Seminal Papers</a></li>
+        </ul>
+        <ul>
+            <li><a href="https://memlines.com/">mem lines</a></li>
         </ul>
     </section>
 </main>
