@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Why work when AI exists">
+<title>Why work when AI exists</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%233b82f6%22/></svg>">
+<style>
+:root {
+    /* GitHub Light (Default) */
+    --bg: #ffffff;
+    --fg: #24292f;
+    --acc: #0969da;
+    --sub: #57606a;
+}
+html[data-theme="dark"] {
+    /* GitHub Dark Dimmed */
+    --bg: #22272e;
+    --fg: #adbac7;
+    --acc: #539bf5;
+    --sub: #768390;
+}
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    background-color: var(--bg);
+    color: var(--fg);
+    line-height: 1.6;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 0.4s ease, color 0.4s ease;
+    font-size: 18px;
+}
+main {
+    width: 100%;
+    max-width: 600px;
+    padding: 2.5rem;
+    animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    opacity: 0;
+    transform: translateY(12px);
+    outline: 1px solid var(--sub);
+    border-radius: 12px;
+}
+@media (max-width: 600px) {
+    main {
+        padding: 1.5rem;
+        border-radius: 0;
+        outline: none;
+        max-width: 100%;
+    }
+    body {
+        align-items: flex-start;
+    }
+}
+@keyframes fadeUp {
+    to { opacity: 1; transform: translateY(0); }
+}
+header {
+    margin-bottom: 2.5rem;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+h1 {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+}
+.dot {
+    width: 10px;
+    height: 10px;
+    background-color: var(--acc);
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+}
+article p {
+    margin: 0 0 1.5rem 0;
+    font-size: 1.1rem;
+}
+article p:last-child {
+    margin-bottom: 0;
+}
+footer {
+    margin-top: 3.5rem;
+    font-size: 1rem;
+    color: var(--sub);
+}
+a {
+    color: inherit;
+    text-decoration: none;
+    position: relative;
+    transition: color 0.2s ease;
+    padding: 4px 0;
+}
+a:hover {
+    color: var(--acc);
+}
+footer a::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    transform: scaleX(0);
+    height: 2px;
+    bottom: 4px;
+    left: 0;
+    background-color: var(--acc);
+    transform-origin: bottom right;
+    transition: transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+footer a:hover::after {
+    transform: scaleX(1);
+    transform-origin: bottom left;
+}
+</style>
+</head>
+<body>
+<main>
+    <header>
+        <h1>Why work when AI exists</h1>
+        <span class="dot"></span>
+        <button id="theme-toggle" aria-label="Toggle theme" style="margin-left: auto; background: none; border: none; cursor: pointer; color: var(--sub); padding: 8px; display: flex;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path class="sun" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                <path class="moon" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" style="display: none;"></path>
+            </svg>
+        </button>
+    </header>
+
+    <article>
+        <p>People love to talk about creativity as if it floats above skill, but creativity needs raw material. It needs patterns, facts, examples, rules, exceptions, and procedures already loaded into long-term memory.</p>
+
+        <p>You cannot think with knowledge you do not have. You cannot cook with ingredients you do not have.</p>
+
+        <p>When the basics are not automatic, your working memory gets spent on the basics. You are trying to be strategic while still thinking about how the pieces move. You are trying to find high-level patterns while the lower-level structures have not formed yet.</p>
+
+        <p>This is why grunt work matters. Repetition is not the enemy of creativity. It is the compression process that frees up mental bandwidth for creativity. If you master the basics until they become unconscious, then your brain finally has room to begin operating at higher levels.</p>
+    </article>
+
+    <footer>
+        <a href="/">&larr; nikhi1g</a>
+    </footer>
+</main>
+
+<script>
+// Theme Toggle
+const toggle = document.getElementById('theme-toggle');
+const sun = toggle.querySelector('.sun');
+const moon = toggle.querySelector('.moon');
+const root = document.documentElement;
+
+const setTheme = (theme) => {
+    root.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+
+    // Logic: If Dark, show Sun (to switch to Light). If Light, show Moon (to switch to Dark).
+    if (theme === 'dark') {
+        sun.style.display = 'block';
+        moon.style.display = 'none';
+    } else {
+        sun.style.display = 'none';
+        moon.style.display = 'block';
+    }
+};
+
+// Init
+const saved = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+setTheme(saved);
+
+toggle.onclick = () => {
+    const current = root.getAttribute('data-theme');
+    setTheme(current === 'dark' ? 'light' : 'dark');
+};
+</script>
+</body>
+</html>
