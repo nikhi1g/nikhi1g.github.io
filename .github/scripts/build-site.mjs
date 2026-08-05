@@ -9,6 +9,10 @@ fs.rmSync(outputDirectory, {recursive: true, force: true});
 fs.mkdirSync(outputDirectory, {recursive: true});
 fs.copyFileSync('index.html', path.join(outputDirectory, 'index.html'));
 
+// Unlinked routes: page only, source assets stay in the repo.
+fs.mkdirSync(path.join(outputDirectory, 'whywork'), {recursive: true});
+fs.copyFileSync('whywork/index.html', path.join(outputDirectory, 'whywork', 'index.html'));
+
 const metadata = {
     commit: process.env.GITHUB_SHA || git('rev-parse', 'HEAD'),
     commit_date: git('show', '-s', '--format=%cI'),
