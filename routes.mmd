@@ -1,0 +1,35 @@
+stateDiagram-v2
+    direction TB
+
+    [*] --> Home
+
+    state "Home" as Home
+    state "MCAT" as MCAT
+    state "153B" as OneFiftyThreeB
+    state "UCLA EMT Course" as UCLAEMT
+    state "Seminal Papers" as SeminalPapers
+    state "whisper_hotkey" as WhisperHotkey
+    state "mem lines" as MemLines
+    state "GitHub" as GitHubProfile
+    state "LinkedIn" as LinkedIn
+    state "Why work when AI exists" as WhyWork
+    state "SpotifyAdSkipper" as SpotifyAdSkipper
+
+    Home --> GitHubProfile: github.com
+    Home --> LinkedIn: linkedin.com
+
+    Home --> MCAT: /mcat/
+    Home --> OneFiftyThreeB: /153b/
+    Home --> UCLAEMT: /ucla-emt-course/
+    Home --> SeminalPapers: /seminal_papers/
+    Home --> WhisperHotkey: /whisper_hotkey/
+    Home --> MemLines: memlines.com
+
+    [*] --> WhyWork: /whywork/ (unlinked)
+    [*] --> SpotifyAdSkipper: /SpotifyAdSkipper/ (unlinked)
+
+    classDef offsite fill:#fff5ad,stroke:#aaaa33
+    classDef unlinked fill:#e0e0e0,stroke:#767676,stroke-dasharray:4 3
+
+    class GitHubProfile,LinkedIn,MemLines offsite
+    class WhyWork,SpotifyAdSkipper unlinked
