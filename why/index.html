@@ -43,14 +43,10 @@ main {
     animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     opacity: 0;
     transform: translateY(12px);
-    outline: 1px solid var(--sub);
-    border-radius: 12px;
 }
 @media (max-width: 600px) {
     main {
         padding: 1.5rem;
-        border-radius: 0;
-        outline: none;
         max-width: 100%;
     }
     body {
@@ -80,6 +76,17 @@ h1 {
     border-radius: 50%;
     display: inline-block;
     flex-shrink: 0;
+}
+article hr {
+    border: 0;
+    border-top: 1px solid var(--sub);
+    margin: 3rem 0 2rem;
+}
+article h2 {
+    margin: 0 0 1.5rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
 }
 article p {
     margin: 0 0 1.5rem 0;
@@ -142,6 +149,8 @@ footer a:hover::after {
         <p>When the basics are not automatic, your working memory gets spent on the basics. You are trying to be strategic while still thinking about how the pieces move. You are trying to find high-level patterns while the lower-level structures have not formed yet.</p>
 
         <p>This is why grunt work matters. Repetition is not the enemy of creativity. It is the compression process that frees up mental bandwidth for creativity. If you master the basics until they become unconscious, then your brain finally has room to begin operating at higher levels.</p>
+        <hr>
+        <h2>Recall Is the Real Workout</h2>
 
         <p>Spaced repetition is so similar to weight training that you might as well call it wait training. You’re lifting a memory off the floor of long-term memory and raising it up into working memory. The fuzzier that memory, the harder it is to lift. The wait creates the weight. And just like successfully lifting a heavy weight strengthens muscles, successfully recalling a fuzzy memory (lengthy wait) strengthens memory.</p>
 
