@@ -12,7 +12,7 @@ stateDiagram-v2
     state "mem lines" as MemLines
     state "GitHub" as GitHubProfile
     state "LinkedIn" as LinkedIn
-    state "Why work when AI exists" as WhyWork
+    state "Why work when AI exists" as Why
     state "SpotifyAdSkipper" as SpotifyAdSkipper
 
     Home --> GitHubProfile: github.com
@@ -25,11 +25,11 @@ stateDiagram-v2
     Home --> WhisperHotkey: /whisper_hotkey/
     Home --> MemLines: memlines.com
 
-    [*] --> WhyWork: /whywork/ (unlinked)
+    [*] --> Why: /why/ (unlinked)
     [*] --> SpotifyAdSkipper: /SpotifyAdSkipper/ (unlinked)
 
     classDef offsite fill:#fff5ad,stroke:#aaaa33
     classDef unlinked fill:#e0e0e0,stroke:#767676,stroke-dasharray:4 3
 
     class GitHubProfile,LinkedIn,MemLines offsite
-    class WhyWork,SpotifyAdSkipper unlinked
+    class Why,SpotifyAdSkipper unlinked
