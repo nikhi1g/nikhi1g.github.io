@@ -7,6 +7,11 @@
 <meta name="description" content="Page not found - Nikhil Gupta">
 <title>Page not found · Nikhil Gupta</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%233b82f6%22/></svg>">
+<!-- Home is the only exit from this page: prerender it up front so the return is instant. -->
+<script type="speculationrules">
+{"prerender": [{"urls": ["/"], "eagerness": "immediate"}]}
+</script>
+<link rel="prefetch" href="/">
 <style>
 :root {
     /* GitHub Light (Default) */
@@ -201,7 +206,7 @@ footer {
     }
 }
 main.leaving {
-    animation: fadeOut 0.26s cubic-bezier(0.4, 0, 1, 1) forwards;
+    animation: fadeOut 0.18s cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 @keyframes fadeOut {
     to { opacity: 0; transform: translateY(-10px) scale(0.985); }
@@ -355,7 +360,7 @@ const goHome = () => {
         return;
     }
     mainEl.classList.add('leaving');
-    setTimeout(() => { window.location.href = '/'; }, 260);
+    setTimeout(() => { window.location.href = '/'; }, 180);
 };
 document.addEventListener('click', (event) => {
     if (event.defaultPrevented || event.button !== 0) return;
