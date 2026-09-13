@@ -200,6 +200,45 @@ footer {
         transform: translate(-50%, -50%);
     }
 }
+main.leaving {
+    animation: fadeOut 0.26s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+@keyframes fadeOut {
+    to { opacity: 0; transform: translateY(-10px) scale(0.985); }
+}
+.hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--sub);
+    font-size: 0.95rem;
+}
+.hint:hover {
+    color: var(--acc);
+}
+.hint kbd {
+    font-family: monospace;
+    font-size: 0.8rem;
+    line-height: 1;
+    padding: 3px 6px;
+    border: 1px solid var(--sub);
+    border-radius: 5px;
+    transition: border-color 0.2s ease, color 0.2s ease;
+}
+.hint:hover kbd, main.leaving .hint kbd {
+    border-color: var(--acc);
+    color: var(--acc);
+}
+main.leaving .hint {
+    color: var(--acc);
+}
+@media (prefers-reduced-motion: reduce) {
+    main, main.leaving {
+        animation: none;
+        opacity: 1;
+        transform: none;
+    }
+}
 </style>
 </head>
 <body>
@@ -219,7 +258,7 @@ footer {
     <section class="message">
         <h2>Page not found</h2>
         <p>That route doesn’t exist.</p>
-        <a href="/">Return home</a>
+        <a class="hint" href="/">Click anywhere or press <kbd>any key</kbd> to return home</a>
     </section>
 
     <footer>
@@ -302,6 +341,38 @@ version.addEventListener('click', (event) => {
     event.preventDefault();
     const commit = version.dataset.commit || version.textContent.split('→').pop().replace('↻', '').trim();
     copyText(commit, event, version);
+});
+
+// Click anywhere / press any key to return home.
+const mainEl = document.querySelector('main');
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+let leaving = false;
+const goHome = () => {
+    if (leaving) return;
+    leaving = true;
+    if (reduceMotion.matches) {
+        window.location.href = '/';
+        return;
+    }
+    mainEl.classList.add('leaving');
+    setTimeout(() => { window.location.href = '/'; }, 260);
+};
+document.addEventListener('click', (event) => {
+    if (event.defaultPrevented || event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+    if (event.target.closest('a, button, #version, #inquiry-commit')) return;
+    if (String(window.getSelection())) return;
+    goHome();
+});
+document.addEventListener('keydown', (event) => {
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
+    if (event.key === 'Shift' || event.key === 'Tab' || event.key === 'Escape') return;
+    if (event.key.startsWith('F') && event.key.length > 1) return;
+    goHome();
+});
+document.querySelector('.hint').addEventListener('click', (event) => {
+    event.preventDefault();
+    goHome();
 });
 // Version Watcher
 (async()=>{
