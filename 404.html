@@ -77,13 +77,24 @@ h1 {
     font-weight: 700;
     letter-spacing: -0.03em;
 }
+.dot-slot {
+    width: 10px;
+    height: 10px;
+    flex-shrink: 0;
+}
 .dot {
+    position: fixed;
+    z-index: 2;
     width: 10px;
     height: 10px;
     background-color: var(--acc);
     border-radius: 50%;
-    display: inline-block;
-    flex-shrink: 0;
+    cursor: grab;
+    touch-action: none;
+    will-change: left, top;
+}
+.dot.dragging {
+    cursor: grabbing;
 }
 .message h2 {
     margin: 0 0 0.75rem;
@@ -245,7 +256,7 @@ main.leaving .hint {
 <main>
     <header>
         <h1>404</h1>
-        <span class="dot"></span>
+        <span class="dot-slot"><span class="dot" aria-hidden="true"></span></span>
         <span id="version" style="font-size: 0.8rem; color: var(--sub); opacity: 0.6; font-family: monospace; cursor: pointer; padding: 4px;" title="Checking version..."></span>
         <button id="theme-toggle" aria-label="Toggle theme" style="margin-left: auto; background: none; border: none; cursor: pointer; color: var(--sub); padding: 8px; display: flex;">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -343,9 +354,100 @@ version.addEventListener('click', (event) => {
     copyText(commit, event, version);
 });
 
-// Click anywhere / press any key to return home.
 const mainEl = document.querySelector('main');
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+// Let the status dot fall and bounce inside the card.
+const statusDot = document.querySelector('.dot');
+const dotSlot = document.querySelector('.dot-slot');
+const dotRadius = 5;
+let dotX = 0;
+let dotY = 0;
+let dotVX = 0;
+let dotVY = 0;
+let dotLastTime;
+let dotDragging = false;
+let dotPointerX = 0;
+let dotPointerY = 0;
+const placeDot = () => {
+    statusDot.style.left = `${dotX - dotRadius}px`;
+    statusDot.style.top = `${dotY - dotRadius}px`;
+};
+const dotBounds = () => {
+    const rect = mainEl.getBoundingClientRect();
+    return {
+        left: rect.left + dotRadius,
+        right: rect.right - dotRadius,
+        top: rect.top + dotRadius,
+        bottom: rect.bottom - dotRadius
+    };
+};
+const animateDot = (time) => {
+    if (dotLastTime === undefined) dotLastTime = time;
+    const dt = Math.min((time - dotLastTime) / 1000, 0.032);
+    dotLastTime = time;
+    if (!dotDragging) {
+        dotVY += 900 * dt;
+        dotX += dotVX * dt;
+        dotY += dotVY * dt;
+        const bounds = dotBounds();
+        if (dotX < bounds.left || dotX > bounds.right) {
+            dotX = Math.max(bounds.left, Math.min(bounds.right, dotX));
+            dotVX *= -0.72;
+        }
+        if (dotY < bounds.top || dotY > bounds.bottom) {
+            dotY = Math.max(bounds.top, Math.min(bounds.bottom, dotY));
+            dotVY *= -0.72;
+            if (Math.abs(dotVY) < 18 && dotY === bounds.bottom) dotVY = 0;
+        }
+        dotVX *= 0.998;
+    }
+    placeDot();
+    requestAnimationFrame(animateDot);
+};
+const startDot = () => {
+    const rect = dotSlot.getBoundingClientRect();
+    dotX = rect.left + rect.width / 2;
+    dotY = rect.top + rect.height / 2;
+    dotVX = 70;
+    statusDot.style.position = 'fixed';
+    placeDot();
+    requestAnimationFrame(animateDot);
+};
+statusDot.addEventListener('pointerdown', (event) => {
+    if (reduceMotion.matches) return;
+    event.preventDefault();
+    dotDragging = true;
+    dotPointerX = event.clientX;
+    dotPointerY = event.clientY;
+    dotVX = 0;
+    dotVY = 0;
+    statusDot.classList.add('dragging');
+    statusDot.setPointerCapture(event.pointerId);
+});
+statusDot.addEventListener('pointermove', (event) => {
+    if (!dotDragging) return;
+    const now = performance.now();
+    const dt = Math.max((now - (statusDot.dragTime || now)) / 1000, 0.008);
+    const dx = event.clientX - dotPointerX;
+    const dy = event.clientY - dotPointerY;
+    dotVX = dx / dt;
+    dotVY = dy / dt;
+    dotX += dx;
+    dotY += dy;
+    dotPointerX = event.clientX;
+    dotPointerY = event.clientY;
+    statusDot.dragTime = now;
+});
+statusDot.addEventListener('pointerup', (event) => {
+    dotDragging = false;
+    statusDot.classList.remove('dragging');
+    statusDot.releasePointerCapture(event.pointerId);
+});
+if (!reduceMotion.matches) {
+    setTimeout(startDot, 600);
+}
+
+// Click anywhere / press any key to return home.
 let leaving = false;
 const goHome = () => {
     if (leaving) return;
@@ -360,7 +462,7 @@ const goHome = () => {
 document.addEventListener('click', (event) => {
     if (event.defaultPrevented || event.button !== 0) return;
     if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
-    if (event.target.closest('a, button, #version, #inquiry-commit')) return;
+    if (event.target.closest('a, button, #version, #inquiry-commit, .dot')) return;
     if (String(window.getSelection())) return;
     goHome();
 });
