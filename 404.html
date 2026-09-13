@@ -401,17 +401,20 @@ const footerEl = document.querySelector('footer');
 const dotRadius = 5;
 const pixelsPerMetre = 100;                        // the 10px dot is a 10cm ball
 const gravity = 9.81 * pixelsPerMetre;             // 981 px/s^2
-const restitution = 0.8;                           // rubber on a hard surface
-const wallRestitution = 0.5;
-const airDrag = 0.12;                              // per second, linear damping
-const sleepSpeed = 0.25 * pixelsPerMetre;          // vertical speed that stops a bounce
-const sleepCreep = 0.04 * pixelsPerMetre;          // horizontal speed that ends a roll
+const restitution = 0.58;                          // damped enough to settle quickly
+const wallRestitution = 0.4;
+const airDrag = 0.3;                               // per second, linear damping
+const sleepSpeed = 0.5 * pixelsPerMetre;           // vertical speed that stops a bounce
+const sleepCreep = 0.08 * pixelsPerMetre;          // horizontal speed that ends a roll
+const rollResistance = 4.5;                        // rolling drag once the user is in charge
 const physicsStep = 1 / 240;                       // fixed timestep keeps bounces stable
-// One shove, chosen once per load, then never again: rolling drag scales off it.
+// The load shove, chosen once, is the only self-propelled motion: it carries the dot
+// off the rule on arrival. After that the dot is inert and obeys whatever the user does.
 const rollVector = 14 + Math.random() * 46;        // px/s of initial rightward drift
-const rollPush = rollVector * 2.4;                 // px/s^2 sustaining the roll
-const rollCreep = 34;                              // px/s the roll always decays toward
+const rollPush = rollVector * 2.4;                 // px/s^2 sustaining that first roll
+const rollCreep = 78;                              // px/s the launch roll decays toward
 const rollFriction = rollPush / rollCreep;         // drag ∝ the shove, so creep is fixed
+let dotSelfRoll = true;                            // cleared for good on first user touch
 let dotX = 0;
 let dotY = 0;
 let dotVX = 0;
@@ -446,12 +449,12 @@ const stepDot = (dt) => {
     const onGround = Math.abs(dotY - world.ground) < 0.5;
     const contact = (onLine || onGround) && dotVY === 0;
     if (contact) {
-        if (onLine) {
-            // Rolling resistance scales with the shove, so any roll bleeds down to
-            // the same gentle creep before it reaches the end of the rule.
+        if (onLine && dotSelfRoll) {
+            // Launch roll only: resistance scales with the shove, so any shove bleeds
+            // down to the same gentle creep before it reaches the end of the rule.
             dotVX += (rollPush - rollFriction * dotVX) * dt;
         } else {
-            dotVX -= dotVX * 2.4 * dt;              // rolling resistance on the page floor
+            dotVX -= dotVX * rollResistance * dt;   // plain rolling resistance
             if (Math.abs(dotVX) < sleepCreep) dotVX = 0;
         }
     } else {
@@ -559,6 +562,7 @@ statusDot.addEventListener('pointerdown', (event) => {
     if (reduceMotion.matches) return;
     event.preventDefault();
     dotDragging = true;
+    dotSelfRoll = false;          // from here on the dot only goes where it is thrown
     dotPointerX = event.clientX;
     dotPointerY = event.clientY;
     dotDragTime = performance.now();
