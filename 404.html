@@ -401,6 +401,7 @@ const dotWorld = () => {
 const floorFor = (world, x, y) => (
     x >= world.lineLeft && x <= world.lineRight && y <= world.lineY + 0.5 ? world.lineY : world.ground
 );
+let dotOnLedge = false;
 const animateDot = (time) => {
     if (dotLastTime === undefined) dotLastTime = time;
     const dt = Math.min((time - dotLastTime) / 1000, 0.032);
@@ -416,14 +417,25 @@ const animateDot = (time) => {
                 // Friction scales with the shove, so any roll bleeds down to the same
                 // gentle creep before it reaches the end of the rule.
                 dotVX += (rollPush - rollFriction * dotVX) * dt;
+                dotOnLedge = true;
             } else {
                 dotVX *= 0.97;            // settle once it reaches the page floor
                 if (Math.abs(dotVX) < 4) dotVX = 0;
+                dotOnLedge = false;
             }
         } else if (dotVY < 0) {
             dotVY += gravityPeak * dt;    // rising: full gravity, so arcs stay honest
             dotFallTime = 0;
+            dotOnLedge = false;
         } else {
+            if (dotOnLedge) {
+                // Just rolled past the end of the rule: tip over the edge and start
+                // the fall already part-way up the gravity ramp, so it drops off the
+                // cliff instead of gliding straight through it.
+                dotOnLedge = false;
+                dotVY = 45;
+                dotFallTime = gravityRamp * 0.55;
+            }
             dotFallTime += dt;            // falling: ease from a gentle release into full gravity
             dotVY += gravityPeak * easeIntoGravity(Math.min(dotFallTime / gravityRamp, 1)) * dt;
         }
