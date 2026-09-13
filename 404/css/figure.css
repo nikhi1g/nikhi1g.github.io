@@ -1,0 +1,119 @@
+.dot-slot {
+    width: 10px;
+    height: 10px;
+    flex-shrink: 0;
+}
+.dot {
+    position: fixed;
+    z-index: 2;
+    width: 10px;
+    height: 10px;
+    background-color: var(--acc);
+    border-radius: 50%;
+    cursor: grab;
+    touch-action: none;
+    will-change: left, top;
+    transition: background-color 0.12s linear;
+}
+.dot.dragging {
+    cursor: grabbing;
+}
+/* Sprouted: the ball hands off to a stroke-based SVG rig standing on the contact point. */
+.dot.sprouted {
+    background-color: transparent;
+}
+.figure {
+    position: absolute;
+    left: -10px;
+    bottom: 5px;
+    width: 30px;
+    height: 74px;
+    overflow: visible;
+    pointer-events: none;
+    opacity: 0;
+    transform: scale(0.28);
+    transform-origin: 50% 100%;
+    transition: opacity 0.12s linear, transform 0.16s ease-in;
+}
+.dot.sprouted .figure {
+    opacity: 1;
+    transform: scale(1);
+    transition: opacity 0.1s linear, transform 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.bone {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 2.1;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.skull {
+    fill: var(--acc);
+}
+.sclera {
+    fill: #fff;
+}
+.iris {
+    fill: #11161c;
+    transition: transform 0.08s linear;
+}
+/* Each joint group grows from its own pivot, so limbs unfold instead of appearing. */
+.joint {
+    transform: scale(0);
+    transition: transform 0.16s ease-in;
+}
+.dot.sprouted .joint {
+    transform: scale(1);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+#torso { transform-origin: 15px 22px; }
+#leg-l, #leg-r { transform-origin: 15px 42px; }
+#arm-l, #arm-r { transform-origin: 15px 27px; }
+#hair { transform-origin: 15px 2px; }
+/* Bottom-up pop: legs, then arms, then the hair. */
+.dot.sprouted #leg-l { transition-delay: 0.04s; }
+.dot.sprouted #leg-r { transition-delay: 0.08s; }
+.dot.sprouted #arm-l { transition-delay: 0.14s; }
+.dot.sprouted #arm-r { transition-delay: 0.18s; }
+.dot.sprouted #hair { transition-delay: 0.24s; }
+/* The ball-state eye hands over to the rig's own eye. */
+.dot.sprouted .eye {
+    opacity: 0;
+    transition: opacity 0.1s linear;
+}
+.eye {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #fff;
+    pointer-events: none;
+    opacity: 0;
+    transform: scale(0.2);
+    transform-origin: center;
+    transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.dot.asleep .eye {
+    opacity: 1;
+    transform: scale(1);
+}
+.dot.asleep.blinking .eye {
+    transform: scale(1) scaleY(0.08);
+    transition: transform 0.07s ease-in;
+}
+.pupil {
+    position: absolute;
+    top: 1.6px;
+    left: 1.6px;
+    width: 2.8px;
+    height: 2.8px;
+    border-radius: 50%;
+    background-color: #11161c;
+}
+@media (prefers-reduced-motion: reduce) {
+    .eye {
+        transition: none;
+    }
+}

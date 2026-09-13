@@ -1,0 +1,98 @@
+.copy-toast {
+    position: fixed;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    pointer-events: none;
+    color: var(--acc);
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.7);
+    will-change: transform, opacity;
+}
+.copy-toast svg {
+    width: 16px;
+    height: 16px;
+}
+.copy-toast.show {
+    animation: copy-float 0.7s ease-out forwards;
+}
+@keyframes copy-float {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.7) rotate(-10deg);
+    }
+    15% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1) rotate(5deg);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, calc(-50% - 28px)) scale(0.95) rotate(-3deg);
+    }
+}
+@keyframes copy-sink {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.7) rotate(10deg);
+    }
+    15% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1) rotate(-5deg);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, calc(-50% + 28px)) scale(0.95) rotate(3deg);
+    }
+}
+.copy-toast.show.down {
+    animation-name: copy-sink;
+}
+#inquiry-commit {
+    cursor: pointer;
+    font-family: monospace;
+}
+#inquiry-commit:hover {
+    color: var(--acc);
+}
+@media (prefers-reduced-motion: reduce) {
+    .copy-toast.show {
+        animation: none;
+        opacity: 1;
+        transform: translate(-50%, -50%);
+    }
+}
+main.leaving {
+    animation: fadeOut 0.18s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+@keyframes fadeOut {
+    to { opacity: 0; transform: translateY(-10px) scale(0.985); }
+}
+.hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--sub);
+    font-size: 0.95rem;
+}
+.hint:hover {
+    color: var(--acc);
+}
+.hint kbd {
+    font-family: monospace;
+    font-size: 0.8rem;
+    line-height: 1;
+    padding: 3px 6px;
+    border: 1px solid var(--sub);
+    border-radius: 5px;
+    transition: border-color 0.2s ease, color 0.2s ease;
+}
+.hint:hover kbd, main.leaving .hint kbd {
+    border-color: var(--acc);
+    color: var(--acc);
+}
+main.leaving .hint {
+    color: var(--acc);
+}

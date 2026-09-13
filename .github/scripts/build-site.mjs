@@ -10,6 +10,9 @@ fs.mkdirSync(outputDirectory, {recursive: true});
 fs.copyFileSync('index.html', path.join(outputDirectory, 'index.html'));
 fs.copyFileSync('404.html', path.join(outputDirectory, '404.html'));
 
+// 404 page components: css + es modules the shell loads at runtime.
+fs.cpSync('404', path.join(outputDirectory, '404'), {recursive: true});
+
 // Unlinked routes: page only, source assets stay in the repo.
 fs.mkdirSync(path.join(outputDirectory, 'why'), {recursive: true});
 fs.copyFileSync('why/index.html', path.join(outputDirectory, 'why', 'index.html'));
