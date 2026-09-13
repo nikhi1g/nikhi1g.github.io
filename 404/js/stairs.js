@@ -1,6 +1,7 @@
 const STEP_RISE = 14;
 const STEP_RUN = 22;
 const STEP_WIDTH = 30;
+const MIN_OVERLAP = 6;
 const WORK_REACH = 30;
 const FADE_MS = 200;
 const REDUCE_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
@@ -70,63 +71,99 @@ export function createStairs(dot) {
     };
 
     const planTo = (targetX, targetY) => {
-        // A new route cannot leave its old platforms registered. Remove materialised
-        // steps first, then replace the unbuilt route.
+        // Capture the current support before clearing an older route. This keeps a
+        // replanned route rooted at the surface the creature is actually standing on.
+        const position = typeof dot.pos === 'function' ? dot.pos() : null;
+        const standing = typeof dot.surfaceSpan === 'function' ? dot.surfaceSpan() : null;
+        const world = typeof dot.world === 'function' ? (dot.world() || {}) : {};
         clear();
 
-        const world = dot.world();
-        const worldLeft = finiteOr(world.left, 0);
-        const worldRight = finiteOr(world.right, worldLeft);
+        const rawWorldLeft = finiteOr(world.left, 0);
+        const rawWorldRight = finiteOr(world.right, rawWorldLeft);
+        const worldLeft = Math.min(rawWorldLeft, rawWorldRight);
+        const worldRight = Math.max(rawWorldLeft, rawWorldRight);
         const worldTop = finiteOr(world.top, 0);
-        const lowerX = Math.min(worldLeft, worldRight) + 4;
-        const upperX = Math.max(worldLeft, worldRight) - 4;
-        const xMin = Math.min(lowerX, upperX);
-        const xMax = Math.max(lowerX, upperX);
+        const innerLeft = worldLeft + 4;
+        const innerRight = worldRight - 4;
+        const xMin = Math.min(innerLeft, innerRight);
+        const xMax = Math.max(innerLeft, innerRight);
         const availableWidth = Math.max(0, xMax - xMin);
-        const run = Math.min(STEP_WIDTH, availableWidth);
+        const width = Math.min(STEP_WIDTH, availableWidth);
+        const maxLeft = xMax - width;
+        const clampLeft = (left) => Math.max(xMin, Math.min(maxLeft, left));
 
-        const position = dot.pos();
-        const rawStartX = finiteOr(position && position.x, (worldLeft + worldRight) / 2);
+        const rawStartX = finiteOr(
+            position && position.x,
+            (worldLeft + worldRight) / 2
+        );
         const startX = Math.max(xMin, Math.min(xMax, rawStartX));
         const rawTargetX = finiteOr(targetX, startX);
         const destinationX = Math.max(xMin, Math.min(xMax, rawTargetX));
         const direction = destinationX < startX ? -1 : 1;
 
-        const span = typeof dot.surfaceSpan === 'function' ? dot.surfaceSpan() : null;
         const radius = Math.max(0, finiteOr(dot.radius, 0));
-        const fallbackContactY = finiteOr(position && position.y, finiteOr(world.ground, worldTop));
-        const contactY = finiteOr(span && span.y, fallbackContactY);
-        // surfaceSpan().y is the dot's contact point. addPlatform() receives the
-        // visible platform top, which is one radius above that contact point.
-        const standingTop = contactY + radius;
-        const destinationY = finiteOr(targetY, standingTop);
-        const verticalGap = Math.max(0, standingTop - (destinationY + WORK_REACH));
-        const verticalSteps = Math.ceil(verticalGap / STEP_RISE);
-        const horizontalSteps = Math.ceil(Math.abs(destinationX - startX) / STEP_RUN);
-        const stepCount = Math.max(1, verticalSteps, horizontalSteps);
-        const horizontalDistance = Math.abs(destinationX - startX);
-        const edgeTravel = horizontalDistance < run
-            ? horizontalDistance
-            : horizontalDistance - run;
-        const horizontalShift = stepCount > 1
-            ? Math.min(STEP_RUN, edgeTravel / (stepCount - 1))
+        const fallbackContactY = finiteOr(
+            position && position.y,
+            finiteOr(world.ground, worldTop)
+        );
+        const contactY = finiteOr(standing && standing.y, fallbackContactY);
+        const baseTop = Math.max(worldTop, contactY + radius);
+        const desiredTop = Math.max(
+            worldTop,
+            finiteOr(targetY, baseTop) + WORK_REACH
+        );
+        const neededRise = Math.max(0, baseTop - desiredTop);
+        const availableRise = Math.max(0, baseTop - worldTop);
+        const totalRise = Math.min(neededRise, availableRise);
+        const verticalSteps = totalRise > 0
+            ? Math.ceil(totalRise / STEP_RISE)
             : 0;
 
-        const riseSteps = Math.max(1, verticalSteps);
+        // Put one edge of the first tread at the creature's feet. The remaining
+        // treads advance by the fixed pitch, while their 30px span leaves 8px of
+        // overlap (or more when clamping at a card edge).
+        const firstLeft = clampLeft(
+            direction > 0 ? startX : startX - width
+        );
+        const firstRight = firstLeft + width;
+        let horizontalSteps = 1;
+        if (direction > 0 && destinationX > firstRight) {
+            horizontalSteps += Math.ceil(
+                (destinationX - firstRight) / STEP_RUN
+            );
+        } else if (direction < 0 && destinationX < firstLeft) {
+            horizontalSteps += Math.ceil(
+                (firstLeft - destinationX) / STEP_RUN
+            );
+        }
+
+        const stepCount = Math.max(1, verticalSteps, horizontalSteps);
+        let previous = null;
         for (let index = 0; index < stepCount; index += 1) {
-            const horizontalOffset = index * horizontalShift;
+            const horizontalIndex = Math.min(index, horizontalSteps - 1);
             const rawLeft = direction > 0
-                ? startX + horizontalOffset
-                : startX - run - horizontalOffset;
-            const left = run >= availableWidth
-                ? xMin
-                : Math.max(xMin, Math.min(xMax - run, rawLeft));
-            const right = left + run;
-            // Horizontal runs may outnumber the vertical rise. Hold those extra
-            // steps at the first reachable level instead of climbing past targetY.
-            const rise = Math.min(index + 1, riseSteps) * STEP_RISE;
-            const y = Math.max(worldTop, standingTop - rise);
-            plan.push({left, right, y});
+                ? firstLeft + horizontalIndex * STEP_RUN
+                : firstLeft - horizontalIndex * STEP_RUN;
+            const left = clampLeft(rawLeft);
+            const rise = Math.min(totalRise, (index + 1) * STEP_RISE);
+            const step = {
+                left,
+                right: left + width,
+                y: Math.max(worldTop, baseTop - rise)
+            };
+
+            if (previous) {
+                const riseBetween = previous.y - step.y;
+                const overlap = Math.min(previous.right, step.right)
+                    - Math.max(previous.left, step.left);
+                if (riseBetween < -0.001
+                    || riseBetween > STEP_RISE + 0.001
+                    || overlap < MIN_OVERLAP - 0.001) {
+                    throw new Error('Untraversable stair plan');
+                }
+            }
+            plan.push(step);
+            previous = step;
         }
 
         return plan.length;

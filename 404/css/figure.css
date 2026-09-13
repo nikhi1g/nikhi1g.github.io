@@ -64,6 +64,10 @@
     fill: #fff;
 }
 .iris {
+    /* Its markup used to bias the resting gaze down and right. Centre it in the
+       sclera so equal cursor vectors produce equal, contained screen travel. */
+    cx: 15.6px;
+    cy: 10.6px;
     fill: #11161c;
     transition: transform 0.08s linear;
 }

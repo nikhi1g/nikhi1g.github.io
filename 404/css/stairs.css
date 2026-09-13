@@ -2,11 +2,12 @@
     position: fixed;
     z-index: 1;
     width: 30px;
-    height: 2px;
+    height: 4px;
     box-sizing: border-box;
     pointer-events: none;
-    background-color: var(--sub);
+    background: var(--sub);
     border-top: 1px solid var(--fg);
+    border-radius: 2px;
     opacity: 0;
     transform: scaleY(0);
     transform-origin: 50% 100%;
@@ -14,7 +15,7 @@
 }
 
 .stair.built {
-    opacity: 0.62;
+    opacity: 0.5;
     transform: scaleY(1);
 }
 
@@ -31,7 +32,7 @@
     }
 
     .stair.built {
-        opacity: 0.62;
+        opacity: 0.5;
         transform: scaleY(1);
     }
 

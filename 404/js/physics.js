@@ -126,12 +126,29 @@ export function createDot() {
             dotY = world.top;
             dotVY = Math.abs(dotVY) * restitution;
         }
+        // Step-up: a walking creature climbs a small rise (a stair) instead of walking
+        // into it. Only while driven and grounded, so a thrown ball cannot climb.
+        if (driven && dotVY === 0) {
+            const stepUp = 18;
+            let ledge = null;
+            for (const s of surfacesAt(dotX)) {
+                if (s.y >= prevY - 0.5) continue;            // not above us
+                if (prevY - s.y > stepUp) continue;          // too tall to step onto
+                if (!ledge || s.y > ledge.y) ledge = s;      // the lowest reachable rise
+            }
+            if (ledge) dotY = ledge.y;
+        }
         // Swept floor test: a surface only catches a dot that was above it.
         const landing = floorUnder(dotX, prevY);
         if (dotVY > 0 && landing && dotY >= landing.y) {
             dotY = landing.y;
             dotVY = -dotVY * restitution;
             if (Math.abs(dotVY) < sleepSpeed) dotVY = 0;  // sleep threshold ends micro-bounces
+        }
+        // Walking off the end of a ledge: start falling instead of hanging in the air.
+        if (driven && dotVY === 0 && !standingOn(dotX, dotY)) {
+            const below = floorUnder(dotX, dotY);
+            if (below) dotY = Math.min(dotY + gravity * dt * dt, below.y);
         }
     };
     const animateDot = (time) => {

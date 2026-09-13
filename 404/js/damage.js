@@ -8,8 +8,11 @@ const TARGET_DEFINITIONS = [
 ];
 
 const REDUCE_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
+const DESKTOP_QUERY = '(min-width: 700px)';
 const DEBRIS_SPEED = 60;
+const DESKTOP_DEBRIS_SPEED = 90;
 const DEBRIS_LIFT = -120;
+const DESKTOP_DEBRIS_LIFT = -150;
 
 const randomBetween = (min, max) => min + Math.random() * (max - min);
 
@@ -42,6 +45,7 @@ const splitText = (target) => {
 
 export function createDamage(dot) {
     const reduceMotion = window.matchMedia(REDUCE_MOTION_QUERY);
+    const desktop = window.matchMedia(DESKTOP_QUERY).matches;
     const targets = [];
     const appliedLog = [];
     const debrisClones = new Set();
@@ -49,40 +53,51 @@ export function createDamage(dot) {
     for (const definition of TARGET_DEFINITIONS) {
         const element = document.querySelector(definition.selector);
         if (!element) continue;
+
+        const stages = [...definition.stages];
+        if (desktop) {
+            stages.push('dmg-shatter');
+            if (definition.letters) stages.push('dmg-collapse');
+        }
+
         targets.push({
             el: element,
-            stages: definition.stages,
+            stages,
             letters: definition.letters === true,
             applied: 0,
             originalText: null,
             letterSpans: null,
-            fallenLetter: null,
-            debrisClone: null
+            falls: []
         });
     }
 
     const recordFor = (element) => targets.find((record) => record.el === element);
 
-    const removeDebris = (record) => {
-        if (record.debrisClone) {
-            record.debrisClone.remove();
-            debrisClones.delete(record.debrisClone);
-            record.debrisClone = null;
-        }
+    const removeDebris = (fall) => {
+        if (!fall?.clone) return;
+        fall.clone.remove();
+        debrisClones.delete(fall.clone);
         if (!debrisClones.size && typeof dot.clearDebris === 'function') {
             dot.clearDebris();
         }
     };
 
-    const knockLooseLetter = (record) => {
+    const prepareHeading = (record) => {
+        if (record.letterSpans) return;
         const split = splitText(record.el);
         record.originalText = split.originalText;
         record.letterSpans = split.letters;
+    };
 
-        // Lose the first visible glyph, rather than a space, so the heading remains
-        // legible while still visibly shedding a character.
-        const fallen = split.letters.find((letter) => letter.textContent.trim() !== '') || split.letters[0];
-        if (!fallen) return;
+    const knockLooseLetter = (record) => {
+        prepareHeading(record);
+
+        const glyphs = record.letterSpans.filter((letter) => letter.textContent.trim() !== '');
+        const stillPresent = glyphs.filter((letter) => !letter.classList.contains('letter-gone'));
+        const previous = record.falls[record.falls.length - 1]?.letter;
+        const preferred = stillPresent.find((letter) => letter !== previous);
+        const fallen = preferred || glyphs.find((letter) => letter !== previous) || glyphs[0];
+        if (!fallen) return null;
 
         const rect = fallen.getBoundingClientRect();
         const clone = fallen.cloneNode(true);
@@ -92,31 +107,47 @@ export function createDamage(dot) {
         clone.style.left = `${rect.left}px`;
         clone.style.top = `${rect.top}px`;
         document.body.appendChild(clone);
-        fallen.classList.add('letter-gone');
-        record.fallenLetter = fallen;
-        record.debrisClone = clone;
+        // Keep at least one glyph readable even when a short heading (notably
+        // "404") has fewer glyphs than desktop damage stages.
+        if (stillPresent.length > 1 && stillPresent.includes(fallen)) {
+            fallen.classList.add('letter-gone');
+        }
+
+        const fall = {letter: fallen, clone};
+        record.falls.push(fall);
         debrisClones.add(clone);
 
         // Reduced motion keeps the damaged state static instead of handing the
         // clone to the physics integrator, which would make it fall.
         if (!reduceMotion.matches && typeof dot.spawnDebris === 'function') {
+            const speed = desktop ? DESKTOP_DEBRIS_SPEED : DEBRIS_SPEED;
             dot.spawnDebris(
                 clone,
                 rect.left,
                 rect.top,
-                randomBetween(-DEBRIS_SPEED, DEBRIS_SPEED),
-                DEBRIS_LIFT
+                randomBetween(-speed, speed),
+                desktop ? DESKTOP_DEBRIS_LIFT : DEBRIS_LIFT
             );
+        }
+        return fall;
+    };
+
+    const restoreFall = (record, fall) => {
+        if (!fall) return;
+        removeDebris(fall);
+        const index = record.falls.lastIndexOf(fall);
+        if (index !== -1) record.falls.splice(index, 1);
+        if (!record.falls.some((other) => other.letter === fall.letter)) {
+            fall.letter.classList.remove('letter-gone');
         }
     };
 
     const restoreHeading = (record) => {
-        removeDebris(record);
-        if (record.fallenLetter) record.fallenLetter.classList.remove('letter-gone');
+        for (const fall of [...record.falls]) removeDebris(fall);
         if (record.originalText !== null) record.el.textContent = record.originalText;
         record.originalText = null;
         record.letterSpans = null;
-        record.fallenLetter = null;
+        record.falls = [];
     };
 
     const nextBreakTarget = () => {
@@ -149,9 +180,10 @@ export function createDamage(dot) {
         const stage = record.stages[record.applied];
         record.el.classList.add(stage);
         record.applied += 1;
-        appliedLog.push({target: record.el, stage});
-
-        if (record.letters && record.applied === 1) knockLooseLetter(record);
+        const fall = record.letters && (desktop || record.applied === 1)
+            ? knockLooseLetter(record)
+            : null;
+        appliedLog.push({target: record.el, stage, fall});
         return true;
     };
 
@@ -163,6 +195,7 @@ export function createDamage(dot) {
         appliedLog.pop();
         record.el.classList.remove(top.stage);
         record.applied -= 1;
+        restoreFall(record, top.fall);
         if (record.applied === 0 && record.letters) restoreHeading(record);
         return true;
     };

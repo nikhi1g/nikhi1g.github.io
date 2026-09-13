@@ -9,7 +9,7 @@ export function initFigure(dot) {
     const eyeballEl = statusDot.querySelector('#eyeball');
     const viewBoxWidth = figureEl.viewBox.baseVal.width;
     const pupilReach = 1.5;             // CSS px the ball-state pupil can travel
-    const irisReach = 2.6;              // viewBox units the rig's iris can travel
+    const irisReach = 3.2;              // viewBox units; leaves the iris edge inside the sclera
     const scleraOffsetX = 0.6;          // viewBox units from the skull centre
     const scleraOffsetY = -0.4;
     let mouseX = null;

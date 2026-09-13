@@ -8,7 +8,9 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
     const fleeSeconds = 1.2;
     const footVerticalReach = 30;
     const standOffDistance = 14;
-    const hopLookahead = 18;
+    const climbStallSeconds = 0.5;
+    const motionEpsilon = 0.75;
+    const surfaceEpsilon = 0.5;
 
     const complete = 'complete';
     const condition = 'condition';
@@ -35,12 +37,18 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
     let mouseY = null;
     let lastFleeRoll = -Infinity;
     let leanAmount = 0;
-    let stairBaseX = null;
+    let stairRoute = null;
 
     const isCurrent = (id) => id === runId && !motionDisabled;
 
     const clearWorkPose = () => {
         dot.el.classList.remove('peering', 'swinging', 'holding-axe', 'holding-hammer', 'building');
+    };
+
+    const clearStairs = () => {
+        if (stairs && typeof stairs.clear === 'function') stairs.clear();
+        stairRoute = null;
+        dot.el.classList.remove('building');
     };
 
     const stopPoses = () => {
@@ -126,7 +134,7 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
 
     const interruptRun = () => {
         const collapseSprout = plannedHop !== null;
-        if (stairs && typeof stairs.clear === 'function') stairs.clear();
+        clearStairs();
         runId += 1;
         active = false;
         fleeRequested = false;
@@ -139,7 +147,6 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
 
     const requestFlee = () => {
         if (!active || fleeing || fleeRequested || plannedHop) return;
-        if (stairs && typeof stairs.clear === 'function') stairs.clear();
         fleeRequested = true;
         gait.stop();
         gait.idle(false);
@@ -260,13 +267,21 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
 
     const performFlee = async (id) => {
         if (!isCurrent(id) || !fleeRequested) return interrupted;
-        if (stairs && typeof stairs.clear === 'function') stairs.clear();
         fleeRequested = false;
         fleeing = true;
         clearWorkPose();
         gait.idle(false);
         gait.lean(0);
         leanAmount = 0;
+
+        const hasStairs = stairs
+            && typeof stairs.hasAny === 'function'
+            && stairs.hasAny();
+        if (hasStairs && stairRoute && dot.surface() === 'platform') {
+            const descentResult = await walkDownStairs(id, {canFlee: false});
+            if (!isCurrent(id) || descentResult === interrupted) return interrupted;
+        }
+        if (hasStairs) clearStairs();
 
         const dir = fleeDirection();
         gait.setFacing(dir);
@@ -280,7 +295,7 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
 
         const cornered = escape === condition && !gait.isWalking();
         gait.stop();
-        if (cornered) {
+        if (cornered && dot.surface() !== 'platform') {
             const hopResult = await performHop(dir, id);
             if (!isCurrent(id) || hopResult === interrupted) return interrupted;
         }
@@ -289,111 +304,31 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
         return complete;
     };
 
-    const nextHigherSurfaceAhead = (targetX) => {
-        const current = dot.surfaceSpan();
-        if (!current || typeof dot.surfacesAt !== 'function') return null;
-
-        const position = dot.pos().x;
-        const dir = targetX >= position ? 1 : -1;
-        const distanceToTarget = Math.abs(targetX - position);
-        const scanDistance = Math.min(Math.max(distanceToTarget + 24, hopLookahead), 640);
-        let nearest = null;
-
-        for (let distance = 1; distance <= scanDistance; distance += 4) {
-            const x = position + dir * distance;
-            const beforeTarget = dir > 0
-                ? x <= targetX + arrivalDistance
-                : x >= targetX - arrivalDistance;
-            if (!beforeTarget) break;
-
-            for (const surface of dot.surfacesAt(x) || []) {
-                if (!surface || !Number.isFinite(surface.y) || surface.y >= current.y - 1) continue;
-                const edgeDistance = dir > 0
-                    ? Math.max(0, surface.left - position)
-                    : Math.max(0, position - surface.right);
-                if (!nearest
-                    || surface.y > nearest.surface.y
-                    || (surface.y === nearest.surface.y && edgeDistance < nearest.distance)) {
-                    nearest = {surface, distance: edgeDistance};
-                }
-            }
-        }
-        return nearest;
-    };
-
-    const walkTo = async (targetX, id, {climb = false} = {}) => {
+    const walkTo = async (targetX, id) => {
         if (!isCurrent(id)) return {result: interrupted, dir: 1};
-        let consecutiveMissedHops = 0;
 
-        while (isCurrent(id)) {
-            const startX = dot.pos().x;
-            const dir = targetX >= startX ? 1 : -1;
-            gait.setFacing(dir);
-
-            if (climb) {
-                const next = nextHigherSurfaceAhead(targetX);
-                const current = dot.surfaceSpan();
-                if (next && current) {
-                    const launchX = clamp(
-                        dir > 0
-                            ? next.surface.left - arrivalDistance
-                            : next.surface.right + arrivalDistance,
-                        current.left,
-                        current.right
-                    );
-                    const launch = await walkTo(launchX, id);
-                    if (!isCurrent(id) || launch.result === interrupted) {
-                        return {result: interrupted, dir};
-                    }
-                    if (launch.result === flee) return {result: flee, dir};
-                    if (launch.result !== arrived && launch.result !== ended) {
-                        return {result: ended, dir};
-                    }
-                    const afterWalk = dot.surfaceSpan();
-                    if (afterWalk && afterWalk.y < current.y - 1) {
-                        consecutiveMissedHops = 0;
-                        continue;
-                    }
-
-                    const beforeHop = dot.surfaceSpan();
-                    const hopResult = await performHop(dir, id);
-                    if (!isCurrent(id) || hopResult === interrupted) {
-                        return {result: interrupted, dir};
-                    }
-                    const afterHop = dot.surfaceSpan();
-                    const sameSurface = beforeHop
-                        && afterHop
-                        && beforeHop.kind === afterHop.kind
-                        && Math.abs(beforeHop.y - afterHop.y) < 0.5
-                        && Math.abs(beforeHop.left - afterHop.left) < 0.5
-                        && Math.abs(beforeHop.right - afterHop.right) < 0.5;
-                    consecutiveMissedHops = sameSurface ? consecutiveMissedHops + 1 : 0;
-                    if (consecutiveMissedHops >= 2) return {result: ended, dir};
-                    continue;
-                }
-            }
-
-            if (Math.abs(targetX - startX) <= arrivalDistance) {
-                gait.stop();
-                return {result: arrived, dir};
-            }
-
-            let reached = false;
-            gait.walk(dir);
-            const walkResult = await waitForStep(id, {
-                predicate: () => {
-                    const x = dot.pos().x;
-                    reached = Math.abs(targetX - x) <= arrivalDistance
-                        || (dir === 1 ? x >= targetX : x <= targetX);
-                    return reached || !gait.isWalking();
-                }
-            });
-            if (!isCurrent(id) || walkResult === interrupted) return {result: interrupted, dir};
+        const startX = dot.pos().x;
+        const dir = targetX >= startX ? 1 : -1;
+        gait.setFacing(dir);
+        if (Math.abs(targetX - startX) <= arrivalDistance) {
             gait.stop();
-            if (walkResult === flee) return {result: flee, dir};
-            return {result: reached ? arrived : ended, dir};
+            return {result: arrived, dir};
         }
-        return {result: interrupted, dir: 1};
+
+        let reached = false;
+        gait.walk(dir);
+        const walkResult = await waitForStep(id, {
+            predicate: () => {
+                const x = dot.pos().x;
+                reached = Math.abs(targetX - x) <= arrivalDistance
+                    || (dir === 1 ? x >= targetX : x <= targetX);
+                return reached || !gait.isWalking();
+            }
+        });
+        if (!isCurrent(id) || walkResult === interrupted) return {result: interrupted, dir};
+        gait.stop();
+        if (walkResult === flee) return {result: flee, dir};
+        return {result: reached ? arrived : ended, dir};
     };
 
     const handleSurfaceEnd = async (targetX, dir, id) => {
@@ -433,6 +368,19 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
                 span.left,
                 span.right
             ),
+            facing: useLeftEdge ? 1 : -1
+        };
+    };
+
+    const standBeside = (rect) => {
+        if (!rect) return null;
+        const world = dot.world();
+        const x = dot.pos().x;
+        const leftX = clamp(rect.left - standOffDistance, world.left, world.right);
+        const rightX = clamp(rect.right + standOffDistance, world.left, world.right);
+        const useLeftEdge = Math.abs(x - leftX) <= Math.abs(x - rightX);
+        return {
+            x: useLeftEdge ? leftX : rightX,
             facing: useLeftEdge ? 1 : -1
         };
     };
@@ -484,43 +432,158 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
         }
         return interrupted;
     };
-    const descendTowardGround = async (rect, id) => {
-        const current = dot.surfaceSpan();
-        const world = dot.world();
-        const ground = {
-            left: world.left,
-            right: world.right,
-            y: world.ground,
-            kind: 'ground'
-        };
-        if (!current || current.y >= ground.y - 1 || !approachFor(rect, ground)) {
+
+
+    const walkDownStairs = async (id, {canFlee = true} = {}) => {
+        if (!stairRoute || dot.surface() !== 'platform') return complete;
+
+        const position = dot.pos();
+        const dir = stairRoute.baseX < position.x
+            ? -1
+            : (stairRoute.baseX > position.x ? 1 : -stairRoute.direction);
+        let motionAnchor = position;
+        gait.setFacing(dir);
+        gait.walk(dir);
+
+        while (isCurrent(id)) {
+            let reachedBase = false;
+            let moved = false;
+            const travelResult = await waitForStep(id, {
+                canFlee,
+                seconds: climbStallSeconds,
+                predicate: () => {
+                    reachedBase = dot.isGrounded() && dot.surface() !== 'platform';
+                    if (reachedBase) return true;
+
+                    const position = dot.pos();
+                    moved = Math.abs(position.x - motionAnchor.x) >= motionEpsilon
+                        || Math.abs(position.y - motionAnchor.y) >= motionEpsilon;
+                    return moved;
+                }
+            });
+            if (!isCurrent(id) || travelResult === interrupted) {
+                gait.stop();
+                return interrupted;
+            }
+            if (travelResult === flee) {
+                gait.stop();
+                return flee;
+            }
+            if (reachedBase) {
+                gait.stop();
+                return complete;
+            }
+            if (moved) {
+                motionAnchor = dot.pos();
+                continue;
+            }
+
+            gait.stop();
             return skipped;
         }
 
-        const canExitLeft = current.left - hopLookahead >= ground.left;
-        const canExitRight = current.right + hopLookahead <= ground.right;
-        if (!canExitLeft && !canExitRight) return skipped;
-
-        const x = dot.pos().x;
-        const dir = canExitLeft && canExitRight
-            ? (x - current.left <= current.right - x ? -1 : 1)
-            : (canExitLeft ? -1 : 1);
-        const edgeX = dir < 0 ? current.left : current.right;
-        const edge = await walkTo(edgeX, id);
-        if (!isCurrent(id) || edge.result === interrupted) return interrupted;
-        if (edge.result === flee) {
-            const fleeResult = await performFlee(id);
-            return !isCurrent(id) || fleeResult === interrupted ? interrupted : flee;
-        }
-        if (edge.result !== arrived && edge.result !== ended) return skipped;
-
-        const previousY = current.y;
-        const hopResult = await performHop(dir, id);
-        if (!isCurrent(id) || hopResult === interrupted) return interrupted;
-        const landed = dot.surfaceSpan();
-        return landed && landed.y > previousY + 1 ? complete : skipped;
+        gait.stop();
+        return interrupted;
     };
 
+    const abandonStairs = async (id) => {
+        gait.stop();
+        if (isCurrent(id) && stairRoute && dot.surface() === 'platform') {
+            await walkDownStairs(id, {canFlee: false});
+        }
+        clearStairs();
+        return isCurrent(id) ? skipped : interrupted;
+    };
+
+    const climbStairs = async (rect, id) => {
+        if (!stairRoute) return skipped;
+
+        const dir = stairRoute.direction;
+        let lastPosition = dot.pos();
+        let lastSurface = dot.surfaceSpan();
+        let motionAnchor = lastPosition;
+        let gainedHeight = false;
+        let stalls = 0;
+
+        gait.setFacing(dir);
+        gait.walk(dir);
+
+        while (isCurrent(id)) {
+            let reachedWorkSurface = false;
+            let moved = false;
+            const climbResult = await waitForStep(id, {
+                seconds: climbStallSeconds,
+                predicate: () => {
+                    const position = dot.pos();
+                    const surface = dot.surfaceSpan();
+                    const positionMovedUp = position.y < lastPosition.y - surfaceEpsilon;
+                    const changedSurface = surface
+                        && lastSurface
+                        && (surface.kind !== lastSurface.kind
+                            || Math.abs(surface.y - lastSurface.y) > surfaceEpsilon);
+                    const surfaceMovedUp = changedSurface
+                        && surface.y <= lastSurface.y + surfaceEpsilon;
+                    if (positionMovedUp
+                        || surfaceMovedUp
+                        || position.y < stairRoute.baseY - surfaceEpsilon) {
+                        gainedHeight = true;
+                    }
+
+                    lastPosition = position;
+                    if (surface) lastSurface = surface;
+
+                    reachedWorkSurface = gainedHeight
+                        && Boolean(approachFor(rect, surface));
+                    if (reachedWorkSurface) return true;
+
+                    moved = Boolean(surfaceMovedUp)
+                        || Math.abs(position.x - motionAnchor.x) >= motionEpsilon
+                        || Math.abs(position.y - motionAnchor.y) >= motionEpsilon;
+                    return moved;
+                }
+            });
+
+            if (!isCurrent(id) || climbResult === interrupted) {
+                gait.stop();
+                clearStairs();
+                return interrupted;
+            }
+            if (climbResult === flee) {
+                gait.stop();
+                return flee;
+            }
+            if (reachedWorkSurface) {
+                gait.stop();
+                return complete;
+            }
+            if (moved) {
+                motionAnchor = dot.pos();
+                continue;
+            }
+
+            gait.stop();
+            stalls += 1;
+            if (stalls >= 2) {
+                clearStairs();
+                return skipped;
+            }
+
+            const hopResult = await performHop(dir, id);
+            if (!isCurrent(id) || hopResult === interrupted) {
+                clearStairs();
+                return interrupted;
+            }
+            lastSurface = dot.surfaceSpan();
+            lastPosition = dot.pos();
+            motionAnchor = lastPosition;
+            gait.setFacing(dir);
+            gait.walk(dir);
+        }
+
+        gait.stop();
+        clearStairs();
+        return interrupted;
+    };
 
     const buildAndClimb = async (target, rect, id) => {
         if (!stairs
@@ -533,19 +596,20 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
             return skipped;
         }
 
-        stairs.clear();
-        const world = dot.world();
-        const currentX = dot.pos().x;
-        stairBaseX = currentX;
-        const useLeftEdge = Math.abs(currentX - rect.left) <= Math.abs(currentX - rect.right);
-        const targetX = clamp(
-            useLeftEdge ? rect.left - standOffDistance : rect.right + standOffDistance,
-            world.left,
-            world.right
-        );
-        const plannedSteps = stairs.planTo(targetX, rect.bottom);
-        if ((!Number.isFinite(plannedSteps) || plannedSteps <= 0) && !stairs.isComplete()) {
-            stairs.clear();
+        clearStairs();
+        const destination = standBeside(rect);
+        const basePosition = dot.pos();
+        if (!destination) return skipped;
+
+        stairs.planTo(destination.x, rect.bottom);
+        stairRoute = {
+            baseX: basePosition.x,
+            baseY: basePosition.y,
+            direction: destination.x < basePosition.x ? -1 : 1
+        };
+        gait.setFacing(stairRoute.direction);
+        if (stairs.isComplete()) {
+            clearStairs();
             return skipped;
         }
 
@@ -554,17 +618,19 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
             while (isCurrent(id) && !stairs.isComplete()) {
                 const swingResult = await waitForAction(gait.swing('hammer'), id);
                 if (!isCurrent(id) || swingResult === interrupted) {
-                    stairs.clear();
+                    clearStairs();
                     return interrupted;
                 }
                 if (swingResult === flee) {
-                    stairs.clear();
+                    clearStairs();
                     const fleeResult = await performFlee(id);
                     if (!isCurrent(id) || fleeResult === interrupted) return interrupted;
                     return flee;
                 }
-                if (!stairs.buildNext()) {
-                    stairs.clear();
+
+                const built = stairs.buildNext();
+                if (built === false && !stairs.isComplete()) {
+                    clearStairs();
                     return skipped;
                 }
             }
@@ -572,68 +638,80 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
             dot.el.classList.remove('building');
         }
         if (!isCurrent(id)) {
-            stairs.clear();
+            clearStairs();
             return interrupted;
         }
 
-        const approach = await walkTo(targetX, id, {climb: true});
-        if (!isCurrent(id) || approach.result === interrupted) {
-            stairs.clear();
-            return interrupted;
-        }
-        if (approach.result === flee) {
-            stairs.clear();
+        const climbResult = await climbStairs(damage.targetRect(target), id);
+        if (!isCurrent(id) || climbResult === interrupted) return interrupted;
+        if (climbResult === flee) {
             const fleeResult = await performFlee(id);
             if (!isCurrent(id) || fleeResult === interrupted) return interrupted;
             return flee;
         }
-        if (approach.result !== arrived) {
-            stairs.clear();
-            return skipped;
-        }
+        if (climbResult !== complete) return climbResult;
 
         const workPosition = approachFor(damage.targetRect(target));
-        if (!workPosition) {
-            stairs.clear();
-            return skipped;
+        if (!workPosition) return abandonStairs(id);
+
+        const approach = await walkTo(workPosition.x, id);
+        if (!isCurrent(id) || approach.result === interrupted) {
+            clearStairs();
+            return interrupted;
         }
-        gait.setFacing(workPosition.facing);
+        if (approach.result === flee) {
+            const fleeResult = await performFlee(id);
+            if (!isCurrent(id) || fleeResult === interrupted) return interrupted;
+            return flee;
+        }
+        if (approach.result !== arrived) return abandonStairs(id);
+
+        const latestPosition = approachFor(damage.targetRect(target));
+        if (!latestPosition) return abandonStairs(id);
+        gait.setFacing(latestPosition.facing);
         return complete;
     };
 
     const dismantleStairs = async (id) => {
-        if (!stairs || typeof stairs.hasAny !== 'function') return complete;
+        if (!stairs || typeof stairs.hasAny !== 'function' || !stairs.hasAny()) {
+            stairRoute = null;
+            return complete;
+        }
+
+        const descentResult = await walkDownStairs(id);
+        if (!isCurrent(id) || descentResult === interrupted) {
+            clearStairs();
+            return interrupted;
+        }
+        if (descentResult === flee) {
+            const fleeResult = await performFlee(id);
+            return !isCurrent(id) || fleeResult === interrupted ? interrupted : complete;
+        }
+        if (descentResult !== complete) {
+            clearStairs();
+            return complete;
+        }
+        if (stairRoute) gait.setFacing(stairRoute.direction);
+
         while (isCurrent(id) && stairs.hasAny()) {
             const swingResult = await waitForAction(gait.swing('hammer'), id);
             if (!isCurrent(id) || swingResult === interrupted) {
-                stairs.clear();
-                stairBaseX = null;
+                clearStairs();
                 return interrupted;
             }
             if (swingResult === flee) {
-                stairs.clear();
-                stairBaseX = null;
                 const fleeResult = await performFlee(id);
                 return !isCurrent(id) || fleeResult === interrupted ? interrupted : complete;
             }
-            const standingOnStair = dot.surface() === 'platform';
-            if (!stairs.teardownNext()) {
-                stairs.clear();
-                stairBaseX = null;
+
+            const removed = stairs.teardownNext();
+            if (removed === false && stairs.hasAny()) {
+                clearStairs();
                 return complete;
             }
-
-            if (standingOnStair) {
-                const returnDirection = stairBaseX === null || stairBaseX >= dot.pos().x ? 1 : -1;
-                const hopResult = await performHop(returnDirection, id);
-                if (!isCurrent(id) || hopResult === interrupted) {
-                    stairs.clear();
-                    stairBaseX = null;
-                    return interrupted;
-                }
-            }
         }
-        stairBaseX = null;
+
+        stairRoute = null;
         return isCurrent(id) ? complete : interrupted;
     };
 
@@ -665,22 +743,13 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
             let routeResult;
 
             const surface = dot.surfaceSpan();
-            const world = dot.world();
-            const ground = {
-                left: world.left,
-                right: world.right,
-                y: world.ground,
-                kind: 'ground'
-            };
+            const targetIsHigh = rect.bottom
+                < (surface ? surface.y : dot.pos().y) - footVerticalReach;
 
             if (approachFor(rect, surface)) {
                 routeResult = await approachOnFoot(target, rect, id);
-            } else if (surface
-                && surface.y < ground.y - 1
-                && approachFor(rect, ground)) {
-                routeResult = await descendTowardGround(rect, id);
-                if (routeResult === complete) continue;
             } else if (kind === 'axe'
+                && targetIsHigh
                 && arrow
                 && typeof arrow.canHit === 'function'
                 && arrow.canHit(rect)) {
@@ -698,11 +767,10 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
             while (completedSwings < swingCount) {
                 const swingResult = await waitForAction(gait.swing(kind), id);
                 if (!isCurrent(id) || swingResult === interrupted) {
-                    if (stairs && stairs.hasAny()) stairs.clear();
+                    clearStairs();
                     return interrupted;
                 }
                 if (swingResult === flee) {
-                    if (stairs && stairs.hasAny()) stairs.clear();
                     const fleeResult = await performFlee(id);
                     if (!isCurrent(id) || fleeResult === interrupted) return interrupted;
                     movedAway = true;

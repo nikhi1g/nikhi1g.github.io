@@ -18,13 +18,17 @@
     opacity: 1;
 }
 
-/* Lucide paths are authored at 24×24. After the nested 0.46 scale, 4.57
-   icon units become 2.1 rig units: the same visual weight as .bone. */
+/* Lucide paths are authored at 24×24. The nested icon scale went from 0.46
+   to 0.70 (see 404.html comment for the translate arithmetic) to make the
+   tools read at a larger, legible size. To keep the same on-screen line
+   weight as .bone (2.1 rig units), the icon-space stroke-width is
+   recomputed as 2.1 / 0.70 = 3: at scale 0.70, 3 icon units become
+   exactly 2.1 rig units again. */
 #axe path,
 #hammer path {
     fill: none;
     stroke: var(--fg);
-    stroke-width: 4.57;
+    stroke-width: 3;
     stroke-linecap: round;
     stroke-linejoin: round;
 }
