@@ -356,18 +356,20 @@ version.addEventListener('click', (event) => {
 
 const mainEl = document.querySelector('main');
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-// Let the status dot ease into a gravity-driven bounce inside the card.
+// The status dot falls with eased gravity, rolls along the footer rule, then drops off its edge.
 const statusDot = document.querySelector('.dot');
 const dotSlot = document.querySelector('.dot-slot');
+const footerEl = document.querySelector('footer');
 const dotRadius = 5;
-const initialDropDuration = 1200;
+const gravityPeak = 1600;      // px/s^2 once the fall is up to speed
+const gravityRamp = 0.55;      // seconds to ease from rest into full gravity
+const rollPush = 70;           // px/s^2 nudge that keeps it rolling rightward
 let dotX = 0;
 let dotY = 0;
 let dotVX = 0;
 let dotVY = 0;
 let dotLastTime;
-let dotDropStart;
-let dotDropTop = 0;
+let dotFallTime = 0;
 let dotDragging = false;
 let dotPointerX = 0;
 let dotPointerY = 0;
@@ -376,53 +378,80 @@ const placeDot = () => {
     statusDot.style.left = `${dotX - dotRadius}px`;
     statusDot.style.top = `${dotY - dotRadius}px`;
 };
-const dotBounds = () => {
-    const rect = mainEl.getBoundingClientRect();
+// Cubic ease-in: the descent starts gently and accelerates into real gravity.
+const easeIntoGravity = (progress) => progress * progress * progress;
+const dotWorld = () => {
+    const card = mainEl.getBoundingClientRect();
+    const footer = footerEl.getBoundingClientRect();
     return {
-        left: rect.left + dotRadius,
-        right: rect.right - dotRadius,
-        top: rect.top + dotRadius,
-        bottom: rect.bottom - dotRadius
+        left: card.left + dotRadius,
+        right: card.right - dotRadius,
+        top: card.top + dotRadius,
+        ground: card.bottom - dotRadius,
+        lineY: footer.top - dotRadius,
+        lineLeft: footer.left,
+        lineRight: footer.right
     };
 };
-// Cubic Bézier with both control points at the start: a gentle release that accelerates.
-const easeIntoGravity = (progress) => progress * progress * progress;
+// The rule is a floor only for a dot that is above it and within its span.
+const floorFor = (world, x, y) => (
+    x >= world.lineLeft && x <= world.lineRight && y <= world.lineY + 0.5 ? world.lineY : world.ground
+);
 const animateDot = (time) => {
     if (dotLastTime === undefined) dotLastTime = time;
     const dt = Math.min((time - dotLastTime) / 1000, 0.032);
     dotLastTime = time;
-    const bounds = dotBounds();
-    if (!dotDragging && dotDropStart !== undefined) {
-        const progress = Math.min((time - dotDropStart) / initialDropDuration, 1);
-        dotY = dotDropTop + (bounds.bottom - dotDropTop) * easeIntoGravity(progress);
-        if (progress === 1) {
-            dotDropStart = undefined;
-            dotVY = 720;
+    if (!dotDragging) {
+        const world = dotWorld();
+        const floor = floorFor(world, dotX, dotY);
+        const resting = dotVY === 0 && dotY >= floor - 0.5;
+        if (resting) {
+            dotY = floor;
+            dotFallTime = 0;
+            if (floor === world.lineY) {
+                dotVX += rollPush * dt;   // roll on toward the end of the rule
+                dotVX *= 0.999;
+            } else {
+                dotVX *= 0.97;            // settle once it reaches the page floor
+                if (Math.abs(dotVX) < 4) dotVX = 0;
+            }
+        } else if (dotVY < 0) {
+            dotVY += gravityPeak * dt;    // rising: full gravity, so arcs stay honest
+            dotFallTime = 0;
+        } else {
+            dotFallTime += dt;            // falling: ease from a gentle release into full gravity
+            dotVY += gravityPeak * easeIntoGravity(Math.min(dotFallTime / gravityRamp, 1)) * dt;
         }
-    } else if (!dotDragging) {
-        dotVY += 900 * dt;
+        const wasAbove = dotY <= world.lineY + 0.5;
         dotX += dotVX * dt;
         dotY += dotVY * dt;
-        if (dotX < bounds.left || dotX > bounds.right) {
-            dotX = Math.max(bounds.left, Math.min(bounds.right, dotX));
-            dotVX *= -0.72;
+        if (dotX < world.left || dotX > world.right) {
+            dotX = Math.max(world.left, Math.min(world.right, dotX));
+            dotVX *= -0.6;
         }
-        if (dotY < bounds.top || dotY > bounds.bottom) {
-            dotY = Math.max(bounds.top, Math.min(bounds.bottom, dotY));
-            dotVY *= -0.72;
-            if (Math.abs(dotVY) < 18 && dotY === bounds.bottom) dotVY = 0;
+        if (dotY < world.top) {
+            dotY = world.top;
+            dotVY = Math.abs(dotVY) * 0.6;
         }
-        dotVX *= 0.998;
+        // Swept test, so a fast fall cannot tunnel through the rule.
+        const onSpan = dotX >= world.lineLeft && dotX <= world.lineRight;
+        const landing = onSpan && wasAbove ? world.lineY : world.ground;
+        if (dotVY > 0 && dotY >= landing) {
+            dotY = landing;
+            dotVY = Math.abs(dotVY) < 60 ? 0 : -dotVY * 0.55;
+            dotFallTime = 0;
+        }
     }
     placeDot();
     requestAnimationFrame(animateDot);
 };
-const startDot = (time) => {
+const startDot = () => {
     const rect = dotSlot.getBoundingClientRect();
     dotX = rect.left + rect.width / 2;
     dotY = rect.top + rect.height / 2;
-    dotDropTop = dotY;
-    dotDropStart = time;
+    dotVX = 18;                   // a small shove, as if rolled off a ledge
+    dotVY = 0;
+    dotFallTime = 0;
     statusDot.remove();
     document.body.appendChild(statusDot);
     placeDot();
@@ -432,7 +461,6 @@ statusDot.addEventListener('pointerdown', (event) => {
     if (reduceMotion.matches) return;
     event.preventDefault();
     dotDragging = true;
-    dotDropStart = undefined;
     dotPointerX = event.clientX;
     dotPointerY = event.clientY;
     dotDragTime = performance.now();
@@ -457,11 +485,13 @@ statusDot.addEventListener('pointermove', (event) => {
 });
 statusDot.addEventListener('pointerup', (event) => {
     dotDragging = false;
+    dotVY = Math.max(dotVY, 0) * 0.2;   // released: ease into the same gentle-then-fast fall
+    dotFallTime = 0;
     statusDot.classList.remove('dragging');
     statusDot.releasePointerCapture(event.pointerId);
 });
 if (!reduceMotion.matches) {
-    setTimeout(() => requestAnimationFrame(startDot), 600);
+    setTimeout(startDot, 600);
 }
 
 // Click anywhere / press any key to return home.
