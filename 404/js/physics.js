@@ -7,8 +7,8 @@ export function createDot() {
     const statusDot = document.querySelector('.dot');
     const dotSlot = document.querySelector('.dot-slot');
     const footerEl = document.querySelector('footer');
-    const dotRadius = 5;
-    const pixelsPerMetre = 100;                        // the 10px dot is a 10cm ball
+    const dotRadius = 8;
+    const pixelsPerMetre = 100;                        // the 16px dot is a 16cm ball
     const gravity = 9.81 * pixelsPerMetre;             // 981 px/s^2
     const restitution = 0.58;                          // damped enough to settle quickly
     const wallRestitution = 0.4;

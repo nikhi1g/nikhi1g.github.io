@@ -1,13 +1,13 @@
 .dot-slot {
-    width: 10px;
-    height: 10px;
+    width: 16px;
+    height: 16px;
     flex-shrink: 0;
 }
 .dot {
     position: fixed;
     z-index: 2;
-    width: 10px;
-    height: 10px;
+    width: 16px;
+    height: 16px;
     background-color: var(--acc);
     border-radius: 50%;
     cursor: grab;
@@ -18,16 +18,17 @@
 .dot.dragging {
     cursor: grabbing;
 }
-/* Sprouted: the ball hands off to a stroke-based SVG rig standing on the contact point. */
+/* Sprouted: the ball hands off to a stroke-based SVG rig standing on the contact point.
+   The rig is rendered so its head is exactly the ball's 16px, so there is no size jump. */
 .dot.sprouted {
     background-color: transparent;
 }
 .figure {
     position: absolute;
-    left: -10px;
-    bottom: 5px;
-    width: 30px;
-    height: 74px;
+    left: -2.9px;
+    bottom: 7.7px;
+    width: 21.8px;
+    height: 53.8px;
     overflow: visible;
     pointer-events: none;
     opacity: 0;
@@ -39,6 +40,8 @@
     opacity: 1;
     transform: scale(1);
     transition: opacity 0.1s linear, transform 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+    pointer-events: auto;      /* the whole figure is grabbable, and never leaves the page */
+    cursor: grab;
 }
 .bone {
     fill: none;
@@ -56,6 +59,13 @@
 .iris {
     fill: #11161c;
     transition: transform 0.08s linear;
+}
+#eyeball {
+    transform-origin: 15.6px 10.6px;
+    transition: transform 0.07s ease-in;
+}
+.dot.sprouted.blinking #eyeball {
+    transform: scaleY(0.08);
 }
 /* Each joint group grows from its own pivot, so limbs unfold instead of appearing. */
 .joint {
@@ -76,17 +86,12 @@
 .dot.sprouted #arm-l { transition-delay: 0.14s; }
 .dot.sprouted #arm-r { transition-delay: 0.18s; }
 .dot.sprouted #hair { transition-delay: 0.24s; }
-/* The ball-state eye hands over to the rig's own eye. */
-.dot.sprouted .eye {
-    opacity: 0;
-    transition: opacity 0.1s linear;
-}
 .eye {
     position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 6px;
-    height: 6px;
+    top: 3.2px;
+    left: 3.2px;
+    width: 9.6px;
+    height: 9.6px;
     border-radius: 50%;
     background-color: #fff;
     pointer-events: none;
@@ -103,17 +108,23 @@
     transform: scale(1) scaleY(0.08);
     transition: transform 0.07s ease-in;
 }
+/* The ball-state eye hands over to the rig's own eye. */
+.dot.sprouted .eye {
+    opacity: 0;
+    transition: opacity 0.1s linear;
+}
 .pupil {
     position: absolute;
-    top: 1.6px;
-    left: 1.6px;
-    width: 2.8px;
-    height: 2.8px;
+    top: 2.5px;
+    left: 2.5px;
+    width: 4.5px;
+    height: 4.5px;
     border-radius: 50%;
     background-color: #11161c;
 }
 @media (prefers-reduced-motion: reduce) {
-    .eye {
+    .eye,
+    #eyeball {
         transition: none;
     }
 }

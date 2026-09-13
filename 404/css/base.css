@@ -38,17 +38,18 @@ main {
 }
 @media (max-width: 600px) {
     main {
-        padding: 1.5rem;
-        border-radius: 0;
-        outline: none;
+        box-sizing: border-box;
+        width: calc(100% - 2rem);
         max-width: 100%;
-        height: 100vh;
+        min-height: calc(100vh - 2rem);
+        margin: 1rem;
+        padding: 1.5rem;
         display: flex;
         flex-direction: column;
         justify-content: center;
     }
     body {
-        align-items: flex-start;
+        align-items: center;
     }
 }
 @keyframes fadeUp {
