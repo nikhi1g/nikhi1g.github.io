@@ -167,6 +167,48 @@ footer {
     color: var(--sub);
     font-size: 0.8rem;
 }
+.copy-toast {
+    position: fixed;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    pointer-events: none;
+    color: var(--acc);
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.7);
+    will-change: transform, opacity;
+}
+.copy-toast svg {
+    width: 16px;
+    height: 16px;
+}
+.copy-toast.show {
+    animation: copy-float 0.7s ease-out forwards;
+}
+@keyframes copy-float {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.7) rotate(-10deg);
+    }
+    15% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1) rotate(5deg);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, calc(-50% - 28px)) scale(0.95) rotate(-3deg);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .copy-toast.show {
+        animation: none;
+        opacity: 1;
+        transform: translate(-50%, -50%);
+    }
+}
 </style>
 </head>
 <body>
@@ -206,6 +248,13 @@ footer {
     </footer>
 </main>
 
+<span id="copy-toast" class="copy-toast" role="status" aria-live="polite" aria-label="Copied">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="5" y="4" width="14" height="17" rx="2"></rect>
+        <path d="M9 4V3h6v1"></path>
+    </svg>
+</span>
+
 <script>
 // Theme Toggle
 const toggle = document.getElementById('theme-toggle');
@@ -235,6 +284,36 @@ toggle.onclick = () => {
     const current = root.getAttribute('data-theme');
     setTheme(current === 'dark' ? 'light' : 'dark');
 };
+
+const inquiryEmail = document.getElementById('inquiry-email');
+const copyToast = document.getElementById('copy-toast');
+let copyToastTimer;
+const showCopyToast = (event, message, target) => {
+    const rect = target.getBoundingClientRect();
+    const hasPointer = event.detail > 0 || event.clientX !== 0 || event.clientY !== 0;
+    const x = hasPointer ? event.clientX : rect.left + rect.width / 2;
+    const y = hasPointer ? event.clientY : rect.top + rect.height / 2;
+    copyToast.setAttribute('aria-label', message);
+    copyToast.style.left = `${x}px`;
+    copyToast.style.top = `${y}px`;
+    copyToast.classList.remove('show');
+    void copyToast.offsetWidth;
+    copyToast.classList.add('show');
+    clearTimeout(copyToastTimer);
+    copyToastTimer = setTimeout(() => copyToast.classList.remove('show'), 700);
+};
+const copyText = async (text, event, target) => {
+    try {
+        await navigator.clipboard.writeText(text);
+        showCopyToast(event, 'Copied', target);
+    } catch {
+        showCopyToast(event, 'Copy failed', target);
+    }
+};
+inquiryEmail.addEventListener('click', (event) => {
+    event.preventDefault();
+    copyText(inquiryEmail.textContent.trim(), event, inquiryEmail);
+});
 
 // Version Watcher
 (async()=>{
