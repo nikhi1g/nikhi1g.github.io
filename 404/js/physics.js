@@ -39,6 +39,14 @@ export function createDot() {
     const onSleepChange = (fn) => {
         sleepListeners.push(fn);
     };
+    let driven = false;              // creature is walking: it owns vx, not friction
+    let contactNow = false;          // touching a surface as of the last step
+    let surfaceNow = null;           // 'line' | 'ground' | null
+    const stepListeners = [];
+    const debris = [];
+    const onStep = (fn) => {
+        stepListeners.push(fn);
+    };
     const placeDot = () => {
         statusDot.style.left = `${dotX - dotRadius}px`;
         statusDot.style.top = `${dotY - dotRadius}px`;
@@ -62,15 +70,17 @@ export function createDot() {
         const onLine = overLine && Math.abs(dotY - world.lineY) < 0.5;
         const onGround = Math.abs(dotY - world.ground) < 0.5;
         const contact = (onLine || onGround) && dotVY === 0;
-        if (contact) {
-            if (onLine && dotSelfRoll) {
-                // Launch roll only: resistance scales with the shove, so any shove bleeds
-                // down to the same gentle creep before it reaches the end of the rule.
-                dotVX += (rollPush - rollFriction * dotVX) * dt;
-            } else {
-                dotVX -= dotVX * rollResistance * dt;   // plain rolling resistance
-                if (Math.abs(dotVX) < sleepCreep) dotVX = 0;
-            }
+        contactNow = contact;
+        surfaceNow = contact ? (onLine ? 'line' : 'ground') : null;
+        if (contact && driven) {
+            // Walking: the creature holds vx steady, so no rolling resistance applies.
+        } else if (contact && onLine && dotSelfRoll) {
+            // Launch roll only: resistance scales with the shove, so any shove bleeds
+            // down to the same gentle creep before it reaches the end of the rule.
+            dotVX += (rollPush - rollFriction * dotVX) * dt;
+        } else if (contact) {
+            dotVX -= dotVX * rollResistance * dt;   // plain rolling resistance
+            if (Math.abs(dotVX) < sleepCreep) dotVX = 0;
         } else {
             dotVY += gravity * dt;                      // constant g, the whole way down
             dotVX -= dotVX * airDrag * dt;
@@ -103,18 +113,22 @@ export function createDot() {
             dotAccumulator += frame;
             while (dotAccumulator >= physicsStep) {
                 stepDot(physicsStep);
+                stepDebris(physicsStep);
                 dotAccumulator -= physicsStep;
             }
         } else {
             dotAccumulator = 0;
         }
         placeDot();
-        const asleep = !dotDragging && dotVX === 0 && dotVY === 0;
+        // Settled means "standing still on a surface" — a driven walk keeps the creature
+        // alive, so walking must not read as a wake-up and collapse the figure.
+        const asleep = !dotDragging && dotVY === 0 && (driven ? contactNow : dotVX === 0);
         if (asleep !== dotAsleep) {
             dotAsleep = asleep;
             statusDot.classList.toggle('asleep', asleep);
             for (const listener of sleepListeners) listener(asleep);
         }
+        for (const listener of stepListeners) listener(frame);
         requestAnimationFrame(animateDot);
     };
     const startDot = () => {
@@ -167,5 +181,82 @@ export function createDot() {
     const start = () => {
         if (!reduceMotion.matches) setTimeout(startDot, 600);
     };
-    return { el: statusDot, start, onSleepChange, isAsleep: () => dotAsleep, isDragging: () => dotDragging };
+    // A driven walk: the creature sets its own speed while it is on a surface.
+    const drive = (vx) => {
+        driven = true;
+        dotVX = vx;
+    };
+    const release = () => {
+        driven = false;
+    };
+    // A hop is a real impulse: control goes straight back to the integrator.
+    const hop = (vy, vx = dotVX) => {
+        driven = false;
+        dotVY = -Math.abs(vy);
+        dotVX = vx;
+    };
+    // Chopped-off page bits fall with the same constants and the same floors.
+    const spawnDebris = (el, x, y, vx, vy) => {
+        el.style.position = 'fixed';
+        el.style.left = `${x}px`;
+        el.style.top = `${y}px`;
+        debris.push({el, x, y, vx, vy, rot: 0, spin: (Math.random() - 0.5) * 600, resting: false});
+    };
+    const clearDebris = () => {
+        debris.length = 0;
+    };
+    const stepDebris = (dt) => {
+        if (!debris.length) return;
+        const world = dotWorld();
+        for (const bit of debris) {
+            if (bit.resting) continue;
+            bit.vy += gravity * dt;
+            bit.vx -= bit.vx * airDrag * dt;
+            const prevY = bit.y;
+            bit.x += bit.vx * dt;
+            bit.y += bit.vy * dt;
+            bit.rot += bit.spin * dt;
+            if (bit.x < world.left || bit.x > world.right) {
+                bit.x = Math.max(world.left, Math.min(world.right, bit.x));
+                bit.vx *= -wallRestitution;
+            }
+            const overLine = bit.x >= world.lineLeft && bit.x <= world.lineRight;
+            const floor = overLine && prevY <= world.lineY + 0.5 ? world.lineY : world.ground;
+            if (bit.vy > 0 && bit.y >= floor) {
+                bit.y = floor;
+                bit.vy = -bit.vy * restitution;
+                bit.spin *= 0.5;
+                if (Math.abs(bit.vy) < sleepSpeed) {
+                    bit.vy = 0;
+                    bit.vx -= bit.vx * rollResistance * dt;
+                    if (Math.abs(bit.vx) < sleepCreep) {
+                        bit.vx = 0;
+                        bit.resting = true;
+                    }
+                }
+            }
+            bit.el.style.left = `${bit.x}px`;
+            bit.el.style.top = `${bit.y}px`;
+            bit.el.style.transform = `rotate(${bit.rot}deg)`;
+        }
+    };
+    return {
+        el: statusDot,
+        radius: dotRadius,
+        start,
+        onSleepChange,
+        onStep,
+        isAsleep: () => dotAsleep,
+        isDragging: () => dotDragging,
+        isGrounded: () => contactNow,
+        surface: () => surfaceNow,
+        pos: () => ({x: dotX, y: dotY}),
+        velocity: () => ({vx: dotVX, vy: dotVY}),
+        world: dotWorld,
+        drive,
+        release,
+        hop,
+        spawnDebris,
+        clearDebris
+    };
 }

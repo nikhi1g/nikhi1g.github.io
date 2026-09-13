@@ -3,24 +3,62 @@ export function initFigure(dot) {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const eyeEl = statusDot.querySelector('.eye');
     const pupilEl = statusDot.querySelector('.pupil');
-    const scleraEl = statusDot.querySelector('.sclera');
+    const figureEl = statusDot.querySelector('.figure');
+    const skullEl = statusDot.querySelector('.skull');
     const irisEl = statusDot.querySelector('.iris');
-    const pupilReach = 1.5;             // px the ball-state pupil can travel
+    const eyeballEl = statusDot.querySelector('#eyeball');
+    const viewBoxWidth = figureEl.viewBox.baseVal.width;
+    const pupilReach = 1.5;             // CSS px the ball-state pupil can travel
     const irisReach = 2.6;              // viewBox units the rig's iris can travel
+    const scleraOffsetX = 0.6;          // viewBox units from the skull centre
+    const scleraOffsetY = -0.4;
     let mouseX = null;
     let mouseY = null;
     let sprouted = false;
     const aimEye = () => {
         if (mouseX === null) return;
-        const target = sprouted ? scleraEl : eyeEl;
-        const reachMax = sprouted ? irisReach : pupilReach;
-        const box = target.getBoundingClientRect();
-        const dx = mouseX - (box.left + box.width / 2);
-        const dy = mouseY - (box.top + box.height / 2);
-        const distance = Math.hypot(dx, dy) || 1;
-        const reach = Math.min(distance, reachMax * 8) / (reachMax * 8) * reachMax;
-        const shift = `translate(${(dx / distance) * reach}px, ${(dy / distance) * reach}px)`;
-        (sprouted ? irisEl : pupilEl).style.transform = shift;
+
+        let centerX;
+        let centerY;
+        let maxReachCss;
+        let outputScale = 1;
+        let horizontalDirection = 1;
+        if (sprouted) {
+            const figureBox = figureEl.getBoundingClientRect();
+            const scale = figureBox.width / viewBoxWidth;
+            if (!scale) return;
+
+            // The skull never moves within the rig, so its rect cannot feed the
+            // iris's previous translation back into the next gaze calculation.
+            const skullBox = skullEl.getBoundingClientRect();
+            horizontalDirection = statusDot.classList.contains('face-left') ? -1 : 1;
+            centerX = skullBox.left + skullBox.width / 2
+                + scleraOffsetX * scale * horizontalDirection;
+            centerY = skullBox.top + skullBox.height / 2 + scleraOffsetY * scale;
+            maxReachCss = irisReach * scale;
+            outputScale = scale;
+        } else {
+            const eyeBox = eyeEl.getBoundingClientRect();
+            centerX = eyeBox.left + eyeBox.width / 2;
+            centerY = eyeBox.top + eyeBox.height / 2;
+            maxReachCss = pupilReach;
+        }
+
+        const dx = mouseX - centerX;
+        const dy = mouseY - centerY;
+        const distance = Math.hypot(dx, dy);
+        const target = sprouted ? irisEl : pupilEl;
+        if (!distance) {
+            target.style.transform = 'translate(0px, 0px)';
+            return;
+        }
+
+        const reachCss = Math.min(distance / 8, maxReachCss);
+        // SVG transforms use viewBox units, so convert the desired screen-pixel
+        // displacement back to the rig's coordinate system.
+        const shiftX = (dx / distance) * reachCss / outputScale * horizontalDirection;
+        const shiftY = (dy / distance) * reachCss / outputScale;
+        target.style.transform = `translate(${shiftX}px, ${shiftY}px)`;
     };
     window.addEventListener('mousemove', (event) => {
         mouseX = event.clientX;
@@ -30,11 +68,16 @@ export function initFigure(dot) {
     // Idle blinks: a lid-drop every few seconds, sometimes twice in quick succession.
     let blinkTimer;
     let sproutTimer;
+    const clearBlink = () => {
+        statusDot.classList.remove('blinking');
+        eyeEl.style.removeProperty('transform');
+        eyeballEl.style.removeProperty('transform');
+    };
     const blink = (times) => {
         if (!dot.isAsleep()) return;
         statusDot.classList.add('blinking');
         setTimeout(() => {
-            statusDot.classList.remove('blinking');
+            clearBlink();
             if (times > 1) setTimeout(() => blink(times - 1), 140);
         }, 90);
     };
@@ -63,7 +106,9 @@ export function initFigure(dot) {
             clearTimeout(blinkTimer);
             clearTimeout(sproutTimer);
             sprouted = false;
-            statusDot.classList.remove('blinking');
+            clearBlink();
+            pupilEl.style.removeProperty('transform');
+            irisEl.style.removeProperty('transform');
             statusDot.classList.remove('sprouted');   // any motion curls it back up
         }
     });

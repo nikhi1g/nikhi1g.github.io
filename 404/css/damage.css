@@ -1,0 +1,114 @@
+/* Damage is deliberately additive: every stage is just one class on its target. */
+h1,
+.message h2,
+.message p,
+.hint kbd,
+footer,
+footer span {
+    transition: transform 0.25s ease, color 0.25s ease, opacity 0.25s ease, border-color 0.25s ease;
+}
+
+.dmg-tilt {
+    transform: translateY(2px) rotate(-2deg);
+    transform-origin: center bottom;
+}
+
+/* A narrow clipped zig-zag keeps the text underneath usable while making the seam
+   visibly jagged. */
+.dmg-crack {
+    position: relative;
+}
+.dmg-crack::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 44%;
+    height: 16%;
+    pointer-events: none;
+    background: linear-gradient(90deg, var(--sub), var(--fg), var(--sub));
+    clip-path: polygon(
+        0 35%, 12% 65%, 25% 28%, 39% 72%, 53% 34%,
+        67% 68%, 81% 25%, 100% 58%, 100% 75%, 81% 43%,
+        67% 84%, 53% 50%, 39% 90%, 25% 46%, 12% 82%, 0 52%
+    );
+    opacity: 0.68;
+    transition: opacity 0.25s ease;
+}
+
+.dmg-dim {
+    color: var(--sub);
+    opacity: 0.68;
+}
+
+/* The original footer border is made transparent while these two short rules
+   move apart, leaving a small, unmistakable break in the page rule. */
+footer {
+    position: relative;
+}
+footer::before,
+footer::after {
+    content: '';
+    position: absolute;
+    top: -1px;
+    width: 50%;
+    height: 1px;
+    background-color: var(--sub);
+    pointer-events: none;
+    opacity: 0;
+    transition: transform 0.25s ease, opacity 0.25s ease, background-color 0.25s ease;
+}
+footer::before {
+    left: 0;
+}
+footer::after {
+    right: 0;
+}
+footer.dmg-split {
+    border-top-color: transparent;
+}
+footer.dmg-split::before {
+    opacity: 1;
+    transform: translate(-6px, -2px) rotate(-1deg);
+}
+footer.dmg-split::after {
+    opacity: 1;
+    transform: translate(6px, 2px) rotate(1deg);
+}
+
+.letter {
+    display: inline-block;
+    white-space: pre;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.letter-gone {
+    opacity: 0;
+    transform: translateY(-0.15em) scale(0.9);
+}
+
+.letter-debris {
+    position: fixed;
+    z-index: 3;
+    display: inline-block;
+    pointer-events: none;
+    white-space: pre;
+    font: inherit;
+    color: inherit;
+    will-change: left, top, transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    h1,
+    .message h2,
+    .message p,
+    .hint kbd,
+    footer,
+    footer span,
+    footer::before,
+    footer::after,
+    .dmg-crack::after,
+    .letter,
+    .letter-debris {
+        transition: none;
+    }
+}

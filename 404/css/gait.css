@@ -1,0 +1,151 @@
+/* Gait: idle breathing, the walk cycle, facing, edge-peering, hops, cursor lean,
+   and tool swings layered on top of the sprouted rig from figure.css.
+   Everything here keys off state classes toggled by gait.js on .dot (the rig's
+   parent), and rotates/translates the existing #torso / #leg-* / #arm-* / #hair
+   joint groups already defined in figure.css. Transform-origins are given in
+   viewBox units with a "px" suffix, matching figure.css's own rig landmarks. */
+
+/* --- Idle bob: a slow breathing sway, not a bounce. --- */
+@keyframes gaitIdleTorso {
+    from { transform: translateY(0) rotate(0deg); }
+    to { transform: translateY(-0.6px) rotate(1deg); }
+}
+@keyframes gaitIdleHair {
+    from { transform: translateY(0) rotate(0deg); }
+    to { transform: translateY(-0.3px) rotate(-0.6deg); }
+}
+.dot.sprouted.idle-bob #torso {
+    transform-origin: 15px 42px;
+    animation: gaitIdleTorso 2.6s ease-in-out infinite alternate;
+}
+.dot.sprouted.idle-bob #hair {
+    animation: gaitIdleHair 2.6s ease-in-out infinite alternate;
+    animation-delay: 0.35s;
+}
+
+/* --- Walk cycle: opposed legs, counter-swinging arms, a torso that rises twice
+   per stride. #leg-r/#arm-l are the same keyframes as their partner, started
+   half a cycle in via a negative delay, so nothing needs a mirrored keyframe. --- */
+@keyframes gaitLegSwing {
+    0% { transform: rotate(-22deg); }
+    50% { transform: rotate(22deg); }
+    100% { transform: rotate(-22deg); }
+}
+@keyframes gaitArmSwing {
+    0% { transform: rotate(16deg); }
+    50% { transform: rotate(-16deg); }
+    100% { transform: rotate(16deg); }
+}
+@keyframes gaitTorsoWalkBob {
+    0%, 50%, 100% { transform: translateY(0); }
+    25%, 75% { transform: translateY(-0.5px); }
+}
+.dot.sprouted.walking #leg-l {
+    animation: gaitLegSwing 0.7s linear infinite;
+}
+.dot.sprouted.walking #leg-r {
+    animation: gaitLegSwing 0.7s linear infinite;
+    animation-delay: -0.35s;
+}
+.dot.sprouted.walking #arm-r {
+    animation: gaitArmSwing 0.7s linear infinite;
+}
+.dot.sprouted.walking #arm-l {
+    animation: gaitArmSwing 0.7s linear infinite;
+    animation-delay: -0.35s;
+}
+.dot.sprouted.walking #torso {
+    animation: gaitTorsoWalkBob 0.7s linear infinite;
+}
+
+/* --- Facing: mirror the whole rig. The scale(1) is included so this composes
+   with .dot.sprouted .figure's own pop-in scale instead of clobbering it. --- */
+.dot.sprouted.face-left .figure {
+    transform: scaleX(-1) scale(1);
+    transform-origin: 50% 100%;
+}
+
+/* --- Peering: a held lean over an edge, front leg straight. Which leg counts
+   as "front" flips with facing. --- */
+.dot.sprouted.peering #torso {
+    transform-origin: 15px 42px;
+    transform: rotate(10deg);
+    transition: transform 0.35s ease-out;
+}
+.dot.sprouted.peering #leg-r {
+    transform: rotate(0deg);
+    transition: transform 0.35s ease-out;
+}
+.dot.sprouted.peering #leg-l {
+    transform: rotate(7deg);
+    transition: transform 0.35s ease-out;
+}
+.dot.sprouted.peering.face-left #leg-r {
+    transform: rotate(7deg);
+}
+.dot.sprouted.peering.face-left #leg-l {
+    transform: rotate(0deg);
+}
+.dot.sprouted.peering #hair {
+    transform: rotate(-16deg);
+    transition: transform 0.35s ease-out;
+}
+
+/* --- Hop: legs tucked in, arms thrown up, snapped on almost instantly. --- */
+.dot.sprouted.hopping #leg-l {
+    transform: rotate(14deg);
+    transition: transform 0.12s linear;
+}
+.dot.sprouted.hopping #leg-r {
+    transform: rotate(-14deg);
+    transition: transform 0.12s linear;
+}
+.dot.sprouted.hopping #arm-l,
+.dot.sprouted.hopping #arm-r {
+    transform: rotate(-40deg);
+    transition: transform 0.12s linear;
+}
+
+/* --- Lean: JS drives --lean (-1..1) inline as the cursor gets close. --- */
+.dot.sprouted.leaning #torso {
+    transform-origin: 15px 42px;
+    transform: rotate(calc(var(--lean, 0) * 12deg));
+    transition: transform 0.25s ease-out;
+}
+
+/* --- Swing: a single re-triggerable chop/hammer stroke on the tool arm. Wind
+   up eases out, the strike eases in, and the arm holds its landed pose until
+   the "swinging" class is removed. --- */
+@keyframes gaitSwingArm {
+    0% { transform: rotate(0deg); animation-timing-function: ease-out; }
+    30% { transform: rotate(-70deg); animation-timing-function: ease-in; }
+    100% { transform: rotate(45deg); }
+}
+.dot.sprouted.swinging #arm-r {
+    transform-origin: 15px 27px;
+    animation: gaitSwingArm 0.42s;
+    animation-fill-mode: forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dot.sprouted.idle-bob #torso,
+    .dot.sprouted.idle-bob #hair,
+    .dot.sprouted.walking #leg-l,
+    .dot.sprouted.walking #leg-r,
+    .dot.sprouted.walking #arm-l,
+    .dot.sprouted.walking #arm-r,
+    .dot.sprouted.walking #torso,
+    .dot.sprouted.peering #torso,
+    .dot.sprouted.peering #leg-l,
+    .dot.sprouted.peering #leg-r,
+    .dot.sprouted.peering #hair,
+    .dot.sprouted.hopping #leg-l,
+    .dot.sprouted.hopping #leg-r,
+    .dot.sprouted.hopping #arm-l,
+    .dot.sprouted.hopping #arm-r,
+    .dot.sprouted.leaning #torso,
+    .dot.sprouted.swinging #arm-r {
+        animation: none;
+        transition: none;
+    }
+}

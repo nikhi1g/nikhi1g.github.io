@@ -1,0 +1,38 @@
+/* Right-hand tools (#axe, #hammer): both are plain SVG groups nested inside
+   #arm-r in the 404.html rig. Because they are children of #arm-r, any
+   rotation applied to the arm (walking swing, tool swing, lean, etc.)
+   carries the tool along automatically — do NOT reparent #axe/#hammer to
+   the SVG root or the tool will stop tracking the hand. */
+
+#axe,
+#hammer {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+}
+
+/* A tool is only ever drawn while the figure is sprouted — a plain ball
+   must never render a floating axe or hammer. */
+.dot.sprouted.holding-axe #axe,
+.dot.sprouted.holding-hammer #hammer {
+    opacity: 1;
+}
+
+/* Extra whip on the axe swing: a brief additional rotation about the hand. */
+.dot.swinging.holding-axe #axe {
+    transform: rotate(8deg);
+    transform-origin: 22.5px 38.5px;
+    transition: transform 0.1s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #axe,
+    #hammer {
+        transition: none;
+    }
+
+    .dot.swinging.holding-axe #axe {
+        transform: none;
+        transition: none;
+    }
+}

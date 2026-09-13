@@ -100,18 +100,17 @@
     transform-origin: center;
     transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.dot.asleep .eye {
+.dot.asleep:not(.sprouted) > .eye {
     opacity: 1;
     transform: scale(1);
 }
-.dot.asleep.blinking .eye {
+.dot.asleep.blinking:not(.sprouted) > .eye {
     transform: scale(1) scaleY(0.08);
     transition: transform 0.07s ease-in;
 }
-/* The ball-state eye hands over to the rig's own eye. */
-.dot.sprouted .eye {
-    opacity: 0;
-    transition: opacity 0.1s linear;
+/* The ball-state eye hands over completely to the rig's own eye. */
+.dot.sprouted > .eye {
+    display: none;
 }
 .pupil {
     position: absolute;
