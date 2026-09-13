@@ -7,8 +7,8 @@ export function createDot() {
     const statusDot = document.querySelector('.dot');
     const dotSlot = document.querySelector('.dot-slot');
     const footerEl = document.querySelector('footer');
-    const dotRadius = 8;
-    const pixelsPerMetre = 100;                        // the 16px dot is a 16cm ball
+    const dotRadius = 10;
+    const pixelsPerMetre = 100;                        // the 20px dot is a 20cm ball
     const gravity = 9.81 * pixelsPerMetre;             // 981 px/s^2
     const restitution = 0.58;                          // damped enough to settle quickly
     const wallRestitution = 0.4;
@@ -64,17 +64,47 @@ export function createDot() {
             lineRight: footer.right
         };
     };
+    // Every walkable surface, in one list: the footer rule, the card floor, and any
+    // platform the creature has built. Each is {y, left, right, kind}.
+    const platforms = [];
+    let platformSeq = 0;
+    const addPlatform = (left, right, y) => {
+        const id = ++platformSeq;
+        platforms.push({id, left, right, y: y - dotRadius, kind: 'platform'});
+        return id;
+    };
+    const removePlatform = (id) => {
+        const i = platforms.findIndex((p) => p.id === id);
+        if (i >= 0) platforms.splice(i, 1);
+    };
+    const clearPlatforms = () => {
+        platforms.length = 0;
+    };
+    const surfacesAt = (x) => {
+        const world = dotWorld();
+        const list = [{y: world.ground, left: world.left, right: world.right, kind: 'ground'},
+            {y: world.lineY, left: world.lineLeft, right: world.lineRight, kind: 'line'}, ...platforms];
+        return list.filter((s) => x >= s.left && x <= s.right);
+    };
+    // The surface a falling dot lands on: the highest one it was above before this step.
+    const floorUnder = (x, prevY) => {
+        let best = null;
+        for (const s of surfacesAt(x)) {
+            if (prevY > s.y + 0.5) continue;
+            if (!best || s.y < best.y) best = s;
+        }
+        return best;
+    };
+    const standingOn = (x, y) => surfacesAt(x).find((s) => Math.abs(y - s.y) < 0.5) || null;
     const stepDot = (dt) => {
         const world = dotWorld();
-        const overLine = dotX >= world.lineLeft && dotX <= world.lineRight;
-        const onLine = overLine && Math.abs(dotY - world.lineY) < 0.5;
-        const onGround = Math.abs(dotY - world.ground) < 0.5;
-        const contact = (onLine || onGround) && dotVY === 0;
+        const resting = standingOn(dotX, dotY);
+        const contact = !!resting && dotVY === 0;
         contactNow = contact;
-        surfaceNow = contact ? (onLine ? 'line' : 'ground') : null;
+        surfaceNow = contact ? resting.kind : null;
         if (contact && driven) {
             // Walking: the creature holds vx steady, so no rolling resistance applies.
-        } else if (contact && onLine && dotSelfRoll) {
+        } else if (contact && resting.kind === 'line' && dotSelfRoll) {
             // Launch roll only: resistance scales with the shove, so any shove bleeds
             // down to the same gentle creep before it reaches the end of the rule.
             dotVX += (rollPush - rollFriction * dotVX) * dt;
@@ -96,11 +126,10 @@ export function createDot() {
             dotY = world.top;
             dotVY = Math.abs(dotVY) * restitution;
         }
-        // Swept floor test: the rule only catches a dot that was above it.
-        const stillOverLine = dotX >= world.lineLeft && dotX <= world.lineRight;
-        const floor = stillOverLine && prevY <= world.lineY + 0.5 ? world.lineY : world.ground;
-        if (dotVY > 0 && dotY >= floor) {
-            dotY = floor;
+        // Swept floor test: a surface only catches a dot that was above it.
+        const landing = floorUnder(dotX, prevY);
+        if (dotVY > 0 && landing && dotY >= landing.y) {
+            dotY = landing.y;
             dotVY = -dotVY * restitution;
             if (Math.abs(dotVY) < sleepSpeed) dotVY = 0;  // sleep threshold ends micro-bounces
         }
@@ -253,6 +282,14 @@ export function createDot() {
         pos: () => ({x: dotX, y: dotY}),
         velocity: () => ({vx: dotVX, vy: dotVY}),
         world: dotWorld,
+        surfacesAt,
+        surfaceSpan: () => {
+            const s = standingOn(dotX, dotY);
+            return s ? {left: s.left, right: s.right, y: s.y, kind: s.kind} : null;
+        },
+        addPlatform,
+        removePlatform,
+        clearPlatforms,
         drive,
         release,
         hop,

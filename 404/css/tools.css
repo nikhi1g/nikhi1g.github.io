@@ -18,9 +18,21 @@
     opacity: 1;
 }
 
-/* Extra whip on the axe swing: a brief additional rotation about the hand. */
+/* Lucide paths are authored at 24×24. After the nested 0.46 scale, 4.57
+   icon units become 2.1 rig units: the same visual weight as .bone. */
+#axe path,
+#hammer path {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 4.57;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* Extra whip on the axe swing. CSS transform replaces the group's SVG
+   transform attribute, so 46deg explicitly includes the 38deg base angle. */
 .dot.swinging.holding-axe #axe {
-    transform: rotate(8deg);
+    transform: rotate(46deg);
     transform-origin: 22.5px 38.5px;
     transition: transform 0.1s ease;
 }
@@ -31,8 +43,9 @@
         transition: none;
     }
 
+    /* transform: none would flatten the grip angle too, so hold the base angle. */
     .dot.swinging.holding-axe #axe {
-        transform: none;
+        transform: rotate(38deg);
         transition: none;
     }
 }

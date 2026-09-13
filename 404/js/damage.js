@@ -140,6 +140,7 @@ export function createDamage(dot) {
         const rect = target.getBoundingClientRect();
         return Math.max(minimum, Math.min(maximum, rect.left + rect.width / 2));
     };
+    const targetRect = (target) => target.getBoundingClientRect();
 
     const breakStage = (target) => {
         const record = recordFor(target);
@@ -173,6 +174,7 @@ export function createDamage(dot) {
         nextBreakTarget,
         nextFixTarget,
         targetX,
+        targetRect,
         breakStage,
         fixStage,
         isFullyBroken,

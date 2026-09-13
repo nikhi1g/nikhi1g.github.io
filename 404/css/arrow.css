@@ -1,0 +1,73 @@
+.bone-arrow {
+    position: fixed;
+    z-index: 1;
+    width: 18px;
+    height: 8px;
+    pointer-events: none;
+    transform-origin: 50% 50%;
+    will-change: left, top, transform;
+}
+
+.bone-arrow svg {
+    display: block;
+    width: 18px;
+    height: 8px;
+    overflow: visible;
+    transform: rotate(var(--arrow-angle, 0deg));
+    transform-origin: 50% 50%;
+}
+
+.bone-arrow__shaft,
+.bone-arrow__knob,
+.bone-arrow__tip {
+    fill: var(--bg);
+    stroke: var(--fg);
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+}
+
+.dot.sprouted.holding-bow #arm-l,
+.dot.sprouted.holding-bow #arm-r {
+    transform-origin: 15px 27px;
+    transition: transform 0.26s ease-out;
+}
+
+/* The left arm presents the bow toward --aim; the right hand rests by the
+   cheek until .drawing pulls it farther back from the bow hand. */
+.dot.sprouted.holding-bow #arm-l {
+    transform: rotate(147deg) rotate(calc(var(--aim, 0) * 1deg));
+}
+
+.dot.sprouted.holding-bow #arm-r {
+    transform: rotate(-112deg) rotate(calc(var(--aim, 0) * 1deg));
+}
+
+.dot.sprouted.holding-bow.drawing #arm-r {
+    transform: rotate(-92deg) rotate(calc(var(--aim, 0) * 1deg));
+}
+
+/* The complete rig is mirrored while facing left, so invert only the world-space
+   aim component to keep the bow pointed at the same target. */
+.dot.sprouted.face-left.holding-bow #arm-l {
+    transform: rotate(147deg) rotate(calc(var(--aim, 0) * -1deg));
+}
+
+.dot.sprouted.face-left.holding-bow #arm-r {
+    transform: rotate(-112deg) rotate(calc(var(--aim, 0) * -1deg));
+}
+
+.dot.sprouted.face-left.holding-bow.drawing #arm-r {
+    transform: rotate(-92deg) rotate(calc(var(--aim, 0) * -1deg));
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dot.sprouted.holding-bow #arm-l,
+    .dot.sprouted.holding-bow #arm-r,
+    .bone-arrow,
+    .bone-arrow svg {
+        animation: none;
+        transition: none;
+    }
+}

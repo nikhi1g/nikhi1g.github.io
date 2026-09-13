@@ -1,13 +1,13 @@
 .dot-slot {
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
     flex-shrink: 0;
 }
 .dot {
     position: fixed;
     z-index: 2;
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
     background-color: var(--acc);
     border-radius: 50%;
     cursor: grab;
@@ -19,16 +19,23 @@
     cursor: grabbing;
 }
 /* Sprouted: the ball hands off to a stroke-based SVG rig standing on the contact point.
-   The rig is rendered so its head is exactly the ball's 16px, so there is no size jump. */
+   The rig is rendered so its head is exactly the ball's 20px, so there is no size jump. */
 .dot.sprouted {
     background-color: transparent;
 }
 .figure {
     position: absolute;
-    left: -2.9px;
-    bottom: 7.7px;
-    width: 21.8px;
-    height: 53.8px;
+    /* left: horizontally centre the 27.25px-wide figure on the 20px dot box: (20 - 27.25) / 2 = -3.625px. */
+    left: -3.625px;
+    /* bottom: the dot box's bottom edge sits 10px below the contact point (dot centre, radius 10).
+       In the SVG the feet sit at viewBox y=65.5, 0.5 units above the viewBox's bottom edge (66,
+       since viewBox="0 -8 30 74" runs from y=-8 to y=66). Rendered at height 67.25px, that 0.5-unit
+       gap scales to (0.5 / 74) * 67.25 = 0.4544px above the figure box's own bottom edge.
+       bottom = radius - feetOffsetFromBoxBottom = 10 - 0.4544 = 9.55px, so the feet land on the
+       contact point exactly. */
+    bottom: 9.55px;
+    width: 27.25px;
+    height: 67.25px;
     overflow: visible;
     pointer-events: none;
     opacity: 0;
@@ -88,10 +95,10 @@
 .dot.sprouted #hair { transition-delay: 0.24s; }
 .eye {
     position: absolute;
-    top: 3.2px;
-    left: 3.2px;
-    width: 9.6px;
-    height: 9.6px;
+    top: 4px;
+    left: 4px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
     background-color: #fff;
     pointer-events: none;
@@ -114,10 +121,10 @@
 }
 .pupil {
     position: absolute;
-    top: 2.5px;
-    left: 2.5px;
-    width: 4.5px;
-    height: 4.5px;
+    top: 3.125px;
+    left: 3.125px;
+    width: 5.625px;
+    height: 5.625px;
     border-radius: 50%;
     background-color: #11161c;
 }

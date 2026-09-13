@@ -6,6 +6,8 @@ import {createDot} from './physics.js';
 import {initFigure} from './figure.js';
 import {createGait} from './gait.js';
 import {createDamage} from './damage.js';
+import {createStairs} from './stairs.js';
+import {createArrow} from './arrow.js';
 import {createCreature} from './creature.js';
 
 initTheme();
@@ -17,7 +19,9 @@ initFigure(dot);
 
 const gait = createGait(dot);
 const damage = createDamage(dot);
-createCreature({dot, gait, damage}).start();
+const stairs = createStairs(dot);
+const arrow = createArrow(dot);
+createCreature({dot, gait, damage, stairs, arrow}).start();
 
 dot.start();
 

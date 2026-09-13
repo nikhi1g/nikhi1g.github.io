@@ -58,10 +58,11 @@
     animation: gaitTorsoWalkBob 0.7s linear infinite;
 }
 
-/* --- Facing: mirror the whole rig. The scale(1) is included so this composes
-   with .dot.sprouted .figure's own pop-in scale instead of clobbering it. --- */
+/* --- Facing: mirror the whole rig with the independent scale property. Keeping
+   the mirror off transform preserves the sprout pop while making turns a hard
+   cut with no compressed in-between frame. --- */
 .dot.sprouted.face-left .figure {
-    transform: scaleX(-1) scale(1);
+    scale: -1 1;
     transform-origin: 50% 100%;
 }
 
