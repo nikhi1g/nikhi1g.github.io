@@ -363,7 +363,11 @@ const footerEl = document.querySelector('footer');
 const dotRadius = 5;
 const gravityPeak = 1600;      // px/s^2 once the fall is up to speed
 const gravityRamp = 0.55;      // seconds to ease from rest into full gravity
-const rollPush = 70;           // px/s^2 nudge that keeps it rolling rightward
+// One shove, chosen once per load, then never again: everything else scales off it.
+const rollVector = 14 + Math.random() * 46;   // px/s of initial rightward drift
+const rollPush = rollVector * 2.4;            // px/s^2 keeping it rolling on a surface
+const rollCreep = 34;                         // px/s the roll always decays toward
+const rollFriction = rollPush / rollCreep;    // drag ∝ the shove, so the creep speed is fixed
 let dotX = 0;
 let dotY = 0;
 let dotVX = 0;
@@ -409,8 +413,9 @@ const animateDot = (time) => {
             dotY = floor;
             dotFallTime = 0;
             if (floor === world.lineY) {
-                dotVX += rollPush * dt;   // roll on toward the end of the rule
-                dotVX *= 0.999;
+                // Friction scales with the shove, so any roll bleeds down to the same
+                // gentle creep before it reaches the end of the rule.
+                dotVX += (rollPush - rollFriction * dotVX) * dt;
             } else {
                 dotVX *= 0.97;            // settle once it reaches the page floor
                 if (Math.abs(dotVX) < 4) dotVX = 0;
@@ -449,7 +454,7 @@ const startDot = () => {
     const rect = dotSlot.getBoundingClientRect();
     dotX = rect.left + rect.width / 2;
     dotY = rect.top + rect.height / 2;
-    dotVX = 18;                   // a small shove, as if rolled off a ledge
+    dotVX = rollVector;           // a small random shove, as if rolled off a ledge
     dotVY = 0;
     dotFallTime = 0;
     statusDot.remove();
