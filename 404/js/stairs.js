@@ -2,6 +2,7 @@ const STEP_RISE = 14;
 const STEP_RUN = 22;
 const STEP_WIDTH = 30;
 const MIN_OVERLAP = 6;
+const LADDER_RUN_THRESHOLD = 8;
 const WORK_REACH = 30;
 const FADE_MS = 200;
 const REDUCE_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
@@ -120,30 +121,26 @@ export function createStairs(dot) {
             : 0;
 
         // Put one edge of the first tread at the creature's feet. The remaining
-        // treads advance by the fixed pitch, while their 30px span leaves 8px of
-        // overlap (or more when clamping at a card edge).
+        // treads advance by at most the fixed pitch, while their 30px span leaves
+        // at least 8px of overlap (or more when clamping at a card edge).
         const firstLeft = clampLeft(
             direction > 0 ? startX : startX - width
         );
         const firstRight = firstLeft + width;
-        let horizontalSteps = 1;
-        if (direction > 0 && destinationX > firstRight) {
-            horizontalSteps += Math.ceil(
-                (destinationX - firstRight) / STEP_RUN
-            );
-        } else if (direction < 0 && destinationX < firstLeft) {
-            horizontalSteps += Math.ceil(
-                (firstLeft - destinationX) / STEP_RUN
-            );
-        }
+        const horizontalDistance = direction > 0
+            ? Math.max(0, destinationX - firstRight)
+            : Math.max(0, firstLeft - destinationX);
+        const horizontalSteps = 1 + Math.ceil(horizontalDistance / STEP_RUN);
 
         const stepCount = Math.max(1, verticalSteps, horizontalSteps);
         let previous = null;
         for (let index = 0; index < stepCount; index += 1) {
             const horizontalIndex = Math.min(index, horizontalSteps - 1);
-            const rawLeft = direction > 0
-                ? firstLeft + horizontalIndex * STEP_RUN
-                : firstLeft - horizontalIndex * STEP_RUN;
+            const horizontalAdvance = Math.min(
+                horizontalDistance,
+                horizontalIndex * STEP_RUN
+            );
+            const rawLeft = firstLeft + direction * horizontalAdvance;
             const left = clampLeft(rawLeft);
             const rise = Math.min(totalRise, (index + 1) * STEP_RISE);
             const step = {
@@ -205,12 +202,24 @@ export function createStairs(dot) {
 
     const hasAny = () => built.length > 0;
 
+    const mode = () => {
+        if (plan.length < 2) return 'stairs';
+
+        let totalAdvance = 0;
+        for (let index = 1; index < plan.length; index += 1) {
+            totalAdvance += Math.abs(plan[index].left - plan[index - 1].left);
+        }
+        const meanAdvance = totalAdvance / (plan.length - 1);
+        return meanAdvance < LADDER_RUN_THRESHOLD ? 'ladder' : 'stairs';
+    };
+
     return {
         planTo,
         buildNext,
         isComplete,
         teardownNext,
         hasAny,
-        clear
+        clear,
+        mode
     };
 }

@@ -1,9 +1,11 @@
-/* Gait: idle breathing, the walk cycle, facing, edge-peering, hops, cursor lean,
-   and tool swings layered on top of the sprouted rig from figure.css.
-   Everything here keys off state classes toggled by gait.js on .dot (the rig's
-   parent), and rotates/translates the existing #torso / #leg-* / #arm-* / #hair
-   joint groups already defined in figure.css. Transform-origins are given in
-   viewBox units with a "px" suffix, matching figure.css's own rig landmarks. */
+/* Gait: idle breathing, the walk cycle, stair/ladder climbs, facing, edge-peering,
+   hops, cursor lean, and tool swings layered on top of the sprouted rig from
+   figure.css. Everything here keys off state classes toggled by gait.js on .dot
+   (the rig's parent), and rotates/translates the existing #torso / #leg-* /
+   #arm-* / #shin-* / #fore-* / #hair joint groups: hips and shoulders pivot
+   about the origins figure.css defines, knees and elbows about the origins set
+   just below. Transform-origins are given in viewBox units with a "px" suffix,
+   matching figure.css's own rig landmarks. */
 
 /* --- Idle bob: a slow breathing sway, not a bounce. --- */
 @keyframes gaitIdleTorso {
@@ -23,18 +25,36 @@
     animation-delay: 0.35s;
 }
 
+/* --- Knee/elbow pivots: figure.css sets hip (#leg-*) and shoulder (#arm-*)
+   origins; these are the nested shin/forearm joints added for bending gaits. --- */
+#shin-l { transform-origin: 11.5px 54px; }
+#shin-r { transform-origin: 18.5px 54px; }
+#fore-l { transform-origin: 10px 33px; }
+#fore-r { transform-origin: 20px 33px; }
+
 /* --- Walk cycle: opposed legs, counter-swinging arms, a torso that rises twice
    per stride. #leg-r/#arm-l are the same keyframes as their partner, started
-   half a cycle in via a negative delay, so nothing needs a mirrored keyframe. --- */
+   half a cycle in via a negative delay, so nothing needs a mirrored keyframe.
+   Shins fold at the knee during mid-swing and straighten at contact; forearms
+   counter-swing gently at the elbow for a natural pendulum lag. --- */
 @keyframes gaitLegSwing {
     0% { transform: rotate(-22deg); }
     50% { transform: rotate(22deg); }
     100% { transform: rotate(-22deg); }
 }
+@keyframes gaitShinSwing {
+    0%, 50%, 75%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-38deg); }
+}
 @keyframes gaitArmSwing {
     0% { transform: rotate(16deg); }
     50% { transform: rotate(-16deg); }
     100% { transform: rotate(16deg); }
+}
+@keyframes gaitForeSwing {
+    0% { transform: rotate(-12deg); }
+    50% { transform: rotate(12deg); }
+    100% { transform: rotate(-12deg); }
 }
 @keyframes gaitTorsoWalkBob {
     0%, 50%, 100% { transform: translateY(0); }
@@ -47,6 +67,13 @@
     animation: gaitLegSwing 0.7s linear infinite;
     animation-delay: -0.35s;
 }
+.dot.sprouted.walking #shin-l {
+    animation: gaitShinSwing 0.7s linear infinite;
+}
+.dot.sprouted.walking #shin-r {
+    animation: gaitShinSwing 0.7s linear infinite;
+    animation-delay: -0.35s;
+}
 .dot.sprouted.walking #arm-r {
     animation: gaitArmSwing 0.7s linear infinite;
 }
@@ -54,8 +81,162 @@
     animation: gaitArmSwing 0.7s linear infinite;
     animation-delay: -0.35s;
 }
+.dot.sprouted.walking #fore-r {
+    animation: gaitForeSwing 0.7s linear infinite;
+}
+.dot.sprouted.walking #fore-l {
+    animation: gaitForeSwing 0.7s linear infinite;
+    animation-delay: -0.35s;
+}
 .dot.sprouted.walking #torso {
     animation: gaitTorsoWalkBob 0.7s linear infinite;
+}
+
+/* --- Stair climb: a high, deliberate step-up. The lead leg swings up hard with
+   a much deeper knee fold than the walk (so the foot clears the tread), then the
+   knee extends as the torso pushes up off the planted foot. Legs run 50% out of
+   phase like the walk; the torso push lands twice per cycle, once per leg. --- */
+@keyframes gaitStairHip {
+    0% { transform: rotate(-18deg); }
+    50% { transform: rotate(34deg); }
+    75% { transform: rotate(30deg); }
+    100% { transform: rotate(-18deg); }
+}
+@keyframes gaitStairKnee {
+    0% { transform: rotate(0deg); }
+    35% { transform: rotate(-70deg); }
+    75% { transform: rotate(-6deg); }
+    100% { transform: rotate(0deg); }
+}
+@keyframes gaitStairArm {
+    0% { transform: rotate(6deg); }
+    50% { transform: rotate(-25deg); }
+    100% { transform: rotate(6deg); }
+}
+@keyframes gaitStairTorsoPush {
+    0%, 50%, 100% { transform: translateY(0); }
+    25%, 75% { transform: translateY(-1px); }
+}
+.dot.sprouted.climbing #leg-l {
+    animation: gaitStairHip 0.8s linear infinite;
+}
+.dot.sprouted.climbing #leg-r {
+    animation: gaitStairHip 0.8s linear infinite;
+    animation-delay: -0.4s;
+}
+.dot.sprouted.climbing #shin-l {
+    animation: gaitStairKnee 0.8s linear infinite;
+}
+.dot.sprouted.climbing #shin-r {
+    animation: gaitStairKnee 0.8s linear infinite;
+    animation-delay: -0.4s;
+}
+.dot.sprouted.climbing #arm-r {
+    animation: gaitStairArm 0.8s linear infinite;
+}
+.dot.sprouted.climbing #arm-l {
+    animation: gaitStairArm 0.8s linear infinite;
+    animation-delay: -0.4s;
+}
+.dot.sprouted.climbing #torso {
+    animation: gaitStairTorsoPush 0.8s linear infinite;
+}
+
+/* --- Ladder climb: hand-over-hand, diagonal pairing. One arm reaches straight
+   overhead to the next rung while the opposite leg drives its knee up hard to
+   find the next foothold; the other side trails. The torso stays near-vertical
+   with only a small sway, since the body is hugging a vertical surface rather
+   than striding across one. --- */
+@keyframes gaitLadderArmRight {
+    0% { transform: rotate(20deg); }
+    45% { transform: rotate(-115deg); }
+    70% { transform: rotate(-100deg); }
+    100% { transform: rotate(20deg); }
+}
+@keyframes gaitLadderArmLeft {
+    0% { transform: rotate(-20deg); }
+    45% { transform: rotate(115deg); }
+    70% { transform: rotate(100deg); }
+    100% { transform: rotate(-20deg); }
+}
+@keyframes gaitLadderForeRight {
+    0%, 100% { transform: rotate(0deg); }
+    45% { transform: rotate(12deg); }
+    70% { transform: rotate(6deg); }
+}
+@keyframes gaitLadderForeLeft {
+    0%, 100% { transform: rotate(0deg); }
+    45% { transform: rotate(-12deg); }
+    70% { transform: rotate(-6deg); }
+}
+@keyframes gaitLadderHip {
+    0% { transform: rotate(-10deg); }
+    45% { transform: rotate(40deg); }
+    70% { transform: rotate(35deg); }
+    100% { transform: rotate(-10deg); }
+}
+@keyframes gaitLadderKnee {
+    0% { transform: rotate(0deg); }
+    45% { transform: rotate(-80deg); }
+    70% { transform: rotate(-15deg); }
+    100% { transform: rotate(0deg); }
+}
+@keyframes gaitLadderTorsoSway {
+    0% { transform: rotate(0deg); }
+    45% { transform: rotate(2deg); }
+    50% { transform: rotate(0deg); }
+    95% { transform: rotate(-2deg); }
+    100% { transform: rotate(0deg); }
+}
+.dot.sprouted.laddering #arm-r {
+    animation: gaitLadderArmRight 0.9s linear infinite;
+}
+.dot.sprouted.laddering #arm-l {
+    animation: gaitLadderArmLeft 0.9s linear infinite;
+    animation-delay: -0.45s;
+}
+.dot.sprouted.laddering #fore-r {
+    animation: gaitLadderForeRight 0.9s linear infinite;
+}
+.dot.sprouted.laddering #fore-l {
+    animation: gaitLadderForeLeft 0.9s linear infinite;
+    animation-delay: -0.45s;
+}
+.dot.sprouted.laddering #leg-l {
+    animation: gaitLadderHip 0.9s linear infinite;
+}
+.dot.sprouted.laddering #leg-r {
+    animation: gaitLadderHip 0.9s linear infinite;
+    animation-delay: -0.45s;
+}
+.dot.sprouted.laddering #shin-l {
+    animation: gaitLadderKnee 0.9s linear infinite;
+}
+.dot.sprouted.laddering #shin-r {
+    animation: gaitLadderKnee 0.9s linear infinite;
+    animation-delay: -0.45s;
+}
+.dot.sprouted.face-left.walking #shin-l {
+    animation-delay: -0.35s;
+}
+.dot.sprouted.face-left.walking #shin-r {
+    animation-delay: 0s;
+}
+.dot.sprouted.face-left.climbing #shin-l {
+    animation-delay: -0.4s;
+}
+.dot.sprouted.face-left.climbing #shin-r {
+    animation-delay: 0s;
+}
+.dot.sprouted.face-left.laddering #shin-l {
+    animation-delay: -0.45s;
+}
+.dot.sprouted.face-left.laddering #shin-r {
+    animation-delay: 0s;
+}
+.dot.sprouted.laddering #torso {
+    transform-origin: 15px 42px;
+    animation: gaitLadderTorsoSway 0.9s linear infinite;
 }
 
 /* --- Facing: mirror the whole rig with the independent scale property. Keeping
@@ -133,9 +314,29 @@
     .dot.sprouted.idle-bob #hair,
     .dot.sprouted.walking #leg-l,
     .dot.sprouted.walking #leg-r,
+    .dot.sprouted.walking #shin-l,
+    .dot.sprouted.walking #shin-r,
     .dot.sprouted.walking #arm-l,
     .dot.sprouted.walking #arm-r,
+    .dot.sprouted.walking #fore-l,
+    .dot.sprouted.walking #fore-r,
     .dot.sprouted.walking #torso,
+    .dot.sprouted.climbing #leg-l,
+    .dot.sprouted.climbing #leg-r,
+    .dot.sprouted.climbing #shin-l,
+    .dot.sprouted.climbing #shin-r,
+    .dot.sprouted.climbing #arm-l,
+    .dot.sprouted.climbing #arm-r,
+    .dot.sprouted.climbing #torso,
+    .dot.sprouted.laddering #arm-l,
+    .dot.sprouted.laddering #arm-r,
+    .dot.sprouted.laddering #fore-l,
+    .dot.sprouted.laddering #fore-r,
+    .dot.sprouted.laddering #leg-l,
+    .dot.sprouted.laddering #leg-r,
+    .dot.sprouted.laddering #shin-l,
+    .dot.sprouted.laddering #shin-r,
+    .dot.sprouted.laddering #torso,
     .dot.sprouted.peering #torso,
     .dot.sprouted.peering #leg-l,
     .dot.sprouted.peering #leg-r,

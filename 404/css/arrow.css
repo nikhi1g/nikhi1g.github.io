@@ -62,11 +62,56 @@
     transform: rotate(-92deg) rotate(calc(var(--aim, 0) * -1deg));
 }
 
+
+.bone-rocket {
+    position: fixed;
+    z-index: 1;
+    width: 28px;
+    height: 12px;
+    pointer-events: none;
+    transform-origin: 50% 50%;
+    will-change: left, top, transform;
+}
+
+.bone-rocket svg {
+    display: block;
+    width: 28px;
+    height: 12px;
+    overflow: visible;
+    transform: rotate(var(--projectile-angle, 0deg));
+    transform-origin: 10px 6px;
+}
+
+.bone-rocket rect,
+.bone-rocket .bone-rocket__tip,
+.bone-rocket .bone-rocket__fin,
+.bone-rocket .bone-rocket__flame {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 1.3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+}
+
+.bone-rocket rect,
+.bone-rocket .bone-rocket__tip,
+.bone-rocket .bone-rocket__fin {
+    fill: var(--bg);
+}
+
+.bone-rocket .bone-rocket__flame {
+    fill: var(--acc);
+    opacity: 0.85;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .dot.sprouted.holding-bow #arm-l,
     .dot.sprouted.holding-bow #arm-r,
     .bone-arrow,
-    .bone-arrow svg {
+    .bone-arrow svg,
+    .bone-rocket,
+    .bone-rocket svg {
         animation: none;
         transition: none;
     }

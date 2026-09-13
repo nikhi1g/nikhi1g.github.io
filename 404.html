@@ -29,10 +29,16 @@
             <g id="torso" class="joint">
                 <line class="bone" x1="15" y1="22" x2="15" y2="42"></line>
                 <g id="arm-l" class="joint">
-                    <path class="bone" d="M15 27 Q9.5 31 7.5 38.5"></path>
+                    <line class="bone" id="upper-l" x1="15" y1="27" x2="10" y2="33"></line>
+                    <g id="fore-l">
+                        <line class="bone" x1="10" y1="33" x2="7.5" y2="38.5"></line>
+                    </g>
                 </g>
                 <g id="arm-r" class="joint">
-                    <path class="bone" d="M15 27 Q20.5 31 22.5 38.5"></path>
+                    <line class="bone" id="upper-r" x1="15" y1="27" x2="20" y2="33"></line>
+                    <g id="fore-r">
+                        <line class="bone" x1="20" y1="33" x2="22.5" y2="38.5"></line>
+                    </g>
                     <!-- Tools remain children of #arm-r so the arm carries them through
                          every swing. Lucide hammer and axe icons © Lucide Contributors,
                          used under the ISC License (https://lucide.dev/license/).
@@ -62,13 +68,23 @@
                         </g>
                     </g>
                 </g>
+                <!-- Legs and arms are split at the joint so the knee and elbow can flex:
+                     the parent group rotates the thigh/upper arm about hip/shoulder, the
+                     nested group rotates the shin/forearm about knee (11.5,54)/(18.5,54)
+                     or elbow (10,33)/(20,33). -->
                 <g id="leg-l" class="joint">
-                    <path class="bone" d="M15 42 L11.5 54 L10.5 65"></path>
-                    <line class="bone" x1="10.5" y1="65.4" x2="7" y2="65.6"></line>
+                    <line class="bone" id="thigh-l" x1="15" y1="42" x2="11.5" y2="54"></line>
+                    <g id="shin-l">
+                        <line class="bone" x1="11.5" y1="54" x2="10.5" y2="65"></line>
+                        <line class="bone" x1="10.5" y1="65.4" x2="7" y2="65.6"></line>
+                    </g>
                 </g>
                 <g id="leg-r" class="joint">
-                    <path class="bone" d="M15 42 L18.5 54 L19.5 65"></path>
-                    <line class="bone" x1="19.5" y1="65.4" x2="23" y2="65.6"></line>
+                    <line class="bone" id="thigh-r" x1="15" y1="42" x2="18.5" y2="54"></line>
+                    <g id="shin-r">
+                        <line class="bone" x1="18.5" y1="54" x2="19.5" y2="65"></line>
+                        <line class="bone" x1="19.5" y1="65.4" x2="23" y2="65.6"></line>
+                    </g>
                 </g>
             </g>
             <circle class="skull" cx="15" cy="11" r="11"></circle>

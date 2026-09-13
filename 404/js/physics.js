@@ -246,7 +246,23 @@ export function createDot() {
         el.style.position = 'fixed';
         el.style.left = `${x}px`;
         el.style.top = `${y}px`;
-        debris.push({el, x, y, vx, vy, rot: 0, spin: (Math.random() - 0.5) * 600, resting: false});
+        const rect = typeof el?.getBoundingClientRect === 'function'
+            ? el.getBoundingClientRect()
+            : null;
+        const width = rect ? rect.width : 0;
+        const height = rect ? rect.height : 0;
+        debris.push({
+            el,
+            x,
+            y,
+            vx,
+            vy,
+            rot: 0,
+            spin: (Math.random() - 0.5) * 600,
+            resting: false,
+            width,
+            height
+        });
     };
     const clearDebris = () => {
         debris.length = 0;
@@ -262,12 +278,19 @@ export function createDot() {
             bit.x += bit.vx * dt;
             bit.y += bit.vy * dt;
             bit.rot += bit.spin * dt;
-            if (bit.x < world.left || bit.x > world.right) {
-                bit.x = Math.max(world.left, Math.min(world.right, bit.x));
+            const halfWidth = Number.isFinite(bit.width) ? bit.width : 0;
+            const minX = Math.min(world.left, world.right - halfWidth);
+            const maxX = Math.max(world.left, world.right - halfWidth);
+            if (bit.x < minX || bit.x > maxX) {
+                bit.x = Math.max(minX, Math.min(maxX, bit.x));
                 bit.vx *= -wallRestitution;
             }
+
             const overLine = bit.x >= world.lineLeft && bit.x <= world.lineRight;
-            const floor = overLine && prevY <= world.lineY + 0.5 ? world.lineY : world.ground;
+            const surface = overLine && prevY <= world.lineY + 0.5
+                ? world.lineY
+                : world.ground;
+            const floor = Math.max(world.top, surface - (Number.isFinite(bit.height) ? bit.height : 0));
             if (bit.vy > 0 && bit.y >= floor) {
                 bit.y = floor;
                 bit.vy = -bit.vy * restitution;
@@ -280,6 +303,10 @@ export function createDot() {
                         bit.resting = true;
                     }
                 }
+            }
+            if (bit.y < world.top) {
+                bit.y = world.top;
+                bit.vy = Math.abs(bit.vy) * restitution;
             }
             bit.el.style.left = `${bit.x}px`;
             bit.el.style.top = `${bit.y}px`;

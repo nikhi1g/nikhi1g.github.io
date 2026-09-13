@@ -8,19 +8,20 @@
     background: var(--sub);
     border-top: 1px solid var(--fg);
     border-radius: 2px;
-    opacity: 0;
+    opacity: 1;
+    mix-blend-mode: normal;
     transform: scaleY(0);
     transform-origin: 50% 100%;
     transition: transform 0.18s ease-out, opacity 0.18s ease-out;
 }
 
 .stair.built {
-    opacity: 0.5;
+    opacity: 1;
     transform: scaleY(1);
 }
 
 .stair.going {
-    opacity: 0;
+    opacity: 0.2;
     transform: scaleY(0);
 }
 
@@ -32,11 +33,12 @@
     }
 
     .stair.built {
-        opacity: 0.5;
+        opacity: 1;
         transform: scaleY(1);
     }
 
     .stair.going {
         transform: scaleY(1);
+        opacity: 0.2;
     }
 }

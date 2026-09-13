@@ -1,15 +1,23 @@
 /* Damage is deliberately additive: every stage is just one class on its target. */
+main,
 h1,
 .message h2,
 .message p,
+#theme-toggle,
+#version,
+.hint,
 .hint kbd,
 footer,
-footer span {
+footer span,
+#inquiry-email {
     transition:
         transform 0.25s ease,
         color 0.25s ease,
         opacity 0.25s ease,
-        letter-spacing 0.25s ease;
+        letter-spacing 0.25s ease,
+        outline-color 0.25s ease,
+        box-shadow 0.25s ease,
+        filter 0.25s ease;
 }
 
 .dmg-tilt {
@@ -17,8 +25,7 @@ footer span {
     transform-origin: center bottom;
 }
 
-/* Two alternating diagonal tiles make a contained zig-zag through the glyphs.
-   A background cannot paint beyond its element's own box. */
+/* Two alternating diagonal tiles make a contained zig-zag through the glyphs. */
 .dmg-crack {
     position: relative;
     background-image:
@@ -42,7 +49,7 @@ h1.dmg-crack,
 }
 
 .dmg-shatter {
-    transform: translate(0.3em, 0.28em) rotate(9deg) skewX(-5deg);
+    transform: translate(0.35em, 0.28em) rotate(9deg) skewX(-5deg);
     transform-origin: left bottom;
     letter-spacing: 0.18em;
     opacity: 0.5;
@@ -56,8 +63,38 @@ h1.dmg-collapse,
     opacity: 0.42;
 }
 
-/* The transparent original border is replaced by two inset half-width copies.
-   Keeping both halves inside an overflow clip prevents the old page-wide seam. */
+/* Border-box damage states, including a cracked outline seam. */
+main.dmg-split {
+    outline-style: dashed;
+    outline-color: var(--acc);
+    box-shadow: 0 3px 0 rgba(0, 0, 0, 0.12),
+        0 0 0 1px var(--acc) inset,
+        0 0 18px rgba(9, 105, 218, 0.18);
+}
+
+main.dmg-tilt {
+    transform: translateY(3px) rotate(-1deg);
+}
+
+main.dmg-shatter {
+    transform: translate(0.4em, 0.4em) rotate(11deg);
+    opacity: 0.55;
+}
+
+main.dmg-dim {
+    opacity: 0.4;
+}
+
+/* Theme toggle and button destruction. */
+#theme-toggle.dmg-split {
+    transform: rotate(-8deg) translateY(1px);
+    box-shadow: 0 0 0 2px var(--acc) inset;
+}
+#theme-toggle.dmg-shatter {
+    transform: rotate(-6deg) translate(0.2em, 0.1em);
+}
+
+/* The transparent original border is replaced by two inset half-width copies. */
 footer {
     position: relative;
 }
@@ -92,6 +129,7 @@ footer.dmg-split::after {
     transform: translateY(4px);
 }
 
+/* The detached parts that fall under physics after a break. */
 .letter {
     display: inline-block;
     white-space: pre;
@@ -102,28 +140,39 @@ footer.dmg-split::after {
     transform: translateY(-0.15em) scale(0.9);
 }
 
-.letter-debris {
+.letter-debris,
+.damage-fragment {
     position: fixed;
     z-index: 3;
     display: inline-block;
     pointer-events: none;
     white-space: pre;
+    will-change: left, top, transform;
     font: inherit;
     color: inherit;
-    will-change: left, top, transform;
+}
+
+.damage-fragment {
+    z-index: 3;
+    display: block;
 }
 
 @media (prefers-reduced-motion: reduce) {
+    main,
     h1,
     .message h2,
     .message p,
-    .hint kbd,
+    #theme-toggle,
+    #version,
+    .hint,
     footer,
     footer span,
+    #inquiry-email,
     footer::before,
     footer::after,
     .letter,
-    .letter-debris {
+    .letter-debris,
+    .damage-fragment {
         transition: none;
     }
 }

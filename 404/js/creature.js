@@ -1,10 +1,13 @@
 export function createCreature({dot, gait, damage, stairs, arrow}) {
-    const restSeconds = 6;
-    const breakWindowMs = 20000;
+    const restSeconds = 1;
+    const headingAttackLimit = 8;
+    const commitAttackLimit = 5;
     const arrivalDistance = 6;
-    const fleeDistance = 90;
-    const leanDistance = 180;
-    const fleeCooldownMs = 2500;
+    const fleeDistance = 130;
+    const leanDistance = 190;
+    const fleeCooldownMs = 900;
+    const fleeForceThreshold = 70;
+    const fleeOdds = 0.82;
     const fleeSeconds = 1.2;
     const footVerticalReach = 30;
     const standOffDistance = 14;
@@ -30,6 +33,7 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
     let motionDisabled = reduceMotion.matches;
     let runId = 0;
     let active = false;
+    let sequenceDone = false;
     let fleeRequested = false;
     let fleeing = false;
     let plannedHop = null;
@@ -52,6 +56,7 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
     };
 
     const stopPoses = () => {
+        gait.stopClimb();
         gait.stop();
         gait.idle(false);
         gait.lean(0);
@@ -148,6 +153,7 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
     const requestFlee = () => {
         if (!active || fleeing || fleeRequested || plannedHop) return;
         fleeRequested = true;
+        gait.stopClimb();
         gait.stop();
         gait.idle(false);
         gait.lean(0);
@@ -176,7 +182,8 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
             const now = performance.now();
             if (now - lastFleeRoll >= fleeCooldownMs) {
                 lastFleeRoll = now;
-                if (Math.random() < 0.5) requestFlee();
+                const chance = distance <= fleeForceThreshold ? 1 : fleeOdds;
+                if (Math.random() < chance) requestFlee();
             }
             return;
         }
@@ -354,10 +361,11 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
     const approachFor = (rect, span = dot.surfaceSpan()) => {
         if (!span || !rect) return null;
         const distanceAboveSurface = span.y - rect.bottom;
-        const overlapsReachBand = distanceAboveSurface >= -arrivalDistance
+        const lineTolerance = span.kind === 'line' ? footVerticalReach : 0;
+        const overlapsReachBand = distanceAboveSurface >= -(footVerticalReach + arrivalDistance)
             && distanceAboveSurface <= footVerticalReach + arrivalDistance;
-        const overlapsSurface = rect.right >= span.left - standOffDistance
-            && rect.left <= span.right + standOffDistance;
+        const overlapsSurface = rect.right >= span.left - standOffDistance - lineTolerance
+            && rect.left <= span.right + standOffDistance + lineTolerance;
         if (!overlapsReachBand || !overlapsSurface) return null;
 
         const x = dot.pos().x;
@@ -443,7 +451,7 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
             : (stairRoute.baseX > position.x ? 1 : -stairRoute.direction);
         let motionAnchor = position;
         gait.setFacing(dir);
-        gait.walk(dir);
+        gait.climb(dir, stairRoute.mode);
 
         while (isCurrent(id)) {
             let reachedBase = false;
@@ -462,15 +470,15 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
                 }
             });
             if (!isCurrent(id) || travelResult === interrupted) {
-                gait.stop();
+                gait.stopClimb();
                 return interrupted;
             }
             if (travelResult === flee) {
-                gait.stop();
+                gait.stopClimb();
                 return flee;
             }
             if (reachedBase) {
-                gait.stop();
+                gait.stopClimb();
                 return complete;
             }
             if (moved) {
@@ -478,11 +486,11 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
                 continue;
             }
 
-            gait.stop();
+            gait.stopClimb();
             return skipped;
         }
 
-        gait.stop();
+        gait.stopClimb();
         return interrupted;
     };
 
@@ -506,7 +514,7 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
         let stalls = 0;
 
         gait.setFacing(dir);
-        gait.walk(dir);
+        gait.climb(dir, stairRoute.mode);
 
         while (isCurrent(id)) {
             let reachedWorkSurface = false;
@@ -544,16 +552,16 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
             });
 
             if (!isCurrent(id) || climbResult === interrupted) {
-                gait.stop();
+                gait.stopClimb();
                 clearStairs();
                 return interrupted;
             }
             if (climbResult === flee) {
-                gait.stop();
+                gait.stopClimb();
                 return flee;
             }
             if (reachedWorkSurface) {
-                gait.stop();
+                gait.stopClimb();
                 return complete;
             }
             if (moved) {
@@ -561,7 +569,7 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
                 continue;
             }
 
-            gait.stop();
+            gait.stopClimb();
             stalls += 1;
             if (stalls >= 2) {
                 clearStairs();
@@ -577,10 +585,10 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
             lastPosition = dot.pos();
             motionAnchor = lastPosition;
             gait.setFacing(dir);
-            gait.walk(dir);
+            gait.climb(dir, stairRoute.mode);
         }
 
-        gait.stop();
+        gait.stopClimb();
         clearStairs();
         return interrupted;
     };
@@ -592,7 +600,8 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
             || typeof stairs.isComplete !== 'function'
             || typeof stairs.hasAny !== 'function'
             || typeof stairs.teardownNext !== 'function'
-            || typeof stairs.clear !== 'function') {
+            || typeof stairs.clear !== 'function'
+            || typeof stairs.mode !== 'function') {
             return skipped;
         }
 
@@ -642,6 +651,7 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
             return interrupted;
         }
 
+        stairRoute.mode = stairs.mode();
         const climbResult = await climbStairs(damage.targetRect(target), id);
         if (!isCurrent(id) || climbResult === interrupted) return interrupted;
         if (climbResult === flee) {
@@ -715,30 +725,40 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
         return isCurrent(id) ? complete : interrupted;
     };
 
-    const fireAtTarget = async (target, rect, id) => {
+    const fireAtTarget = async (target, rect, id, options = {}) => {
+        const weapon = options.weapon || 'arrow';
+        const damageMode = options.damageMode || 'break';
+        const fire = weapon === 'rocket' ? arrow?.fireRocket : arrow?.fire;
+
         if (!arrow
             || typeof arrow.canHit !== 'function'
             || typeof arrow.aimAt !== 'function'
-            || typeof arrow.fire !== 'function') {
+            || typeof fire !== 'function') {
             return skipped;
         }
 
         arrow.aimAt(rect);
         try {
-            await arrow.fire(rect);
+            await fire.call(arrow, rect);
         } catch {
             return interrupted;
         }
         if (!isCurrent(id)) return interrupted;
-        damage.breakStage(target);
+
+        if (damageMode === 'break') damage.breakStage(target);
+        else damage.fixStage(target);
+
         const fleeResult = await performFleeIfNeeded(id);
         return !isCurrent(id) || fleeResult === interrupted ? interrupted : complete;
     };
 
-    const workOnTarget = async (target, kind, swingCount, id) => {
+    const workOnTarget = async (target, kind, swingCount, id, options = {}) => {
+        const damageMode = options.damageMode || (kind === 'axe' ? 'break' : 'fix');
+        const weapon = options.weapon || 'axe';
         let completedSwings = 0;
         while (isCurrent(id)) {
             const rect = damage.targetRect(target);
+            if (!rect) return skipped;
             let usedStairs = false;
             let routeResult;
 
@@ -753,7 +773,10 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
                 && arrow
                 && typeof arrow.canHit === 'function'
                 && arrow.canHit(rect)) {
-                return fireAtTarget(target, rect, id);
+                return fireAtTarget(target, rect, id, {
+                    weapon,
+                    damageMode
+                });
             } else {
                 routeResult = await buildAndClimb(target, rect, id);
                 usedStairs = routeResult === complete;
@@ -780,7 +803,7 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
             }
             if (movedAway) continue;
 
-            if (kind === 'axe') damage.breakStage(target);
+            if (damageMode === 'break') damage.breakStage(target);
             else damage.fixStage(target);
 
             if (usedStairs) {
@@ -792,52 +815,71 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
         return interrupted;
     };
 
-    const runWorking = async (id) => {
-        const breakStarted = performance.now();
-        const unreachableTargets = new Set();
-        let skippedPassStart = null;
+    const destroyTarget = async (target, {
+        id,
+        kind = 'axe',
+        swings = 1,
+        loops = 8,
+        weapon = 'arrow',
+        damageMode
+    }) => {
+        if (!isCurrent(id) || !target) return skipped;
+        const isBroken = () => (
+            typeof damage.isTargetBroken === 'function'
+                ? damage.isTargetBroken(target)
+                : false
+        );
 
-        while (isCurrent(id)
-            && !damage.isFullyBroken()
-            && performance.now() - breakStarted < breakWindowMs) {
-            const target = damage.nextBreakTarget();
-            if (!target) break;
-            if (unreachableTargets.has(target)) {
-                if (target === skippedPassStart) break;
-                if (!skippedPassStart) skippedPassStart = target;
-                continue;
-            }
-
-            const result = await workOnTarget(target, 'axe', 3, id);
+        for (let pass = 0; isCurrent(id) && pass < loops; pass += 1) {
+            if (isBroken()) return complete;
+            const result = await workOnTarget(target, kind, swings, id, {
+                weapon,
+                damageMode
+            });
             if (!isCurrent(id) || result === interrupted) return interrupted;
-            if (result === skipped) {
-                unreachableTargets.add(target);
-                if (!skippedPassStart) skippedPassStart = target;
-                continue;
-            }
-            skippedPassStart = null;
+            if (result === skipped) return skipped;
         }
 
-        if (!isCurrent(id)) return interrupted;
-        clearWorkPose();
-        skippedPassStart = null;
-        while (isCurrent(id) && !damage.isFullyFixed()) {
-            const target = damage.nextFixTarget();
-            if (!target) break;
-            if (unreachableTargets.has(target)) {
-                if (target === skippedPassStart) break;
-                if (!skippedPassStart) skippedPassStart = target;
-                continue;
-            }
+        return isBroken() ? complete : skipped;
+    };
 
-            const result = await workOnTarget(target, 'hammer', 2, id);
-            if (!isCurrent(id) || result === interrupted) return interrupted;
-            if (result === skipped) {
-                unreachableTargets.add(target);
-                if (!skippedPassStart) skippedPassStart = target;
-                continue;
-            }
-            skippedPassStart = null;
+    const runWorking = async (id) => {
+        const heading = document.querySelector('h1');
+        const commit = document.getElementById('inquiry-commit');
+        const themeToggle = document.getElementById('theme-toggle');
+
+        const headingResult = await destroyTarget(heading, {
+            id,
+            kind: 'axe',
+            swings: 1,
+            loops: headingAttackLimit,
+            weapon: 'arrow',
+            damageMode: 'break'
+        });
+        if (!isCurrent(id) || headingResult === interrupted) return interrupted;
+
+        if (isCurrent(id) && commit) {
+            const commitResult = await destroyTarget(commit, {
+                id,
+                kind: 'axe',
+                swings: 1,
+                loops: commitAttackLimit,
+                weapon: 'rocket',
+                damageMode: 'break'
+            });
+            if (!isCurrent(id) || commitResult === interrupted) return interrupted;
+        }
+
+        if (isCurrent(id) && themeToggle) {
+            const themeResult = await destroyTarget(themeToggle, {
+                id,
+                kind: 'hammer',
+                swings: 1,
+                loops: 8,
+                weapon: 'hammer',
+                damageMode: 'break'
+            });
+            if (!isCurrent(id) || themeResult === interrupted) return interrupted;
         }
 
         return isCurrent(id) ? complete : interrupted;
@@ -851,20 +893,22 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
         if (!isCurrent(id) || sprouted === interrupted) return;
         active = true;
 
-        while (isCurrent(id)) {
-            clearWorkPose();
-            gait.idle(true);
-            const rested = await waitForStep(id, {seconds: restSeconds});
-            if (!isCurrent(id) || rested === interrupted) return;
-            gait.idle(false);
-            if (rested === flee) {
-                const fleeResult = await performFlee(id);
-                if (!isCurrent(id) || fleeResult === interrupted) return;
-                continue;
-            }
+        const rested = await waitForStep(id, {seconds: restSeconds});
+        if (!isCurrent(id) || rested === interrupted) return;
+        gait.idle(false);
+        if (rested === flee) {
+            const fleeResult = await performFlee(id);
+            if (!isCurrent(id) || fleeResult === interrupted) return;
+        }
 
-            const workResult = await runWorking(id);
-            if (!isCurrent(id) || workResult === interrupted) return;
+        const workResult = await runWorking(id);
+        if (!isCurrent(id) || workResult === interrupted) return;
+        if (workResult === complete) {
+            sequenceDone = true;
+            clearWorkPose();
+            stopPoses();
+            clearStairs();
+            return;
         }
     };
 
@@ -872,6 +916,7 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
         runId += 1;
         cancelPending(interrupted);
         active = false;
+        sequenceDone = false;
         fleeRequested = false;
         fleeing = false;
         plannedHop = null;
@@ -883,18 +928,23 @@ export function createCreature({dot, gait, damage, stairs, arrow}) {
     const onSleepChange = (asleep) => {
         if (motionDisabled) return;
         if (!asleep) {
-            if (plannedHop && !plannedHop.landed && !dot.isDragging()) {
+            if (dot.isDragging()) {
+                interruptRun();
+                return;
+            }
+            if (plannedHop && !plannedHop.landed) {
                 dot.el.classList.add('sprouted');
                 return;
             }
-            interruptRun();
             return;
         }
         if (plannedHop) {
             plannedHop.landed = true;
             return;
         }
-        beginFreshRun();
+        if (!sequenceDone) {
+            beginFreshRun();
+        }
     };
 
     const onMotionPreferenceChange = (event) => {

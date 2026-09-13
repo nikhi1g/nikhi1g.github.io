@@ -1,20 +1,28 @@
 const GRAVITY = 981;
 const MAX_HORIZONTAL_DISTANCE = 400;
 const VERTICAL_CLEARANCE = 20;
-const DRAW_DURATION = 260;
-const FLIGHT_TIME = 0.45;
-const CLEANUP_DELAY = 400;
+
+const CLEANUP_DELAY = 0;
+
 const ARROW_WIDTH = 18;
 const ARROW_HEIGHT = 8;
+const ARROW_DRAW_DURATION = 170;
+const ARROW_FLIGHT_TIME = 0.35;
+
+const ROCKET_WIDTH = 28;
+const ROCKET_HEIGHT = 12;
+const ROCKET_DRAW_DURATION = 140;
+const ROCKET_FLIGHT_TIME = 0.45;
+
 const RIG_HEIGHT = 74;
 const FEET_Y = 65.5;
 const HAND_Y = 38.5;
 const FALLBACK_HAND_RISE = 25;
 
 const prefersReducedMotion = () => (
-    typeof window !== 'undefined' &&
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    typeof window !== 'undefined'
+    && typeof window.matchMedia === 'function'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 );
 
 const targetCentre = (rect) => ({
@@ -43,8 +51,8 @@ export function createArrow(dot) {
     const canHit = (rect) => {
         const position = dot.pos();
         const target = targetCentre(rect);
-        return rect.bottom < position.y - VERTICAL_CLEARANCE &&
-            Math.abs(target.x - position.x) <= MAX_HORIZONTAL_DISTANCE;
+        return rect.bottom < position.y - VERTICAL_CLEARANCE
+            && Math.abs(target.x - position.x) <= MAX_HORIZONTAL_DISTANCE;
     };
 
     const aimAt = (rect) => {
@@ -70,7 +78,29 @@ export function createArrow(dot) {
         return arrow;
     };
 
-    const fire = async (rect) => {
+    const makeRocket = () => {
+        const rocket = document.createElement('div');
+        rocket.className = 'bone-rocket';
+        rocket.setAttribute('aria-hidden', 'true');
+        rocket.innerHTML = `
+            <svg viewBox="0 0 28 12" width="28" height="12" aria-hidden="true" focusable="false">
+                <rect x="1" y="1.5" width="14" height="9" rx="3" ry="3"></rect>
+                <polygon class="bone-rocket__fin" points="1,10 1,4 7,7"></polygon>
+                <polygon class="bone-rocket__fin" points="15,1 15,11 21,7"></polygon>
+                <circle class="bone-rocket__flame" cx="21.5" cy="6" r="4"></circle>
+                <polygon class="bone-rocket__tip" points="15,1.2 28,6 15,10.8"></polygon>
+            </svg>`;
+        return rocket;
+    };
+
+    const fireProjectile = async (rect, {
+        kind,
+        drawDuration,
+        flightTime,
+        width,
+        height
+    }) => {
+        const spawn = kind === 'rocket' ? makeRocket() : makeArrow();
         aimAt(rect);
 
         if (prefersReducedMotion()) {
@@ -78,31 +108,59 @@ export function createArrow(dot) {
             return;
         }
 
-        await wait(DRAW_DURATION);
+        await wait(drawDuration);
         creature.classList.remove('drawing');
 
         const origin = handPosition();
         const target = targetCentre(rect);
         const dx = target.x - origin.x;
         const dy = target.y - origin.y;
-        const vx = dx / FLIGHT_TIME;
-        const vy = dy / FLIGHT_TIME - 0.5 * GRAVITY * FLIGHT_TIME;
-        const arrow = makeArrow();
+        const vx = dx / flightTime;
+        const vy = dy / flightTime - 0.5 * GRAVITY * flightTime;
 
-        arrow.style.setProperty('--arrow-angle', `${Math.atan2(vy, vx) * 180 / Math.PI}deg`);
-        document.body.appendChild(arrow);
+        const angle = Math.atan2(vy, vx) * 180 / Math.PI;
+        spawn.style.setProperty('--projectile-angle', `${angle}deg`);
+        spawn.setAttribute('data-weapon', kind);
+        document.body.appendChild(spawn);
         dot.spawnDebris(
-            arrow,
-            origin.x - ARROW_WIDTH / 2,
-            origin.y - ARROW_HEIGHT / 2,
+            spawn,
+            origin.x - width / 2,
+            origin.y - height / 2,
             vx,
             vy
         );
 
-        await wait(FLIGHT_TIME * 1000);
+        await wait(flightTime * 1000);
         creature.classList.remove('holding-bow');
-        setTimeout(() => arrow.remove(), CLEANUP_DELAY);
+        if (CLEANUP_DELAY > 0) {
+            setTimeout(() => spawn.remove(), CLEANUP_DELAY);
+        }
     };
 
-    return {canHit, aimAt, fire};
+    const fire = async (rect) => {
+        await fireProjectile(rect, {
+            kind: 'arrow',
+            drawDuration: ARROW_DRAW_DURATION,
+            flightTime: ARROW_FLIGHT_TIME,
+            width: ARROW_WIDTH,
+            height: ARROW_HEIGHT
+        });
+    };
+
+    const fireRocket = async (rect) => {
+        await fireProjectile(rect, {
+            kind: 'rocket',
+            drawDuration: ROCKET_DRAW_DURATION,
+            flightTime: ROCKET_FLIGHT_TIME,
+            width: ROCKET_WIDTH,
+            height: ROCKET_HEIGHT
+        });
+    };
+
+    return {
+        canHit,
+        aimAt,
+        fire,
+        fireRocket
+    };
 }
