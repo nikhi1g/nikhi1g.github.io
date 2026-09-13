@@ -10,7 +10,6 @@ Diagram source: [routes.mmd](routes.mmd). Re-render with `mmdc -i routes.mmd -o 
 
 In this repo:
 - `/` — [index.html](index.html), landing page
-- `/why/` — [why/index.html](why/index.html), a short piece on why grunt work matters. Not linked from anywhere and marked `noindex`
 
 Published from other repos under the same GitHub Pages domain:
 - `/seminal_papers/` — [nikhi1g/seminal_papers](https://github.com/nikhi1g/seminal_papers), a searchable archive of notable papers, essays, memos, and more
@@ -18,10 +17,9 @@ Published from other repos under the same GitHub Pages domain:
 - `/153b/` — [nikhi1g/153b](https://github.com/nikhi1g/153b)
 - `/ucla-emt-course/` — [nikhi1g/ucla-emt-course](https://github.com/nikhi1g/ucla-emt-course)
 - `/whisper_hotkey/` — [nikhi1g/whisper_hotkey](https://github.com/nikhi1g/whisper_hotkey)
-- `/SpotifyAdSkipper/` — [nikhi1g/SpotifyAdSkipper](https://github.com/nikhi1g/SpotifyAdSkipper). Not linked from the landing page
 
 Off-domain links on the landing page:
 - [GitHub](https://github.com/nikhi1g?tab=repositories) and [LinkedIn](https://www.linkedin.com/in/nikhil---gupta/) in the nav
 - [mem lines](https://memlines.com/) in the links list
 
-Only `index.html`, `404.html`, `commit.json`, and `why/index.html` are deployed — [.github/scripts/build-site.mjs](.github/scripts/build-site.mjs) copies files into `_site` explicitly, so anything new in this repo has to be added there to go live.
+The published site is assembled explicitly by [.github/scripts/build-site.mjs](.github/scripts/build-site.mjs), which copies a fixed set of files into `_site` — anything new in this repo has to be added there to go live.

@@ -1,35 +1,43 @@
-stateDiagram-v2
-    direction TB
+---
+config:
+  theme: base
+  themeVariables:
+    primaryTextColor: "#1f2933"
+    lineColor: "#9aa3b2"
+    edgeLabelBackground: "#ffffff"
+  flowchart:
+    curve: basis
+    nodeSpacing: 18
+    rankSpacing: 110
+    padding: 8
+---
+flowchart LR
+    Home(["<b>Home</b><br/><code>nikhi1g.github.io</code>"])
 
-    [*] --> Home
+    SeminalPapers["Seminal Papers"]
+    MCAT["MCAT"]
+    OneFiftyThreeB["153B"]
+    UCLAEMT["UCLA EMT Course"]
+    WhisperHotkey["whisper_hotkey"]
 
-    state "Home" as Home
-    state "MCAT" as MCAT
-    state "153B" as OneFiftyThreeB
-    state "UCLA EMT Course" as UCLAEMT
-    state "Seminal Papers" as SeminalPapers
-    state "whisper_hotkey" as WhisperHotkey
-    state "mem lines" as MemLines
-    state "GitHub" as GitHubProfile
-    state "LinkedIn" as LinkedIn
-    state "Why work when AI exists" as Why
-    state "SpotifyAdSkipper" as SpotifyAdSkipper
+    GitHubProfile(["GitHub"])
+    LinkedIn(["LinkedIn"])
+    MemLines(["mem lines"])
 
-    Home --> GitHubProfile: github.com
-    Home --> LinkedIn: linkedin.com
+    Home --> |"/seminal_papers/"| SeminalPapers
+    Home --> |"/mcat/"| MCAT
+    Home --> |"/153b/"| OneFiftyThreeB
+    Home --> |"/ucla-emt-course/"| UCLAEMT
+    Home --> |"/whisper_hotkey/"| WhisperHotkey
 
-    Home --> MCAT: /mcat/
-    Home --> OneFiftyThreeB: /153b/
-    Home --> UCLAEMT: /ucla-emt-course/
-    Home --> SeminalPapers: /seminal_papers/
-    Home --> WhisperHotkey: /whisper_hotkey/
-    Home --> MemLines: memlines.com
+    Home -.-> |"github.com"| GitHubProfile
+    Home -.-> |"linkedin.com"| LinkedIn
+    Home -.-> |"memlines.com"| MemLines
 
-    [*] --> Why: /why/ (unlinked)
-    [*] --> SpotifyAdSkipper: /SpotifyAdSkipper/ (unlinked)
+    classDef home fill:#e0e7ff,stroke:#6366f1,stroke-width:2px,color:#1e1b4b
+    classDef page fill:#f5f3ff,stroke:#a78bfa,color:#312e81
+    classDef external fill:#fff8cc,stroke:#d4b106,color:#5c4813
 
-    classDef offsite fill:#fff5ad,stroke:#aaaa33
-    classDef unlinked fill:#e0e0e0,stroke:#767676,stroke-dasharray:4 3
-
-    class GitHubProfile,LinkedIn,MemLines offsite
-    class Why,SpotifyAdSkipper unlinked
+    class Home home
+    class SeminalPapers,MCAT,OneFiftyThreeB,UCLAEMT,WhisperHotkey page
+    class GitHubProfile,LinkedIn,MemLines external
