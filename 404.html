@@ -356,24 +356,32 @@ version.addEventListener('click', (event) => {
 
 const mainEl = document.querySelector('main');
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-// The status dot falls with eased gravity, rolls along the footer rule, then drops off its edge.
+// Real physics for the status dot: MKS units scaled to pixels, à la Box2D's
+// pixels-per-meter convention, with a coefficient of restitution and a sleep
+// threshold as in the standard canvas bouncing-ball implementations.
 const statusDot = document.querySelector('.dot');
 const dotSlot = document.querySelector('.dot-slot');
 const footerEl = document.querySelector('footer');
 const dotRadius = 5;
-const gravityPeak = 1600;      // px/s^2 once the fall is up to speed
-const gravityRamp = 0.55;      // seconds to ease from rest into full gravity
-// One shove, chosen once per load, then never again: everything else scales off it.
-const rollVector = 14 + Math.random() * 46;   // px/s of initial rightward drift
-const rollPush = rollVector * 2.4;            // px/s^2 keeping it rolling on a surface
-const rollCreep = 34;                         // px/s the roll always decays toward
-const rollFriction = rollPush / rollCreep;    // drag ∝ the shove, so the creep speed is fixed
+const pixelsPerMetre = 100;                        // the 10px dot is a 10cm ball
+const gravity = 9.81 * pixelsPerMetre;             // 981 px/s^2
+const restitution = 0.8;                           // rubber on a hard surface
+const wallRestitution = 0.5;
+const airDrag = 0.12;                              // per second, linear damping
+const sleepSpeed = 0.25 * pixelsPerMetre;          // vertical speed that stops a bounce
+const sleepCreep = 0.04 * pixelsPerMetre;          // horizontal speed that ends a roll
+const physicsStep = 1 / 240;                       // fixed timestep keeps bounces stable
+// One shove, chosen once per load, then never again: rolling drag scales off it.
+const rollVector = 14 + Math.random() * 46;        // px/s of initial rightward drift
+const rollPush = rollVector * 2.4;                 // px/s^2 sustaining the roll
+const rollCreep = 34;                              // px/s the roll always decays toward
+const rollFriction = rollPush / rollCreep;         // drag ∝ the shove, so creep is fixed
 let dotX = 0;
 let dotY = 0;
 let dotVX = 0;
 let dotVY = 0;
 let dotLastTime;
-let dotFallTime = 0;
+let dotAccumulator = 0;
 let dotDragging = false;
 let dotPointerX = 0;
 let dotPointerY = 0;
@@ -382,8 +390,6 @@ const placeDot = () => {
     statusDot.style.left = `${dotX - dotRadius}px`;
     statusDot.style.top = `${dotY - dotRadius}px`;
 };
-// Cubic ease-in: the descent starts gently and accelerates into real gravity.
-const easeIntoGravity = (progress) => progress * progress * progress;
 const dotWorld = () => {
     const card = mainEl.getBoundingClientRect();
     const footer = footerEl.getBoundingClientRect();
@@ -397,67 +403,57 @@ const dotWorld = () => {
         lineRight: footer.right
     };
 };
-// The rule is a floor only for a dot that is above it and within its span.
-const floorFor = (world, x, y) => (
-    x >= world.lineLeft && x <= world.lineRight && y <= world.lineY + 0.5 ? world.lineY : world.ground
-);
-let dotOnLedge = false;
+const stepDot = (dt) => {
+    const world = dotWorld();
+    const overLine = dotX >= world.lineLeft && dotX <= world.lineRight;
+    const onLine = overLine && Math.abs(dotY - world.lineY) < 0.5;
+    const onGround = Math.abs(dotY - world.ground) < 0.5;
+    const contact = (onLine || onGround) && dotVY === 0;
+    if (contact) {
+        if (onLine) {
+            // Rolling resistance scales with the shove, so any roll bleeds down to
+            // the same gentle creep before it reaches the end of the rule.
+            dotVX += (rollPush - rollFriction * dotVX) * dt;
+        } else {
+            dotVX -= dotVX * 2.4 * dt;              // rolling resistance on the page floor
+            if (Math.abs(dotVX) < sleepCreep) dotVX = 0;
+        }
+    } else {
+        dotVY += gravity * dt;                      // constant g, the whole way down
+        dotVX -= dotVX * airDrag * dt;
+    }
+    const prevY = dotY;
+    dotX += dotVX * dt;
+    dotY += dotVY * dt;
+    if (dotX < world.left || dotX > world.right) {
+        dotX = Math.max(world.left, Math.min(world.right, dotX));
+        dotVX *= -wallRestitution;
+    }
+    if (dotY < world.top) {
+        dotY = world.top;
+        dotVY = Math.abs(dotVY) * restitution;
+    }
+    // Swept floor test: the rule only catches a dot that was above it.
+    const stillOverLine = dotX >= world.lineLeft && dotX <= world.lineRight;
+    const floor = stillOverLine && prevY <= world.lineY + 0.5 ? world.lineY : world.ground;
+    if (dotVY > 0 && dotY >= floor) {
+        dotY = floor;
+        dotVY = -dotVY * restitution;
+        if (Math.abs(dotVY) < sleepSpeed) dotVY = 0;  // sleep threshold ends micro-bounces
+    }
+};
 const animateDot = (time) => {
     if (dotLastTime === undefined) dotLastTime = time;
-    const dt = Math.min((time - dotLastTime) / 1000, 0.032);
+    const frame = Math.min((time - dotLastTime) / 1000, 0.05);
     dotLastTime = time;
     if (!dotDragging) {
-        const world = dotWorld();
-        const floor = floorFor(world, dotX, dotY);
-        const resting = dotVY === 0 && dotY >= floor - 0.5;
-        if (resting) {
-            dotY = floor;
-            dotFallTime = 0;
-            if (floor === world.lineY) {
-                // Friction scales with the shove, so any roll bleeds down to the same
-                // gentle creep before it reaches the end of the rule.
-                dotVX += (rollPush - rollFriction * dotVX) * dt;
-                dotOnLedge = true;
-            } else {
-                dotVX *= 0.97;            // settle once it reaches the page floor
-                if (Math.abs(dotVX) < 4) dotVX = 0;
-                dotOnLedge = false;
-            }
-        } else if (dotVY < 0) {
-            dotVY += gravityPeak * dt;    // rising: full gravity, so arcs stay honest
-            dotFallTime = 0;
-            dotOnLedge = false;
-        } else {
-            if (dotOnLedge) {
-                // Just rolled past the end of the rule: tip over the edge and start
-                // the fall already part-way up the gravity ramp, so it drops off the
-                // cliff instead of gliding straight through it.
-                dotOnLedge = false;
-                dotVY = 45;
-                dotFallTime = gravityRamp * 0.55;
-            }
-            dotFallTime += dt;            // falling: ease from a gentle release into full gravity
-            dotVY += gravityPeak * easeIntoGravity(Math.min(dotFallTime / gravityRamp, 1)) * dt;
+        dotAccumulator += frame;
+        while (dotAccumulator >= physicsStep) {
+            stepDot(physicsStep);
+            dotAccumulator -= physicsStep;
         }
-        const wasAbove = dotY <= world.lineY + 0.5;
-        dotX += dotVX * dt;
-        dotY += dotVY * dt;
-        if (dotX < world.left || dotX > world.right) {
-            dotX = Math.max(world.left, Math.min(world.right, dotX));
-            dotVX *= -0.6;
-        }
-        if (dotY < world.top) {
-            dotY = world.top;
-            dotVY = Math.abs(dotVY) * 0.6;
-        }
-        // Swept test, so a fast fall cannot tunnel through the rule.
-        const onSpan = dotX >= world.lineLeft && dotX <= world.lineRight;
-        const landing = onSpan && wasAbove ? world.lineY : world.ground;
-        if (dotVY > 0 && dotY >= landing) {
-            dotY = landing;
-            dotVY = Math.abs(dotVY) < 60 ? 0 : -dotVY * 0.55;
-            dotFallTime = 0;
-        }
+    } else {
+        dotAccumulator = 0;
     }
     placeDot();
     requestAnimationFrame(animateDot);
@@ -468,7 +464,6 @@ const startDot = () => {
     dotY = rect.top + rect.height / 2;
     dotVX = rollVector;           // a small random shove, as if rolled off a ledge
     dotVY = 0;
-    dotFallTime = 0;
     statusDot.remove();
     document.body.appendChild(statusDot);
     placeDot();
@@ -502,8 +497,10 @@ statusDot.addEventListener('pointermove', (event) => {
 });
 statusDot.addEventListener('pointerup', (event) => {
     dotDragging = false;
-    dotVY = Math.max(dotVY, 0) * 0.2;   // released: ease into the same gentle-then-fast fall
-    dotFallTime = 0;
+    // Released: keep the throw velocity, clamped so a fast flick stays on-screen.
+    const throwLimit = 12 * pixelsPerMetre;
+    dotVX = Math.max(-throwLimit, Math.min(throwLimit, dotVX));
+    dotVY = Math.max(-throwLimit, Math.min(throwLimit, dotVY));
     statusDot.classList.remove('dragging');
     statusDot.releasePointerCapture(event.pointerId);
 });
