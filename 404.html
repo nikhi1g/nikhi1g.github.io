@@ -3,10 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Nikhil Gupta - Developer Portfolio">
-<title>Nikhil Gupta</title>
-<link rel="dns-prefetch" href="https://github.com">
-<link rel="dns-prefetch" href="https://www.linkedin.com">
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Page not found - Nikhil Gupta">
+<title>Page not found · Nikhil Gupta</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%233b82f6%22/></svg>">
 <style>
 :root {
@@ -35,7 +34,7 @@ body {
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
     transition: background-color 0.4s ease, color 0.4s ease;
-    font-size: 18px; /* Increased base size */
+    font-size: 18px;
 }
 main {
     width: 100%;
@@ -66,15 +65,15 @@ main {
     to { opacity: 1; transform: translateY(0); }
 }
 header {
-    margin-bottom: 3.5rem;
+    margin-bottom: 2.5rem;
     display: flex;
-    align-items: center; /* Changed from baseline to center for better icon alignment */
+    align-items: center;
     gap: 16px;
     flex-wrap: wrap;
 }
 h1 {
     margin: 0;
-    font-size: 2rem; /* Larger Title */
+    font-size: 2rem;
     font-weight: 700;
     letter-spacing: -0.03em;
 }
@@ -86,42 +85,14 @@ h1 {
     display: inline-block;
     flex-shrink: 0;
 }
-.pulse {
-    animation: pulse 2s infinite;
+.message h2 {
+    margin: 0 0 0.75rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
 }
-@keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.7); }
-    70% { box-shadow: 0 0 0 10px rgba(249, 115, 22, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
-}
-nav {
-    display: flex;
-    gap: 2rem;
-    margin-bottom: 3.5rem;
-    font-size: 1.15rem; /* Larger Nav */
-}
-section h2 {
-    font-size: 1rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--sub);
-    margin: 0 0 1.25rem 0;
-    font-weight: 600;
-}
-ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-.links-grid {
-    display: flex;
-    gap: 2rem;
-}
-.links-grid ul {
-    flex: 1;
-}
-li {
-    margin-bottom: 1rem;
+.message p {
+    margin: 0 0 1.5rem;
     font-size: 1.1rem;
 }
 a {
@@ -129,39 +100,35 @@ a {
     text-decoration: none;
     position: relative;
     transition: color 0.2s ease;
-    padding: 4px 0; /* Larger tap target */
+    padding: 4px 0;
 }
 a:hover {
     color: var(--acc);
 }
-/* Subtle underline animation */
-nav a::after, li a::after, #version::after {
+.message a::after, #version::after {
     content: '';
     position: absolute;
     width: 100%;
     transform: scaleX(0);
-    height: 2px; /* Thicker line */
-    bottom: 4px; /* Move up slightly to underline text directly */
+    height: 2px;
+    bottom: 4px;
     left: 0;
     background-color: var(--acc);
     transform-origin: bottom right;
     transition: transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
-nav a:hover::after, li a:hover::after, #version:hover::after {
+.message a:hover::after, #version:hover::after {
     transform: scaleX(1);
     transform-origin: bottom left;
 }
 #version {
-    position: relative; /* Ensure ::after is positioned relative to this */
+    position: relative;
 }
 #version:hover {
     color: var(--acc) !important;
 }
 footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 2.5rem;
+    margin-top: 3rem;
     padding-top: 1rem;
     border-top: 1px solid var(--sub);
     color: var(--sub);
@@ -172,33 +139,21 @@ footer {
 <body>
 <main>
     <header>
-        <h1>Nikhil Gupta</h1>
+        <h1>404</h1>
         <span class="dot"></span>
         <span id="version" style="font-size: 0.8rem; color: var(--sub); opacity: 0.6; font-family: monospace; cursor: pointer; padding: 4px;" title="Checking version..."></span>
         <button id="theme-toggle" aria-label="Toggle theme" style="margin-left: auto; background: none; border: none; cursor: pointer; color: var(--sub); padding: 8px; display: flex;">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path class="sun" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                <path class="sun" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l.707-.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
                 <path class="moon" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" style="display: none;"></path>
             </svg>
         </button>
     </header>
-    
-    <nav>
-        <a href="https://github.com/nikhi1g?tab=repositories">GitHub</a>
-        <a href="https://www.linkedin.com/in/nikhil---gupta/">LinkedIn</a>
-    </nav>
 
-    <section class="links-grid">
-        <ul>
-            <li><a href="https://nikhi1g.github.io/mcat/index.html">MCAT</a></li>
-            <li><a href="https://nikhi1g.github.io/153b/">153B</a></li>
-            <li><a href="https://nikhi1g.github.io/ucla-emt-course/">UCLA EMT Course</a></li>
-            <li><a href="https://nikhi1g.github.io/seminal_papers/">Seminal Papers</a></li>
-        </ul>
-        <ul>
-            <li><a href="/whisper_hotkey/">whisper_hotkey</a></li>
-            <li><a href="https://memlines.com/">mem lines</a></li>
-        </ul>
+    <section class="message">
+        <h2>Page not found</h2>
+        <p>That route doesn’t exist.</p>
+        <a href="/">Return home</a>
     </section>
 
     <footer>
@@ -216,8 +171,7 @@ const root = document.documentElement;
 const setTheme = (theme) => {
     root.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
-    
-    // Logic: If Dark, show Sun (to switch to Light). If Light, show Moon (to switch to Dark).
+
     if (theme === 'dark') {
         sun.style.display = 'block';
         moon.style.display = 'none';
@@ -227,7 +181,6 @@ const setTheme = (theme) => {
     }
 };
 
-// Init
 const saved = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 setTheme(saved);
 
@@ -250,36 +203,34 @@ toggle.onclick = () => {
 
     const check = async () => {
         try {
-            const res = await fetch('commit.json?t='+Date.now());
+            const res = await fetch('/commit.json?t='+Date.now());
             if(!res.ok) return;
             const d = await res.json();
             const remote = d.commit.slice(0,7);
             setInquiryCommit(remote);
 
             if(!localCommit) {
-                // First load
                 localCommit = remote;
                 el.textContent = localCommit;
                 el.title = d.message || '';
                 el.onclick = () => window.location.href = `https://github.com/nikhi1g/nikhi1g.github.io/commit/${d.commit}`;
                 sessionStorage.setItem('v', localCommit);
             } else if(localCommit !== remote) {
-                // Update detected
                 el.innerHTML = `${localCommit}&rarr;${remote} <span style="font-size:12px">↻</span>`;
                 el.onclick = (e) => {
                     e.preventDefault();
                     location.reload();
                 };
                 el.style.opacity = 1;
-                el.style.color = '#f97316'; // Orange text
-                dot.style.backgroundColor = '#f97316'; // Orange dot
-                dot.classList.add('pulse'); // Optional: add pulse if we had css
+                el.style.color = '#f97316';
+                dot.style.backgroundColor = '#f97316';
+                dot.classList.add('pulse');
             }
         } catch(e){}
     };
 
     await check();
-    setInterval(check, 30000); // Poll every 30s
+    setInterval(check, 30000);
     document.addEventListener('visibilitychange', () => {
         if(document.visibilityState === 'visible') check();
     });

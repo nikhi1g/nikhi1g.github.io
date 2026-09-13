@@ -8,6 +8,7 @@ const git = (...args) => execFileSync('git', args, {encoding: 'utf8'}).trim();
 fs.rmSync(outputDirectory, {recursive: true, force: true});
 fs.mkdirSync(outputDirectory, {recursive: true});
 fs.copyFileSync('index.html', path.join(outputDirectory, 'index.html'));
+fs.copyFileSync('404.html', path.join(outputDirectory, '404.html'));
 
 // Unlinked routes: page only, source assets stay in the repo.
 fs.mkdirSync(path.join(outputDirectory, 'why'), {recursive: true});

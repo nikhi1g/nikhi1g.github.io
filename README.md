@@ -24,4 +24,4 @@ Off-domain links on the landing page:
 - [GitHub](https://github.com/nikhi1g?tab=repositories) and [LinkedIn](https://www.linkedin.com/in/nikhil---gupta/) in the nav
 - [mem lines](https://memlines.com/) in the links list
 
-Only `index.html`, `commit.json`, and `why/index.html` are deployed — [.github/scripts/build-site.mjs](.github/scripts/build-site.mjs) copies files into `_site` explicitly, so anything new in this repo has to be added there to go live.
+Only `index.html`, `404.html`, `commit.json`, and `why/index.html` are deployed — [.github/scripts/build-site.mjs](.github/scripts/build-site.mjs) copies files into `_site` explicitly, so anything new in this repo has to be added there to go live.
