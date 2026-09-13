@@ -356,18 +356,22 @@ version.addEventListener('click', (event) => {
 
 const mainEl = document.querySelector('main');
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-// Let the status dot fall and bounce inside the card.
+// Let the status dot ease into a gravity-driven bounce inside the card.
 const statusDot = document.querySelector('.dot');
 const dotSlot = document.querySelector('.dot-slot');
 const dotRadius = 5;
+const initialDropDuration = 1200;
 let dotX = 0;
 let dotY = 0;
 let dotVX = 0;
 let dotVY = 0;
 let dotLastTime;
+let dotDropStart;
+let dotDropTop = 0;
 let dotDragging = false;
 let dotPointerX = 0;
 let dotPointerY = 0;
+let dotDragTime = 0;
 const placeDot = () => {
     statusDot.style.left = `${dotX - dotRadius}px`;
     statusDot.style.top = `${dotY - dotRadius}px`;
@@ -381,15 +385,24 @@ const dotBounds = () => {
         bottom: rect.bottom - dotRadius
     };
 };
+// Cubic Bézier with both control points at the start: a gentle release that accelerates.
+const easeIntoGravity = (progress) => progress * progress * progress;
 const animateDot = (time) => {
     if (dotLastTime === undefined) dotLastTime = time;
     const dt = Math.min((time - dotLastTime) / 1000, 0.032);
     dotLastTime = time;
-    if (!dotDragging) {
+    const bounds = dotBounds();
+    if (!dotDragging && dotDropStart !== undefined) {
+        const progress = Math.min((time - dotDropStart) / initialDropDuration, 1);
+        dotY = dotDropTop + (bounds.bottom - dotDropTop) * easeIntoGravity(progress);
+        if (progress === 1) {
+            dotDropStart = undefined;
+            dotVY = 720;
+        }
+    } else if (!dotDragging) {
         dotVY += 900 * dt;
         dotX += dotVX * dt;
         dotY += dotVY * dt;
-        const bounds = dotBounds();
         if (dotX < bounds.left || dotX > bounds.right) {
             dotX = Math.max(bounds.left, Math.min(bounds.right, dotX));
             dotVX *= -0.72;
@@ -404,12 +417,14 @@ const animateDot = (time) => {
     placeDot();
     requestAnimationFrame(animateDot);
 };
-const startDot = () => {
+const startDot = (time) => {
     const rect = dotSlot.getBoundingClientRect();
     dotX = rect.left + rect.width / 2;
     dotY = rect.top + rect.height / 2;
-    dotVX = 70;
-    statusDot.style.position = 'fixed';
+    dotDropTop = dotY;
+    dotDropStart = time;
+    statusDot.remove();
+    document.body.appendChild(statusDot);
     placeDot();
     requestAnimationFrame(animateDot);
 };
@@ -417,8 +432,10 @@ statusDot.addEventListener('pointerdown', (event) => {
     if (reduceMotion.matches) return;
     event.preventDefault();
     dotDragging = true;
+    dotDropStart = undefined;
     dotPointerX = event.clientX;
     dotPointerY = event.clientY;
+    dotDragTime = performance.now();
     dotVX = 0;
     dotVY = 0;
     statusDot.classList.add('dragging');
@@ -427,7 +444,7 @@ statusDot.addEventListener('pointerdown', (event) => {
 statusDot.addEventListener('pointermove', (event) => {
     if (!dotDragging) return;
     const now = performance.now();
-    const dt = Math.max((now - (statusDot.dragTime || now)) / 1000, 0.008);
+    const dt = Math.max((now - dotDragTime) / 1000, 0.008);
     const dx = event.clientX - dotPointerX;
     const dy = event.clientY - dotPointerY;
     dotVX = dx / dt;
@@ -436,7 +453,7 @@ statusDot.addEventListener('pointermove', (event) => {
     dotY += dy;
     dotPointerX = event.clientX;
     dotPointerY = event.clientY;
-    statusDot.dragTime = now;
+    dotDragTime = now;
 });
 statusDot.addEventListener('pointerup', (event) => {
     dotDragging = false;
@@ -444,7 +461,7 @@ statusDot.addEventListener('pointerup', (event) => {
     statusDot.releasePointerCapture(event.pointerId);
 });
 if (!reduceMotion.matches) {
-    setTimeout(startDot, 600);
+    setTimeout(() => requestAnimationFrame(startDot), 600);
 }
 
 // Click anywhere / press any key to return home.
