@@ -114,6 +114,10 @@ h1 {
     opacity: 1;
     transform: scale(1);
 }
+.dot.asleep.blinking .eye {
+    transform: scale(1) scaleY(0.08);
+    transition: transform 0.07s ease-in;
+}
 .pupil {
     position: absolute;
     top: 1.6px;
@@ -495,6 +499,23 @@ window.addEventListener('mousemove', (event) => {
     mouseY = event.clientY;
     if (dotAsleep) aimEye();
 });
+// Idle blinks: a lid-drop every few seconds, sometimes twice in quick succession.
+let blinkTimer;
+const blink = (times) => {
+    if (!dotAsleep) return;
+    statusDot.classList.add('blinking');
+    setTimeout(() => {
+        statusDot.classList.remove('blinking');
+        if (times > 1) setTimeout(() => blink(times - 1), 140);
+    }, 90);
+};
+const scheduleBlink = () => {
+    clearTimeout(blinkTimer);
+    blinkTimer = setTimeout(() => {
+        blink(Math.random() < 0.25 ? 2 : 1);   // occasional double blink
+        scheduleBlink();
+    }, 2600 + Math.random() * 3800);
+};
 const animateDot = (time) => {
     if (dotLastTime === undefined) dotLastTime = time;
     const frame = Math.min((time - dotLastTime) / 1000, 0.05);
@@ -513,6 +534,12 @@ const animateDot = (time) => {
     if (asleep !== dotAsleep) {
         dotAsleep = asleep;
         statusDot.classList.toggle('asleep', asleep);
+        if (asleep) {
+            scheduleBlink();
+        } else {
+            clearTimeout(blinkTimer);
+            statusDot.classList.remove('blinking');
+        }
     }
     if (dotAsleep) aimEye();
     requestAnimationFrame(animateDot);
