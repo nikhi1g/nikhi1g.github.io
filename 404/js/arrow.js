@@ -190,6 +190,15 @@ export function createArrow(dot) {
 
         return {vx, vy: vy + GRAVITY * flightTime};
     };
+    const fire = async (rect) => {
+        return fireProjectile(rect, {
+            kind: 'arrow',
+            drawDuration: ARROW_DRAW_DURATION,
+            flightTime: ARROW_FLIGHT_TIME,
+            width: ARROW_WIDTH,
+            height: ARROW_HEIGHT
+        });
+    };
 
     const fireRocket = async (rect) => {
         return fireProjectile(rect, {
