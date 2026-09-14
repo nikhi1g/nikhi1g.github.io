@@ -22,11 +22,13 @@ const flag = (name) => args.includes(name);
 
 const ROOT = resolve(opt('--root', '.'));
 const PAGE = opt('--page', '/404.html');
-const TIMEOUT_S = Number(opt('--timeout', '150'));
+const TIMEOUT_S = Number(opt('--timeout', '240'));
 const EXPECT_DEBRIS = Number(opt('--expect-debris', '3'));
 const EXPECT_HOLE = !flag('--no-hole');
 const EXPECT_AXE = !flag('--no-axe');
 const EXPECT_PRY = !flag('--no-pry');
+const EXPECT_SAW = !flag('--no-saw');
+const EXPECT_CATCHES = Number(opt('--expect-catches', '1'));
 const ALLOW = args.filter((a, i) => args[i - 1] === '--allow');
 const REPORT = opt('--report', join(tmpdir(), '404-harness-report.json'));
 
@@ -203,9 +205,18 @@ async function main() {
             hole: document.querySelectorAll('.glass-hole').length,
             rule: document.querySelectorAll('.pried-rule').length,
             ruleGone: !!document.querySelector('footer.rule-gone'),
+            stairs: document.querySelectorAll('.stair').length,
+            sawHalves: document.querySelectorAll('.saw-half').length,
+            catches: document.querySelectorAll('.fish-catch').length,
+            rod: document.querySelectorAll('#rod').length,
             iconHome: !!document.querySelector('header #theme-toggle')
         })`;
         let milestones = {};
+        // Some milestones are transient by design: the staircase is cleared the
+        // moment the creature has somewhere real to stand, so a final snapshot
+        // can never see it. Accumulate maxima across the whole poll and assert
+        // against those for anything that rises and falls.
+        const peak = {};
         const deadline = Date.now() + TIMEOUT_S * 1000;
         let milestonePass = false;
         while (Date.now() < deadline) {
@@ -215,11 +226,17 @@ async function main() {
             } catch {
                 milestones = {};
             }
+            for (const [key, value] of Object.entries(milestones)) {
+                if (typeof value === 'number') peak[key] = Math.max(peak[key] || 0, value);
+                else if (typeof value === 'boolean') peak[key] = peak[key] || value;
+            }
             const debrisOk = (milestones.debris || 0) >= EXPECT_DEBRIS;
             const holeOk = !EXPECT_HOLE || (milestones.hole || 0) > 0;
             const axeOk = !EXPECT_AXE || (milestones.axe || 0) > 0;
             const pryOk = !EXPECT_PRY || (milestones.ruleGone === true && (milestones.rule || 0) > 0);
-            if (debrisOk && holeOk && axeOk && pryOk) {
+            const sawOk = !EXPECT_SAW || ((milestones.sawHalves || 0) >= 2 && (peak.stairs || 0) > 0);
+            const catchOk = (milestones.catches || 0) >= EXPECT_CATCHES;
+            if (debrisOk && holeOk && axeOk && pryOk && sawOk && catchOk) {
                 milestonePass = true;
                 break;
             }
@@ -238,6 +255,18 @@ async function main() {
         }
         if (EXPECT_PRY && !(milestones.ruleGone === true && (milestones.rule || 0) > 0)) {
             milestoneFailures.push({kind: 'milestone', text: 'footer rule was never pried off'});
+        }
+        if (EXPECT_SAW && !((milestones.sawHalves || 0) >= 2)) {
+            milestoneFailures.push({kind: 'milestone', text: `saw halves ${milestones.sawHalves || 0} < 2`});
+        }
+        if (EXPECT_SAW && !((peak.stairs || 0) > 0)) {
+            milestoneFailures.push({kind: 'milestone', text: 'no staircase was ever hammered'});
+        }
+        if ((milestones.catches || 0) < EXPECT_CATCHES) {
+            milestoneFailures.push({kind: 'milestone', text: `fish catches ${milestones.catches || 0} < expected ${EXPECT_CATCHES}`});
+        }
+        if (EXPECT_CATCHES > 0 && !((milestones.rod || 0) > 0)) {
+            milestoneFailures.push({kind: 'milestone', text: 'fishing rod never appeared'});
         }
         if (EXPECT_HOLE && milestones.iconHome !== false) {
             milestoneFailures.push({kind: 'milestone', text: 'theme icon never left the header'});
