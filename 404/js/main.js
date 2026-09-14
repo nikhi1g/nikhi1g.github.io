@@ -17,7 +17,7 @@ initClipboard();
 initReturnHome();
 
 const dot = createDot();
-initFigure(dot);
+const figure = initFigure(dot);
 
 const gait = createGait(dot);
 const damage = createDamage(dot);
@@ -25,7 +25,7 @@ const stairs = createStairs(dot);
 const arrow = createArrow(dot);
 const saw = createSaw(dot);
 const fishing = createFishing(dot);
-createCreature({dot, gait, damage, stairs, saw, fishing, arrow}).start();
+createCreature({dot, gait, damage, stairs, saw, fishing, arrow, figure}).start();
 
 dot.start();
 
