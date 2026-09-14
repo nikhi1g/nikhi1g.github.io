@@ -1,7 +1,7 @@
 .bone-arrow {
     position: fixed;
     z-index: 1;
-    width: 18px;
+    width: 24px;
     height: 8px;
     pointer-events: none;
     transform-origin: 50% 50%;
@@ -10,7 +10,7 @@
 
 .bone-arrow svg {
     display: block;
-    width: 18px;
+    width: 24px;
     height: 8px;
     overflow: visible;
     transform: rotate(var(--arrow-angle, 0deg));
@@ -18,11 +18,10 @@
 }
 
 .bone-arrow__shaft,
-.bone-arrow__knob,
 .bone-arrow__tip {
     fill: var(--bg);
     stroke: var(--fg);
-    stroke-width: 1.6;
+    stroke-width: 1.4;
     stroke-linecap: round;
     stroke-linejoin: round;
     vector-effect: non-scaling-stroke;
@@ -104,12 +103,78 @@
     fill: var(--acc);
     opacity: 0.85;
 }
+.bone-bow {
+    position: fixed;
+    z-index: 1;
+    width: 10px;
+    height: 30px;
+    margin-left: -5px;
+    margin-top: -15px;
+    pointer-events: none;
+    opacity: 0;
+    transform: rotate(var(--bow-angle, 0deg));
+    transform-origin: 50% 50%;
+    transition: opacity 0.12s ease-out;
+    will-change: left, top, transform;
+}
+
+.bone-bow.is-visible {
+    opacity: 1;
+}
+
+.bone-bow svg {
+    display: block;
+    overflow: visible;
+}
+
+.bone-bow__limb,
+.bone-bow__string {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+}
+
+.bone-bow__limb {
+    fill: none;
+}
+
+/* Nocked arrow sits across the string; left hand holds the bow,
+   right hand pulls this arrow back while .is-drawing. */
+.bone-nocked {
+    position: absolute;
+    left: 1px;
+    top: 11px;
+    width: 24px;
+    height: 8px;
+    transform: translateX(0);
+    transition: transform 0.17s ease-out, opacity 0.06s linear;
+}
+
+.bone-bow.is-drawing .bone-nocked {
+    transform: translateX(-9px);
+}
+
+.bone-nocked .bone-arrow__shaft,
+.bone-nocked .bone-arrow__tip {
+    fill: var(--bg);
+    stroke: var(--fg);
+    stroke-width: 1.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+}
 
 @media (prefers-reduced-motion: reduce) {
     .dot.sprouted.holding-bow #arm-l,
     .dot.sprouted.holding-bow #arm-r,
     .bone-arrow,
     .bone-arrow svg,
+    .bone-bow,
+    .bone-bow svg,
+    .bone-nocked,
     .bone-rocket,
     .bone-rocket svg {
         animation: none;
