@@ -1,6 +1,6 @@
 import {glassHole} from './glass.js';
 
-export function createCreature({dot, gait, stairs, saw, fishing, arrow}) {
+export function createCreature({dot, gait, stairs, saw, fishing, arrow, figure}) {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     // Every destructive act is separated by a beat: the creature sizes up the
     // next target instead of machine-gunning the page apart.
@@ -160,6 +160,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, arrow}) {
         const from = dot.pos();
         gait.setFacing(goalX < from.x ? -1 : 1);
         for (let guard = 0; guard < 60 && !stairs.isComplete(); guard += 1) {
+            markPoint(goalX, standY);
             await gait.swing('hammer');
             if (!stairs.buildNext()) break;
             await wait(160);
@@ -167,24 +168,46 @@ export function createCreature({dot, gait, stairs, saw, fishing, arrow}) {
         return stairs.isComplete();
     };
 
-    // Climb until standing where the plan aimed. Bounded so a blocked route can
-    // never wedge the sequence.
+    // Climb the route one rung at a time. Each rung is a single scripted step of
+    // fixed length with one limb cycle played over it, so the climb is a
+    // sequence of discrete steps rather than a continuous blur — the old
+    // drive-and-snap climb is what made it shake.
     const climbStairs = async (goalX, standY) => {
         if (!gait) return false;
-        const reach = 18;
-        const mode = typeof stairs.mode === 'function' ? stairs.mode() : 'stairs';
-        for (let guard = 0; guard < 240; guard += 1) {
+        const ladder = typeof stairs.activeMode === 'function' && stairs.activeMode() === 'ladder';
+        const cycleMs = ladder ? 620 : 540;
+        const route = typeof stairs.route === 'function' ? stairs.route() : [];
+
+        for (const tread of route) {
+            const centre = (tread.left + tread.right) / 2;
+            const footY = tread.y - dot.radius;
             const p = dot.pos();
-            const closeX = Math.abs(p.x - goalX) <= reach;
-            const closeY = Math.abs(p.y - standY) <= reach;
-            if (closeX && closeY) break;
-            const stepX = Math.abs(p.x - goalX) <= reach ? 0 : (goalX < p.x ? -1 : 1);
-            gait.climb(stepX === 0 ? 1 : stepX, mode);
-            await wait(80);
+            const alreadyThere = Math.abs(p.y - footY) < 2 && Math.abs(p.x - centre) < 6;
+            if (alreadyThere) continue;
+            const dir = centre < p.x ? -1 : 1;
+            gait.stepClimb(dir, ladder ? 'ladder' : 'stairs');
+            dot.stepTo(centre, footY, cycleMs);
+            await wait(cycleMs + 60);
+            if (Math.abs(dot.pos().y - standY) < dot.radius && Math.abs(dot.pos().x - goalX) < 24) break;
         }
+
         gait.stopClimb();
         gait.stop();
         return true;
+    };
+
+    // Close any remaining gap to the goal the way a person would: hop. Used when
+    // the route ends a little short of where the work has to happen.
+    const nudgeTo = async (goalX) => {
+        const reach = 24;
+        for (let attempt = 0; attempt < 6; attempt += 1) {
+            const p = dot.pos();
+            if (Math.abs(p.x - goalX) <= reach) return true;
+            gait.hopDown(goalX < p.x ? -1 : 1);
+            for (let guard = 0; guard < 40 && !dot.isGrounded(); guard += 1) await wait(60);
+            await wait(140);
+        }
+        return Math.abs(dot.pos().x - goalX) <= reach * 2;
     };
 
     // Scaffolding is temporary: once the creature is up on something real, the
@@ -205,6 +228,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, arrow}) {
         if (!built) return false;
         keepStairs = true;
         await climbStairs(goalX, standY);
+        await nudgeTo(goalX);
         if (standOn) {
             dot.addPlatform(standOn.left, standOn.right, standOn.top);
             await clearStairs();
@@ -217,6 +241,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, arrow}) {
     // up off its far end while the creature leans, then tears free as debris.
     const pryRule = async () => {
         const footer = document.querySelector('footer');
+        markTarget(footer);
         if (!footer || footer.classList.contains('rule-gone')) return;
         const rect = footer.getBoundingClientRect();
         if (rect.width < 1) return;
@@ -252,17 +277,19 @@ export function createCreature({dot, gait, stairs, saw, fishing, arrow}) {
         dot.spawnDebris(bar, torn.left, torn.top, dir * -60, -90, dir * -140);
     };
 
-    // The footer sentence is fished out one letter at a time. Whitespace is left
-    // unwrapped (it has no visible box to hook) and #inquiry-commit is kept
-    // intact and fished as a single catch at the end, because version.js
-    // rewrites its textContent on every poll and would wipe any spans inside it.
+    // The footer sentence is fished out one WORD at a time — a hook that takes a
+    // single letter reads as a typo, a hook that takes a whole word reads as
+    // fishing. Whitespace is left as plain text (it has no box to hook), and
+    // #inquiry-commit is kept intact and fished as one catch at the end, because
+    // version.js rewrites its textContent on every poll and would wipe any spans
+    // inside it.
     const splitSentence = () => {
         const footer = document.querySelector('footer');
         const root = footer ? footer.querySelector('span') : null;
         if (!root) return [];
         const skip = root.querySelector('#inquiry-commit');
 
-        if (!root.querySelector('.letter')) {
+        if (!root.querySelector('.word')) {
             const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
             const texts = [];
             while (walker.nextNode()) {
@@ -273,19 +300,24 @@ export function createCreature({dot, gait, stairs, saw, fishing, arrow}) {
             }
             for (const node of texts) {
                 const fragment = document.createDocumentFragment();
-                for (const character of Array.from(node.nodeValue)) {
+                for (const piece of node.nodeValue.split(/(\s+)/)) {
+                    if (!piece) continue;
+                    if (!piece.trim()) {
+                        fragment.appendChild(document.createTextNode(piece));
+                        continue;
+                    }
                     const span = document.createElement('span');
-                    span.className = 'letter';
-                    span.textContent = character;
+                    span.className = 'word';
+                    span.textContent = piece;
                     fragment.appendChild(span);
                 }
                 node.parentNode.replaceChild(fragment, node);
             }
         }
 
-        const letters = [...root.querySelectorAll('.letter')];
-        if (skip && skip.isConnected) letters.push(skip);
-        return letters;
+        const words = [...root.querySelectorAll('.word')];
+        if (skip && skip.isConnected) words.push(skip);
+        return words;
     };
 
     const run = async (id) => {
@@ -297,6 +329,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, arrow}) {
         if (!volleyDone) {
             if (!arrow || typeof arrow.fire !== 'function') return;
             const letters = splitHeading();
+            markTarget(letters[0]);
             await beat();
             for (const letter of letters) {
                 if (!isCurrent(id)) return;
@@ -332,6 +365,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, arrow}) {
         if (volleyDone && !finaleDone && arrow && typeof arrow.fireAxe === 'function' && finaleTries < 3) {
             finaleTries += 1;
             const icon = document.getElementById('theme-toggle');
+            markTarget(icon);
             if (!icon || !icon.isConnected) {
                 finaleDone = true;
             } else {
@@ -387,6 +421,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, arrow}) {
                 try {
                     await beat();
                     const rect = paragraph.getBoundingClientRect();
+                    markTarget(paragraph);
                     // Stand one arm's length under the text so the saw bites
                     // through the middle of it. Never saw from where we happen
                     // to be: if the approach failed, walking away is wrong.
@@ -420,6 +455,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, arrow}) {
                 try {
                     await beat();
                     const rect = heading.getBoundingClientRect();
+                    markTarget(heading);
                     await travelTo(rect.left + rect.width / 2, rect.top, rect);
                     perchDone = true;
                 } catch {
@@ -440,10 +476,11 @@ export function createCreature({dot, gait, stairs, saw, fishing, arrow}) {
             // this phase holds.
             gait.putAway();
             try {
-                const letters = splitSentence();
-                for (const letter of letters) {
-                    if (!letter.isConnected) continue;
-                    await fishing.fishOnce(letter);
+                const words = splitSentence();
+                for (const word of words) {
+                    if (!word.isConnected) continue;
+                    markTarget(word);
+                    await fishing.fishOnce(word);
                     await wait(90);
                 }
                 fishing.hideRod();
@@ -492,14 +529,52 @@ export function createCreature({dot, gait, stairs, saw, fishing, arrow}) {
         }
     };
 
+    // The creature watches the pointer while the pointer is being used, and
+    // looks at what it is about to do once the pointer has gone quiet.
+    const IDLE_MS = 900;
+    let lastMouseMove = 0;
+    let lookAt = null;
+
+    const updateGaze = () => {
+        if (!figure || typeof figure.setLookTarget !== 'function') return;
+        const idle = performance.now() - lastMouseMove > IDLE_MS;
+        figure.setLookTarget(idle ? lookAt : null);
+    };
+
+    // Called at the start of each destructive act with the thing being worked on.
+    const markTarget = (element) => {
+        if (!element) {
+            lookAt = null;
+            return;
+        }
+        try {
+            const rect = element.getBoundingClientRect();
+            if (rect.width < 1 || rect.height < 1) {
+                lookAt = null;
+                return;
+            }
+            lookAt = {x: rect.left + rect.width / 2, y: rect.top + rect.height / 2};
+        } catch {
+            lookAt = null;
+        }
+    };
+
+    // For work with no element to stare at — building, travelling — look at the
+    // place it is heading.
+    const markPoint = (x, y) => {
+        lookAt = Number.isFinite(x) && Number.isFinite(y) ? {x, y} : null;
+    };
+
     const start = () => {
         if (started || reduceMotion.matches) return;
         started = true;
         window.addEventListener('mousemove', (event) => {
             mouseX = event.clientX;
             mouseY = event.clientY;
+            lastMouseMove = performance.now();
         });
         dot.onStep(updateFlee);
+        dot.onStep(updateGaze);
         dot.onSleepChange(onSleepChange);
         // Watchdog: sleep events are the normal trigger, but a wake at the
         // wrong instant can strand a finished phase with no future event to
