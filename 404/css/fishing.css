@@ -64,6 +64,11 @@
     vector-effect: non-scaling-stroke;
 }
 
+/* A word is fished as one catch, so it must never line-break mid-way. */
+.word {
+    white-space: nowrap;
+}
+
 /* A hooked piece of the page: it keeps its own type metrics (copied inline by
    the module) and only gains fixed positioning while it is off the page. */
 .fish-catch {
