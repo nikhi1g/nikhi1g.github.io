@@ -1,0 +1,105 @@
+/* Chainsaw tool: a runtime-created SVG group (#saw) appended inside #arm-r —
+   see tools.css's comment for why it must stay a child of #arm-r rather than
+   the SVG root. Visibility and the whole cutting animation are driven by the
+   .sawing state class saw.js toggles on .dot.
+
+   Three nested groups, and the nesting matters:
+     #saw            -> grip rotation (transform ATTRIBUTE)
+       .chainsaw-jitter -> engine judder (CSS animation; no attribute transform,
+                           so the animation has nothing to clobber)
+         art          -> icon translate/rotate/scale (transform ATTRIBUTE)
+   A CSS transform animation replaces a transform attribute outright, so the
+   judder cannot live on either of the outer groups without losing the grip. */
+
+#saw {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.dot.sawing #saw {
+    opacity: 1;
+}
+
+/* Icon-space stroke-width 3 maps back to the rig's 2.1 through the tool's
+   0.70 nested scale, exactly as tools.css does for #axe/#hammer. */
+#saw .chainsaw-body,
+#saw .chainsaw-handle,
+#saw .chainsaw-bar,
+#saw .chainsaw-sprocket {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* Teeth marching around the guide bar. A solid stroke with dashes reads as
+   chain links, and animating the dash offset is what actually sells a running
+   chain — far more than wobbling the whole tool would. */
+#saw .chainsaw-chain {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 2.6;
+    stroke-linecap: butt;
+    stroke-dasharray: 1.1 1.5;
+}
+
+#saw .chainsaw-sprocket {
+    fill: var(--bg);
+    stroke-width: 2;
+}
+
+/* Engine judder: a fast two-frame buzz, not a smooth wobble. */
+@keyframes chainsawBuzz {
+    0%, 100% { transform: translate(0, 0); }
+    25% { transform: translate(0.34px, -0.28px); }
+    50% { transform: translate(-0.3px, 0.24px); }
+    75% { transform: translate(0.18px, 0.3px); }
+}
+
+/* The chain itself, running around the bar loop. */
+@keyframes chainsawRun {
+    to { stroke-dashoffset: -31; }
+}
+
+/* The brace: the body of the saw is pushed into the cut and bucked. */
+@keyframes chainsawBrace {
+    0%, 100% { transform: rotate(-6deg); }
+    50% { transform: rotate(-2deg); }
+}
+
+.dot.sawing #saw .chainsaw-jitter {
+    animation: chainsawBuzz 0.09s steps(1, end) infinite;
+}
+
+.dot.sawing #saw .chainsaw-chain {
+    animation: chainsawRun 0.32s linear infinite;
+}
+
+.dot.sawing #arm-r {
+    transform-origin: 15px 27px;
+    animation: chainsawBrace 0.42s ease-in-out infinite;
+}
+
+/* The free hand braces the work while the other runs the saw. */
+.dot.sawing #arm-l {
+    transform: rotate(-16deg);
+    transform-origin: 15px 27px;
+    transition: transform 0.24s ease-out;
+}
+
+/* The two fallen halves saw.js clips out of the sawn target. */
+.saw-half {
+    position: fixed;
+    pointer-events: none;
+    z-index: 3;
+    margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dot.sawing #saw .chainsaw-jitter,
+    .dot.sawing #saw .chainsaw-chain,
+    .dot.sawing #arm-r {
+        animation: none;
+    }
+}
