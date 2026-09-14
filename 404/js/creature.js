@@ -459,8 +459,13 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                     await beat();
                     const rect = heading.getBoundingClientRect();
                     markTarget(heading);
-                    await travelTo(rect.left + rect.width / 2, rect.top, rect);
-                    perchDone = true;
+                    // Only claim the perch if it actually got up there. Marking
+                    // this done on a failed climb is what left it fishing from
+                    // the floor while the sequence believed it was on the heading.
+                    const up = await travelTo(rect.left + rect.width / 2, rect.top, rect);
+                    if (up) perchDone = true;
+                    else if (perchTries >= 3) perchDone = true;
+                    else return;
                 } catch {
                     if (perchTries >= 3) perchDone = true;
                 } finally {
@@ -484,7 +489,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                     if (!word.isConnected) continue;
                     markTarget(word);
                     await fishing.fishOnce(word);
-                    await wait(90);
+                    await wait(320);
                 }
                 fishing.hideRod();
                 fishDone = true;
@@ -512,7 +517,11 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                     await beat();
                     const rect = socket.getBoundingClientRect();
                     markTarget(socket);
-                    await travelTo(rect.left + rect.width / 2, rect.top, rect);
+                    const there = await travelTo(rect.left + rect.width / 2, rect.top, rect);
+                    if (!there) {
+                        wipeDone = true;
+                        return;
+                    }
                     await beat();
                     await wipe.wipeAway(socket);
                     wipeDone = true;
