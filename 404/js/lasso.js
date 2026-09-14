@@ -283,13 +283,17 @@ export function createLasso(dot) {
         if (rect.width < 1 || rect.height < 1) return false;
 
         // The socket left behind: a same-size fracture decal holding the layout.
-        const hole = document.createElement('span');
-        hole.className = 'glass-hole';
-        hole.setAttribute('aria-hidden', 'true');
-        hole.style.width = `${rect.width}px`;
-        hole.style.height = `${rect.height}px`;
-        hole.innerHTML = crackDecal(Math.round(rect.width), Math.round(rect.height));
-        icon.parentElement.insertBefore(hole, icon);
+        // A retried yank reuses the existing socket instead of doubling it.
+        if (!icon.dataset.yanked && !document.querySelector('.glass-hole')) {
+            const hole = document.createElement('span');
+            hole.className = 'glass-hole';
+            hole.setAttribute('aria-hidden', 'true');
+            hole.style.width = `${rect.width}px`;
+            hole.style.height = `${rect.height}px`;
+            hole.innerHTML = crackDecal(Math.round(rect.width), Math.round(rect.height));
+            icon.parentElement.insertBefore(hole, icon);
+            icon.dataset.yanked = '1';
+        }
 
         icon.style.position = 'fixed';
         icon.style.left = `${rect.left}px`;

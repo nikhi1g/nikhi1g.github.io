@@ -5,7 +5,8 @@ export function createCreature({dot, arrow, lasso}) {
     const FLEE_SPEED = 170;
 
     let started = false;
-    let done = false;
+    let volleyDone = false;
+    let lassoDone = false;
     let runId = 0;
     let mouseX = null;
     let mouseY = null;
@@ -72,52 +73,59 @@ export function createCreature({dot, arrow, lasso}) {
             : -140;
         dot.spawnDebris(letter, rect.left, rect.top, vx, vy, (Math.random() - 0.5) * 120);
     };
+
     const run = async (id) => {
         const ready = await waitForSprouted(id);
-        if (!ready || !isCurrent(id) || done) return;
-        if (!arrow || typeof arrow.fire !== 'function') return;
+        if (!ready || !isCurrent(id)) return;
 
-        const letters = splitHeading();
-        if (letters.length === 0) return;
-        for (const letter of letters) {
-            if (!isCurrent(id) || done) return;
-            if (!dot.isAsleep()) return;
-            if (!letter.isConnected) continue;
-            const rect = letter.getBoundingClientRect();
-            if (!rect || rect.width < 1 || rect.height < 1) continue;
-            let impact = null;
-            try {
-                impact = await arrow.fire(rect);
-            } catch {
-                return;
-            }
-            if (!isCurrent(id)) return;
-            if (letter.isConnected) {
+        // Phase 1: three arrows into the heading. A wake aborts the loop, but
+        // the next sleep resumes on whatever letters are still standing.
+        if (!volleyDone) {
+            if (!arrow || typeof arrow.fire !== 'function') return;
+            const letters = splitHeading();
+            for (const letter of letters) {
+                if (!isCurrent(id)) return;
+                if (!dot.isAsleep()) return;
+                if (!letter.isConnected) continue;
+                const rect = letter.getBoundingClientRect();
+                if (!rect || rect.width < 1 || rect.height < 1) continue;
+                let impact = null;
                 try {
-                    knockOffLetter(letter, impact);
+                    impact = await arrow.fire(rect);
                 } catch {
-                    continue;
+                    return;
                 }
+                if (!isCurrent(id)) return;
+                if (letter.isConnected) {
+                    try {
+                        knockOffLetter(letter, impact);
+                    } catch {
+                        continue;
+                    }
+                }
+                await new Promise((resolve) => setTimeout(resolve, SHOT_GAP_MS));
             }
-            await new Promise((resolve) => setTimeout(resolve, SHOT_GAP_MS));
+            if (isCurrent(id)) volleyDone = true;
+            else return;
         }
-        // The 404 is down: summon the lasso, crack it twice wide, and on the
-        // third throw hook the theme icon and yank it to the ground.
-        if (isCurrent(id) && lasso && typeof lasso.sequence === 'function') {
+
+        // Phase 2: summon the lasso, crack it twice wide, and on the third
+        // throw hook the theme icon and yank it to the ground.
+        if (volleyDone && !lassoDone && lasso && typeof lasso.sequence === 'function') {
+            if (!isCurrent(id)) return;
             try {
                 await lasso.sequence(() => document.getElementById('theme-toggle'));
             } catch {
                 return;
             }
+            if (isCurrent(id)) lassoDone = true;
         }
-
-        done = true;
     };
 
     const onSleepChange = (asleep) => {
         if (reduceMotion.matches) return;
         runId += 1;
-        if (!asleep || done) return;
+        if (!asleep || (volleyDone && lassoDone)) return;
         const id = runId;
         void run(id);
     };
