@@ -7,9 +7,9 @@
 // express. So the line and hook are drawn in a separate full-screen overlay in
 // viewport pixels, anchored to the fist via getScreenCTM.
 
-const CAST_MS = 620;      // hand -> target
-const DRAW_MS = 220;      // beat once the hook is on
-const HOIST_MS = 520;     // target lifted back toward the creature
+const CAST_MS = 1150;     // hand -> target: the hook has to travel, it should read as a throw
+const DRAW_MS = 700;      // a real beat with the hook on before it takes the weight
+const HOIST_MS = 950;     // and the catch comes up slowly, against gravity
 const ARC_LIFT = 0.42;    // how high the cast bows, as a fraction of the span
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
