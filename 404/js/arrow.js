@@ -171,6 +171,9 @@ export function createArrow(dot) {
         const angle = Math.atan2(vy, vx) * 180 / Math.PI;
         spawn.style.setProperty('--projectile-angle', `${angle}deg`);
         spawn.setAttribute('data-weapon', kind);
+        // Inline before it joins the document: `body` is a flex container, and a
+        // projectile that was briefly in flow would take width from the card.
+        spawn.style.position = 'fixed';
         document.body.appendChild(spawn);
         dot.spawnDebris(
             spawn,
