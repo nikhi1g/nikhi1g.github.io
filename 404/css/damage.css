@@ -206,3 +206,7 @@ footer.dmg-split::after {
     stroke-width: 1.2;
     vector-effect: non-scaling-stroke;
 }
+.glass-hole__crack--hair {
+    stroke-width: 0.9;
+    opacity: 0.6;
+}
