@@ -239,10 +239,11 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
     // treads fade out from under it.
     const clearStairs = async () => {
         if (!stairs || !stairs.hasAny()) return;
-        for (let guard = 0; guard < 60 && stairs.hasAny(); guard += 1) {
-            stairs.teardownNext();
-            await wait(90);
-        }
+        // `clear` rather than teardownNext: the creature has already been given a
+        // real platform at this point, and teardownNext only drops treads — the
+        // rails and risers would survive it and linger through the cleanup.
+        await wait(120);
+        stairs.clear();
     };
 
     // Travel to stand at (goalX, standY). With `standOn` the target rect becomes
@@ -262,8 +263,39 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         return true;
     };
 
-    // The lever: a stand-in rule element takes the footer's top border, tilts
-    // up off its far end while the creature leans, then tears free as debris.
+    // The footer rule takes two blows. The first cracks it — the grey line above
+    // "For any inquiries" shows fracture marks but holds. The second shatters it
+    // into shards that rain down and settle on the floor, and the rule stops
+    // being a surface the creature can stand on.
+    const SHARDS = 110;
+
+    const shatterRule = (bar, rect) => {
+        bar.remove();
+        for (let index = 0; index < SHARDS; index += 1) {
+            const piece = document.createElement('span');
+            piece.className = 'rule-shard';
+            piece.setAttribute('aria-hidden', 'true');
+            const x = rect.left + (rect.width * index) / SHARDS;
+            const width = rect.width / SHARDS + 1;
+            piece.style.position = 'fixed';
+            piece.style.left = `${x}px`;
+            piece.style.top = `${rect.top}px`;
+            piece.style.width = `${width}px`;
+            piece.style.height = `${Math.random() < 0.5 ? 1 : 2}px`;
+            document.body.appendChild(piece);
+            // Thrown outward and up a little, so the dust of it settles across
+            // the whole floor rather than piling in one place.
+            dot.spawnDebris(
+                piece,
+                x,
+                rect.top,
+                (Math.random() - 0.5) * 260,
+                -70 - Math.random() * 170,
+                (Math.random() - 0.5) * 900
+            );
+        }
+    };
+
     const pryRule = async () => {
         const footer = document.querySelector('footer');
         markTarget(footer);
@@ -286,20 +318,26 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
 
         const dir = dot.pos().x > rect.left + rect.width / 2 ? 1 : -1;
         bar.style.transformOrigin = dir > 0 ? '0% 50%' : '100% 50%';
-        dot.el.classList.add('prying');
         dot.el.classList.toggle('face-left', dir < 0);
 
-        // Load the lever, hold, then let it tear.
-        await new Promise((r) => setTimeout(r, 260));
-        bar.classList.add('is-levering');
-        await new Promise((r) => setTimeout(r, 520));
+        try {
+            // First blow: it cracks.
+            await beat();
+            await gait.swing('hammer');
+            bar.classList.add('is-cracked');
+            await wait(360);
 
-        dot.el.classList.remove('prying');
-        const torn = bar.getBoundingClientRect();
-        bar.classList.remove('is-levering');
-        bar.style.transition = 'none';
-        dot.dropLine();
-        dot.spawnDebris(bar, torn.left, torn.top, dir * -60, -90, dir * -140);
+            // Second blow: it shatters, and the floor it used to be is gone.
+            await beat();
+            await gait.swing('hammer');
+            dot.dropLine();
+            shatterRule(bar, rect);
+        } catch {
+            if (bar.isConnected) {
+                dot.dropLine();
+                shatterRule(bar, rect);
+            }
+        }
     };
 
     // The footer sentence is fished out one WORD at a time — a hook that takes a
@@ -590,7 +628,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                 await wait(260);
                 // Walk along the floor to the nearest loose piece, so the leg
                 // cycle plays instead of the creature sliding into position.
-                const nearest = [...document.querySelectorAll('body > .letter, body > .word, body > .fish-catch, body > .bone-arrow, body > .bone-axe-thrown, body > .damage-fragment')]
+                const nearest = [...document.querySelectorAll('body > .letter, body > .word, body > .fish-catch, body > .bone-arrow, body > .bone-axe-thrown, body > .damage-fragment, body > .rule-shard')]
                     .filter((el) => el.isConnected)
                     .map((el) => el.getBoundingClientRect())
                     .filter((r) => r.width >= 1)
@@ -630,7 +668,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                 // still lying about.
                 const strays = [...document.querySelectorAll(
                     'body > .bone-bow, body > .bone-rocket, body > .glass-hole, #version, .hint kbd, .bone-lasso, body > .stair, body > .ladder-rail, body > .stair-riser, body > .pried-rule, body > .thrown-vacuum,'
-                    + ' body > .letter, body > .word, body > .fish-catch, body > .bone-arrow, body > .bone-axe-thrown, body > .damage-fragment'
+                    + ' body > .letter, body > .word, body > .fish-catch, body > .bone-arrow, body > .bone-axe-thrown, body > .damage-fragment, body > .rule-shard'
                 )].filter((el) => el && el.isConnected);
                 markPoint(dot.pos().x, dot.world().ground);
                 await vacuum.suckAll(strays);
