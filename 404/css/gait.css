@@ -118,28 +118,28 @@
     25%, 75% { transform: translateY(-1px); }
 }
 .dot.sprouted.climbing #leg-l {
-    animation: gaitStairHip 0.8s linear infinite;
+    animation: gaitStairHip var(--climb-cycle, 0.8s) linear var(--climb-count, infinite);
 }
 .dot.sprouted.climbing #leg-r {
-    animation: gaitStairHip 0.8s linear infinite;
+    animation: gaitStairHip var(--climb-cycle, 0.8s) linear var(--climb-count, infinite);
     animation-delay: -0.4s;
 }
 .dot.sprouted.climbing #shin-l {
-    animation: gaitStairKnee 0.8s linear infinite;
+    animation: gaitStairKnee var(--climb-cycle, 0.8s) linear var(--climb-count, infinite);
 }
 .dot.sprouted.climbing #shin-r {
-    animation: gaitStairKnee 0.8s linear infinite;
+    animation: gaitStairKnee var(--climb-cycle, 0.8s) linear var(--climb-count, infinite);
     animation-delay: -0.4s;
 }
 .dot.sprouted.climbing #arm-r {
-    animation: gaitStairArm 0.8s linear infinite;
+    animation: gaitStairArm var(--climb-cycle, 0.8s) linear var(--climb-count, infinite);
 }
 .dot.sprouted.climbing #arm-l {
-    animation: gaitStairArm 0.8s linear infinite;
+    animation: gaitStairArm var(--climb-cycle, 0.8s) linear var(--climb-count, infinite);
     animation-delay: -0.4s;
 }
 .dot.sprouted.climbing #torso {
-    animation: gaitStairTorsoPush 0.8s linear infinite;
+    animation: gaitStairTorsoPush var(--climb-cycle, 0.8s) linear var(--climb-count, infinite);
 }
 
 /* --- Ladder climb: hand-over-hand, diagonal pairing. One arm reaches straight
@@ -189,31 +189,31 @@
     100% { transform: rotate(0deg); }
 }
 .dot.sprouted.laddering #arm-r {
-    animation: gaitLadderArmRight 0.9s linear infinite;
+    animation: gaitLadderArmRight var(--ladder-cycle, 0.9s) linear var(--ladder-count, infinite);
 }
 .dot.sprouted.laddering #arm-l {
-    animation: gaitLadderArmLeft 0.9s linear infinite;
+    animation: gaitLadderArmLeft var(--ladder-cycle, 0.9s) linear var(--ladder-count, infinite);
     animation-delay: -0.45s;
 }
 .dot.sprouted.laddering #fore-r {
-    animation: gaitLadderForeRight 0.9s linear infinite;
+    animation: gaitLadderForeRight var(--ladder-cycle, 0.9s) linear var(--ladder-count, infinite);
 }
 .dot.sprouted.laddering #fore-l {
-    animation: gaitLadderForeLeft 0.9s linear infinite;
+    animation: gaitLadderForeLeft var(--ladder-cycle, 0.9s) linear var(--ladder-count, infinite);
     animation-delay: -0.45s;
 }
 .dot.sprouted.laddering #leg-l {
-    animation: gaitLadderHip 0.9s linear infinite;
+    animation: gaitLadderHip var(--ladder-cycle, 0.9s) linear var(--ladder-count, infinite);
 }
 .dot.sprouted.laddering #leg-r {
-    animation: gaitLadderHip 0.9s linear infinite;
+    animation: gaitLadderHip var(--ladder-cycle, 0.9s) linear var(--ladder-count, infinite);
     animation-delay: -0.45s;
 }
 .dot.sprouted.laddering #shin-l {
-    animation: gaitLadderKnee 0.9s linear infinite;
+    animation: gaitLadderKnee var(--ladder-cycle, 0.9s) linear var(--ladder-count, infinite);
 }
 .dot.sprouted.laddering #shin-r {
-    animation: gaitLadderKnee 0.9s linear infinite;
+    animation: gaitLadderKnee var(--ladder-cycle, 0.9s) linear var(--ladder-count, infinite);
     animation-delay: -0.45s;
 }
 .dot.sprouted.face-left.walking #shin-l {
@@ -236,7 +236,7 @@
 }
 .dot.sprouted.laddering #torso {
     transform-origin: 15px 42px;
-    animation: gaitLadderTorsoSway 0.9s linear infinite;
+    animation: gaitLadderTorsoSway var(--ladder-cycle, 0.9s) linear var(--ladder-count, infinite);
 }
 
 /* --- Facing: mirror the whole rig with the independent scale property. Keeping
