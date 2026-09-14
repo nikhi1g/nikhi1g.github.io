@@ -33,6 +33,7 @@ clean run. The harness therefore also asserts the observable end state:
 | `axe > 0` | the thrown axe was spawned |
 | `hole > 0` | the fracture decal took the theme icon's socket |
 | `iconHome === false` | the icon actually left the header |
+| `ruleGone` + `rule > 0` | the footer rule was pried off and handed to physics |
 
 If you add a phase, add its milestone. An assertion that can't fail is worse
 than no assertion.
@@ -45,7 +46,7 @@ than no assertion.
 | `--page <path>` | `/404.html` | page under test |
 | `--timeout <s>` | `150` | milestone deadline |
 | `--expect-debris <n>` | `3` | knocked-off glyph count |
-| `--no-axe` / `--no-hole` | off | skip finale milestones |
+| `--no-axe` / `--no-hole` / `--no-pry` | off | skip finale milestones |
 | `--allow <substr>` | — | repeatable console-error allowlist |
 | `--report <path>` | tmp | JSON report destination |
 
@@ -74,8 +75,7 @@ noise rather than a regression.
 |---|---|
 | `404.html` | markup shell plus stylesheet/module links |
 | `404/js/physics.js` | the simulation; exposes `drive`/`hop`/`spawnDebris`/`onStep` |
-| `404/js/figure.js` | eye, blinking, sprout/collapse |
-| `404/js/creature.js` | phased sequence: arrow volley, then axe finale |
+| `404/js/creature.js` | phased sequence: arrow volley, axe finale, rule pry |
 | `404/js/arrow.js` | bow, arrow, rocket, thrown axe on shared ballistics |
 | `404/js/glass.js` | procedural impact-fracture decal |
 | `404/js/damage.js` | damage stage classes and LIFO break/fix log |
