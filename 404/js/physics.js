@@ -51,6 +51,12 @@ export function createDot() {
         statusDot.style.left = `${dotX - dotRadius}px`;
         statusDot.style.top = `${dotY - dotRadius}px`;
     };
+    // The footer rule is a real floor until the creature pries it off; after
+    // that the card bottom is the only fixed surface left.
+    let lineGone = false;
+    const dropLine = () => {
+        lineGone = true;
+    };
     const dotWorld = () => {
         const card = mainEl.getBoundingClientRect();
         const footer = footerEl.getBoundingClientRect();
@@ -61,7 +67,8 @@ export function createDot() {
             ground: card.bottom - dotRadius,
             lineY: footer.top - dotRadius,
             lineLeft: footer.left,
-            lineRight: footer.right
+            lineRight: footer.right,
+            lineGone
         };
     };
     // Every walkable surface, in one list: the footer rule, the card floor, and any
@@ -82,8 +89,10 @@ export function createDot() {
     };
     const surfacesAt = (x) => {
         const world = dotWorld();
-        const list = [{y: world.ground, left: world.left, right: world.right, kind: 'ground'},
-            {y: world.lineY, left: world.lineLeft, right: world.lineRight, kind: 'line'}, ...platforms];
+        const list = [{y: world.ground, left: world.left, right: world.right, kind: 'ground'}, ...platforms];
+        if (!world.lineGone) {
+            list.push({y: world.lineY, left: world.lineLeft, right: world.lineRight, kind: 'line'});
+        }
         return list.filter((s) => x >= s.left && x <= s.right);
     };
     // The surface a falling dot lands on: the highest one it was above before this step.
@@ -306,7 +315,7 @@ export function createDot() {
             // the rule's span and its bottom edge was above the rule last step,
             // so wide glyphs can't slip through at their edges.
             const prevBottom = prevY + h;
-            const overlapsLine = bit.x + w > world.lineLeft && bit.x < world.lineRight;
+            const overlapsLine = !world.lineGone && bit.x + w > world.lineLeft && bit.x < world.lineRight;
             const surface = overlapsLine && prevBottom <= world.lineY + dotRadius + 0.5
                 ? world.lineY
                 : world.ground;
@@ -356,6 +365,7 @@ export function createDot() {
         addPlatform,
         removePlatform,
         clearPlatforms,
+        dropLine,
         drive,
         release,
         hop,
