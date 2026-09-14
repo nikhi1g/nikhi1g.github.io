@@ -172,9 +172,21 @@ export function createDot() {
         if (asleep !== dotAsleep) {
             dotAsleep = asleep;
             statusDot.classList.toggle('asleep', asleep);
-            for (const listener of sleepListeners) listener(asleep);
+            for (const listener of sleepListeners) {
+                try {
+                    listener(asleep);
+                } catch (e) {
+                    void e;
+                }
+            }
         }
-        for (const listener of stepListeners) listener(frame);
+        for (const listener of stepListeners) {
+            try {
+                listener(frame);
+            } catch (e) {
+                void e;
+            }
+        }
         requestAnimationFrame(animateDot);
     };
     const startDot = () => {
@@ -209,8 +221,11 @@ export function createDot() {
         const dy = event.clientY - dotPointerY;
         dotVX = dx / dt;
         dotVY = dy / dt;
-        dotX += dx;
-        dotY += dy;
+        // The dot can't leave the box it bounces in: clamp the drag to the
+        // same world rect the integrator enforces.
+        const world = dotWorld();
+        dotX = Math.max(world.left, Math.min(world.right, dotX + dx));
+        dotY = Math.max(world.top, Math.min(world.ground, dotY + dy));
         dotPointerX = event.clientX;
         dotPointerY = event.clientY;
         dotDragTime = now;
@@ -242,7 +257,7 @@ export function createDot() {
         dotVX = vx;
     };
     // Chopped-off page bits fall with the same constants and the same floors.
-    const spawnDebris = (el, x, y, vx, vy) => {
+    const spawnDebris = (el, x, y, vx, vy, spin = null) => {
         el.style.position = 'fixed';
         el.style.left = `${x}px`;
         el.style.top = `${y}px`;
@@ -258,7 +273,7 @@ export function createDot() {
             vx,
             vy,
             rot: 0,
-            spin: (Math.random() - 0.5) * 600,
+            spin: Number.isFinite(spin) ? spin : (Math.random() - 0.5) * 600,
             resting: false,
             width,
             height
@@ -278,19 +293,26 @@ export function createDot() {
             bit.x += bit.vx * dt;
             bit.y += bit.vy * dt;
             bit.rot += bit.spin * dt;
-            const halfWidth = Number.isFinite(bit.width) ? bit.width : 0;
-            const minX = Math.min(world.left, world.right - halfWidth);
-            const maxX = Math.max(world.left, world.right - halfWidth);
+            const w = Number.isFinite(bit.width) ? bit.width : 0;
+            const h = Number.isFinite(bit.height) ? bit.height : 0;
+            const minX = Math.min(world.left, world.right - w);
+            const maxX = Math.max(world.left, world.right - w);
             if (bit.x < minX || bit.x > maxX) {
                 bit.x = Math.max(minX, Math.min(maxX, bit.x));
                 bit.vx *= -wallRestitution;
             }
 
-            const overLine = bit.x >= world.lineLeft && bit.x <= world.lineRight;
-            const surface = overLine && prevY <= world.lineY + 0.5
+            // A falling bit lands on the footer rule when any part of it overlaps
+            // the rule's span and its bottom edge was above the rule last step,
+            // so wide glyphs can't slip through at their edges.
+            const prevBottom = prevY + h;
+            const overlapsLine = bit.x + w > world.lineLeft && bit.x < world.lineRight;
+            const surface = overlapsLine && prevBottom <= world.lineY + dotRadius + 0.5
                 ? world.lineY
                 : world.ground;
-            const floor = Math.max(world.top, surface - (Number.isFinite(bit.height) ? bit.height : 0));
+            // Rest the bottom edge exactly on the surface instead of floating
+            // one dot-radius above it.
+            const floor = Math.max(world.top, surface + dotRadius - h);
             if (bit.vy > 0 && bit.y >= floor) {
                 bit.y = floor;
                 bit.vy = -bit.vy * restitution;
