@@ -71,13 +71,17 @@ export function createStairs(dot) {
         plan = [];
     };
 
-    const planTo = (targetX, targetY) => {
+    // `keep` continues an existing staircase instead of replacing it: the new
+    // treads append above the ones already built, rooted at whatever the
+    // creature is standing on. That lets it travel in legs without ever losing
+    // the tread under its feet, which would drop it out of its climb pose.
+    const planTo = (targetX, targetY, options = {}) => {
         // Capture the current support before clearing an older route. This keeps a
         // replanned route rooted at the surface the creature is actually standing on.
         const position = typeof dot.pos === 'function' ? dot.pos() : null;
         const standing = typeof dot.surfaceSpan === 'function' ? dot.surfaceSpan() : null;
         const world = typeof dot.world === 'function' ? (dot.world() || {}) : {};
-        clear();
+        if (!(options.keep === true && built.length > 0)) clear();
 
         const rawWorldLeft = finiteOr(world.left, 0);
         const rawWorldRight = finiteOr(world.right, rawWorldLeft);
@@ -172,6 +176,11 @@ export function createStairs(dot) {
         const rect = plan[built.length];
         const element = document.createElement('div');
         element.className = 'stair';
+        // Positioned inline as well as in CSS: `body` is a flex container, so a
+        // tread that ever lacked `position: fixed` (a stylesheet that failed to
+        // load, a slow first paint) would become a flex item and steal width
+        // from the card — which moves the physics bounds with it.
+        element.style.position = 'fixed';
         element.style.left = `${rect.left}px`;
         element.style.top = `${rect.y}px`;
         element.style.width = `${Math.max(0, rect.right - rect.left)}px`;
