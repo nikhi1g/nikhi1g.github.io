@@ -233,12 +233,15 @@ async function main() {
                 if (typeof value === 'number') peak[key] = Math.max(peak[key] || 0, value);
                 else if (typeof value === 'boolean') peak[key] = peak[key] || value;
             }
-            const debrisOk = (milestones.debris || 0) >= EXPECT_DEBRIS;
-            const holeOk = !EXPECT_HOLE || (milestones.hole || 0) > 0;
-            const axeOk = !EXPECT_AXE || (milestones.axe || 0) > 0;
-            const pryOk = !EXPECT_PRY || (milestones.ruleGone === true && (milestones.rule || 0) > 0);
-            const sawOk = !EXPECT_SAW || ((milestones.sawHalves || 0) >= 2 && (peak.stairs || 0) > 0);
-            const catchOk = (milestones.catches || 0) >= EXPECT_CATCHES;
+            // Everything the cleanup pass tidies away — the thrown axe, the glass
+            // socket, the pry bar, the caught words — exists only mid-run, so
+            // these are judged on the peak, never on the final snapshot.
+            const debrisOk = (peak.debris || 0) >= EXPECT_DEBRIS;
+            const holeOk = !EXPECT_HOLE || (peak.hole || 0) > 0;
+            const axeOk = !EXPECT_AXE || (peak.axe || 0) > 0;
+            const pryOk = !EXPECT_PRY || (milestones.ruleGone === true && (peak.rule || 0) > 0);
+            const sawOk = !EXPECT_SAW || ((peak.sawHalves || 0) >= 2 && (peak.stairs || 0) > 0);
+            const catchOk = (peak.catches || 0) >= EXPECT_CATCHES;
             // Opt-in: the cleanup pass only starts once the fishing loop has
             // finished the whole sentence, which runs for minutes.
             const cleanOk = !EXPECT_CLEANUP || (milestones.wiped === true && (milestones.remains || 0) === 0);
@@ -250,29 +253,33 @@ async function main() {
         }
 
         const milestoneFailures = [];
-        if ((milestones.debris || 0) < EXPECT_DEBRIS) {
-            milestoneFailures.push({kind: 'milestone', text: `debris ${milestones.debris || 0} < expected ${EXPECT_DEBRIS}`});
+        if ((peak.debris || 0) < EXPECT_DEBRIS) {
+            milestoneFailures.push({kind: 'milestone', text: `debris ${peak.debris || 0} < expected ${EXPECT_DEBRIS}`});
         }
-        if (EXPECT_AXE && !(milestones.axe > 0)) {
+        if (EXPECT_AXE && !(peak.axe > 0)) {
             milestoneFailures.push({kind: 'milestone', text: 'thrown axe never appeared'});
         }
-        if (EXPECT_HOLE && !(milestones.hole > 0)) {
+        if (EXPECT_HOLE && !(peak.hole > 0)) {
             milestoneFailures.push({kind: 'milestone', text: 'glass hole never appeared'});
         }
-        if (EXPECT_PRY && !(milestones.ruleGone === true && (milestones.rule || 0) > 0)) {
+        if (EXPECT_PRY && !(milestones.ruleGone === true && (peak.rule || 0) > 0)) {
             milestoneFailures.push({kind: 'milestone', text: 'footer rule was never pried off'});
         }
-        if (EXPECT_SAW && !((milestones.sawHalves || 0) >= 2)) {
-            milestoneFailures.push({kind: 'milestone', text: `saw halves ${milestones.sawHalves || 0} < 2`});
+        if (EXPECT_SAW && !((peak.sawHalves || 0) >= 2)) {
+            milestoneFailures.push({kind: 'milestone', text: `saw halves ${peak.sawHalves || 0} < 2`});
         }
         if (EXPECT_SAW && !((peak.stairs || 0) > 0)) {
             milestoneFailures.push({kind: 'milestone', text: 'no staircase was ever hammered'});
         }
-        if ((milestones.catches || 0) < EXPECT_CATCHES) {
-            milestoneFailures.push({kind: 'milestone', text: `fish catches ${milestones.catches || 0} < expected ${EXPECT_CATCHES}`});
+        if ((peak.catches || 0) < EXPECT_CATCHES) {
+            milestoneFailures.push({kind: 'milestone', text: `fish catches ${peak.catches || 0} < expected ${EXPECT_CATCHES}`});
         }
-        if (EXPECT_CATCHES > 0 && !((milestones.rod || 0) > 0)) {
+        if (EXPECT_CATCHES > 0 && !((peak.rod || 0) > 0)) {
             milestoneFailures.push({kind: 'milestone', text: 'fishing rod never appeared'});
+        }
+        if (EXPECT_CLEANUP && (peak.hole || 0) === 0) {
+            // "wiped" is only meaningful if there was something to wipe.
+            milestoneFailures.push({kind: 'milestone', text: 'nothing to wipe: the glass socket never appeared'});
         }
         if (EXPECT_CLEANUP && milestones.wiped !== true) {
             milestoneFailures.push({kind: 'milestone', text: 'the glass socket was never wiped away'});
