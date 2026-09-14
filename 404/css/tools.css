@@ -41,6 +41,33 @@
     transition: transform 0.1s ease;
 }
 
+/* Prying: the axe is held low and the whole rig leans its weight onto the
+   handle — a lever, not a swing. */
+.dot.sprouted.prying #axe {
+    opacity: 1;
+    transform: rotate(96deg);
+    transform-origin: 22.5px 38.5px;
+    transition: transform 0.26s ease-out;
+}
+
+.dot.sprouted.prying #arm-r {
+    transform: rotate(-26deg);
+    transform-origin: 15px 27px;
+    transition: transform 0.26s ease-out;
+}
+
+.dot.sprouted.prying #arm-l {
+    transform: rotate(-14deg);
+    transform-origin: 15px 27px;
+    transition: transform 0.26s ease-out;
+}
+
+.dot.sprouted.prying #torso {
+    transform: rotate(11deg);
+    transform-origin: 15px 42px;
+    transition: transform 0.3s ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
     #axe,
     #hammer {
