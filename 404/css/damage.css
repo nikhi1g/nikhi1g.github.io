@@ -210,3 +210,31 @@ footer.dmg-split::after {
     stroke-width: 0.9;
     opacity: 0.6;
 }
+/* The pried-off footer rule: a stand-in for the real border so it can tilt
+   and then fall as debris. The border hands over on the same frame that this
+   appears, so there is never a doubled or missing line. */
+footer.rule-gone {
+    border-top-color: transparent;
+}
+
+.pried-rule {
+    position: fixed;
+    z-index: 3;
+    height: 0;
+    border-top: 1px solid var(--sub);
+    pointer-events: none;
+    transform: rotate(0deg);
+    transition: transform 0.5s cubic-bezier(0.3, 0, 0.7, 1);
+    will-change: left, top, transform;
+}
+
+/* Levering: the far end stays put while the near end lifts. */
+.pried-rule.is-levering {
+    transform: rotate(-7deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pried-rule {
+        transition: none;
+    }
+}
