@@ -10,6 +10,9 @@ import {createStairs} from './stairs.js';
 import {createArrow} from './arrow.js';
 import {createSaw} from './saw.js';
 import {createFishing} from './fishing.js';
+import {createWipe} from './wipe.js';
+import {createSweep} from './sweep.js';
+import {createVacuum} from './vacuum.js';
 import {createCreature} from './creature.js';
 
 initTheme();
@@ -25,7 +28,10 @@ const stairs = createStairs(dot);
 const arrow = createArrow(dot);
 const saw = createSaw(dot);
 const fishing = createFishing(dot);
-createCreature({dot, gait, damage, stairs, saw, fishing, arrow, figure}).start();
+const wipe = createWipe(dot);
+const sweep = createSweep(dot);
+const vacuum = createVacuum(dot);
+createCreature({dot, gait, damage, stairs, saw, fishing, wipe, sweep, vacuum, arrow, figure}).start();
 
 dot.start();
 
