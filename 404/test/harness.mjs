@@ -206,12 +206,13 @@ async function main() {
             hole: document.querySelectorAll('.glass-hole').length,
             rule: document.querySelectorAll('.pried-rule').length,
             ruleGone: !!document.querySelector('footer.rule-gone'),
+            ruleShards: document.querySelectorAll('.rule-shard').length,
             stairs: document.querySelectorAll('.stair').length,
             sawHalves: document.querySelectorAll('.saw-half').length,
             catches: document.querySelectorAll('.fish-catch').length,
             rod: document.querySelectorAll('#rod').length,
             wiped: document.querySelectorAll('.glass-hole').length === 0,
-            remains: document.querySelectorAll('body > .letter, body > .word, body > .fish-catch, body > .bone-arrow, body > .bone-axe-thrown, body > .stair, body > .ladder-rail, body > .stair-riser, body > .pried-rule, body > .thrown-vacuum').length,
+            remains: document.querySelectorAll('body > .letter, body > .word, body > .fish-catch, body > .bone-arrow, body > .bone-axe-thrown, body > .stair, body > .ladder-rail, body > .stair-riser, body > .pried-rule, body > .thrown-vacuum, body > .rule-shard').length,
             perched: (function () {
                 const dotEl = document.querySelector('.dot');
                 const heading = document.querySelector('.message h2');
@@ -250,7 +251,9 @@ async function main() {
             const debrisOk = (peak.debris || 0) >= EXPECT_DEBRIS;
             const holeOk = !EXPECT_HOLE || (peak.hole || 0) > 0;
             const axeOk = !EXPECT_AXE || (peak.axe || 0) > 0;
-            const pryOk = !EXPECT_PRY || (milestones.ruleGone === true && (peak.rule || 0) > 0);
+            // The pry bar is gone the instant it shatters, so the durable evidence of
+            // the break is the shards it left on the floor.
+            const pryOk = !EXPECT_PRY || (milestones.ruleGone === true && (peak.ruleShards || 0) > 0);
             const sawOk = !EXPECT_SAW || ((peak.sawHalves || 0) >= 2 && (peak.stairs || 0) > 0);
             const catchOk = (peak.catches || 0) >= EXPECT_CATCHES;
             // Opt-in: the cleanup pass only starts once the fishing loop has
@@ -277,8 +280,8 @@ async function main() {
         if (EXPECT_HOLE && !(peak.hole > 0)) {
             milestoneFailures.push({kind: 'milestone', text: 'glass hole never appeared'});
         }
-        if (EXPECT_PRY && !(milestones.ruleGone === true && (peak.rule || 0) > 0)) {
-            milestoneFailures.push({kind: 'milestone', text: 'footer rule was never pried off'});
+        if (EXPECT_PRY && !(milestones.ruleGone === true && (peak.ruleShards || 0) > 0)) {
+            milestoneFailures.push({kind: 'milestone', text: 'footer rule was never cracked and shattered'});
         }
         if (EXPECT_SAW && !((peak.sawHalves || 0) >= 2)) {
             milestoneFailures.push({kind: 'milestone', text: `saw halves ${peak.sawHalves || 0} < 2`});
