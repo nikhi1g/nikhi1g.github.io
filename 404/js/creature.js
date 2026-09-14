@@ -1,6 +1,6 @@
 import {glassHole} from './glass.js';
 
-export function createCreature({dot, arrow}) {
+export function createCreature({dot, gait, stairs, saw, fishing, arrow}) {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     // Every destructive act is separated by a beat: the creature sizes up the
     // next target instead of machine-gunning the page apart.
@@ -8,6 +8,9 @@ export function createCreature({dot, arrow}) {
     const BEAT_MAX_MS = 2000;
     const beat = () => new Promise((resolve) => {
         setTimeout(resolve, BEAT_MIN_MS + Math.random() * (BEAT_MAX_MS - BEAT_MIN_MS));
+    });
+    const wait = (ms) => new Promise((resolve) => {
+        setTimeout(resolve, ms);
     });
     const FLEE_RADIUS = 170;
     const FLEE_SPEED = 170;
@@ -18,6 +21,13 @@ export function createCreature({dot, arrow}) {
     let finaleTries = 0;
     let pryDone = false;
     let pryTries = 0;
+    let sawDone = false;
+    let sawTries = 0;
+    let perchDone = false;
+    let perchTries = 0;
+    let fishDone = false;
+    let working = false;
+    let keepStairs = false;
     let runId = 0;
     let lastKick = 0;
     let mouseX = null;
@@ -126,6 +136,83 @@ export function createCreature({dot, arrow}) {
         dot.spawnDebris(icon, rect.left, rect.top, vx, 80);
     };
 
+    // The staircase is how the creature travels the page: it hammers treads up
+    // to wherever it needs to stand, climbs them, and the scaffolding comes
+    // down once it has somewhere real to stand. `stairs` owns the geometry and
+    // registers every tread as a physics platform, so the climb is just the
+    // normal walk with step-up.
+    // Mirrors stairs.js WORK_REACH: the top tread lands one arm's reach below
+    // the point the creature is aiming for.
+    const STAND_OFFSET = 30;
+
+    // One hammer swing, one tread: the tread appears as the swing lands, so the
+    // staircase is literally hammered into place rather than fading in.
+    const buildStairs = async (goalX, standY, keep) => {
+        if (!stairs || !gait) return false;
+        let planned = 0;
+        try {
+            planned = stairs.planTo(goalX, standY - STAND_OFFSET, {keep});
+        } catch {
+            return false;
+        }
+        if (!planned) return false;
+
+        const from = dot.pos();
+        gait.setFacing(goalX < from.x ? -1 : 1);
+        for (let guard = 0; guard < 60 && !stairs.isComplete(); guard += 1) {
+            await gait.swing('hammer');
+            if (!stairs.buildNext()) break;
+            await wait(160);
+        }
+        return stairs.isComplete();
+    };
+
+    // Climb until standing where the plan aimed. Bounded so a blocked route can
+    // never wedge the sequence.
+    const climbStairs = async (goalX, standY) => {
+        if (!gait) return false;
+        const reach = 18;
+        const mode = typeof stairs.mode === 'function' ? stairs.mode() : 'stairs';
+        for (let guard = 0; guard < 240; guard += 1) {
+            const p = dot.pos();
+            const closeX = Math.abs(p.x - goalX) <= reach;
+            const closeY = Math.abs(p.y - standY) <= reach;
+            if (closeX && closeY) break;
+            const stepX = Math.abs(p.x - goalX) <= reach ? 0 : (goalX < p.x ? -1 : 1);
+            gait.climb(stepX === 0 ? 1 : stepX, mode);
+            await wait(80);
+        }
+        gait.stopClimb();
+        gait.stop();
+        return true;
+    };
+
+    // Scaffolding is temporary: once the creature is up on something real, the
+    // treads fade out from under it.
+    const clearStairs = async () => {
+        if (!stairs || !stairs.hasAny()) return;
+        for (let guard = 0; guard < 60 && stairs.hasAny(); guard += 1) {
+            stairs.teardownNext();
+            await wait(90);
+        }
+    };
+
+    // Travel to stand at (goalX, standY). With `standOn` the target rect becomes
+    // a real ledge first, so the staircase can be cleared behind the creature;
+    // without it the top tread stays, because the creature is standing on it.
+    const travelTo = async (goalX, standY, standOn = null) => {
+        const built = await buildStairs(goalX, standY, keepStairs);
+        if (!built) return false;
+        keepStairs = true;
+        await climbStairs(goalX, standY);
+        if (standOn) {
+            dot.addPlatform(standOn.left, standOn.right, standOn.top);
+            await clearStairs();
+            keepStairs = false;
+        }
+        return true;
+    };
+
     // The lever: a stand-in rule element takes the footer's top border, tilts
     // up off its far end while the creature leans, then tears free as debris.
     const pryRule = async () => {
@@ -137,6 +224,9 @@ export function createCreature({dot, arrow}) {
         const bar = document.createElement('span');
         bar.className = 'pried-rule';
         bar.setAttribute('aria-hidden', 'true');
+        // Inline, for the same reason the treads are: `body` is a flex
+        // container and nothing appended to it may ever take layout width.
+        bar.style.position = 'fixed';
         bar.style.left = `${rect.left}px`;
         bar.style.top = `${rect.top}px`;
         bar.style.width = `${rect.width}px`;
@@ -160,6 +250,42 @@ export function createCreature({dot, arrow}) {
         bar.style.transition = 'none';
         dot.dropLine();
         dot.spawnDebris(bar, torn.left, torn.top, dir * -60, -90, dir * -140);
+    };
+
+    // The footer sentence is fished out one letter at a time. Whitespace is left
+    // unwrapped (it has no visible box to hook) and #inquiry-commit is kept
+    // intact and fished as a single catch at the end, because version.js
+    // rewrites its textContent on every poll and would wipe any spans inside it.
+    const splitSentence = () => {
+        const footer = document.querySelector('footer');
+        const root = footer ? footer.querySelector('span') : null;
+        if (!root) return [];
+        const skip = root.querySelector('#inquiry-commit');
+
+        if (!root.querySelector('.letter')) {
+            const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+            const texts = [];
+            while (walker.nextNode()) {
+                const node = walker.currentNode;
+                if (!node.nodeValue || !node.nodeValue.trim()) continue;
+                if (skip && skip.contains(node)) continue;
+                texts.push(node);
+            }
+            for (const node of texts) {
+                const fragment = document.createDocumentFragment();
+                for (const character of Array.from(node.nodeValue)) {
+                    const span = document.createElement('span');
+                    span.className = 'letter';
+                    span.textContent = character;
+                    fragment.appendChild(span);
+                }
+                node.parentNode.replaceChild(fragment, node);
+            }
+        }
+
+        const letters = [...root.querySelectorAll('.letter')];
+        if (skip && skip.isConnected) letters.push(skip);
+        return letters;
     };
 
     const run = async (id) => {
@@ -246,25 +372,109 @@ export function createCreature({dot, arrow}) {
             }
             pryDone = true;
         }
+
+        // Phase 4: the paragraph is out of reach, so hammer a staircase up to
+        // it, climb, then saw it in half. `working` parks the flee reflex for
+        // the duration — otherwise the cursor would drag the creature off its
+        // own staircase mid-climb.
+        if (pryDone && !sawDone && saw && typeof saw.sawThrough === 'function' && sawTries < 3) {
+            sawTries += 1;
+            const paragraph = document.querySelector('.message p');
+            if (!paragraph || !paragraph.isConnected) {
+                sawDone = true;
+            } else {
+                working = true;
+                try {
+                    await beat();
+                    const rect = paragraph.getBoundingClientRect();
+                    // Stand one arm's length under the text so the saw bites
+                    // through the middle of it. Never saw from where we happen
+                    // to be: if the approach failed, walking away is wrong.
+                    const arrived = await travelTo(rect.left + rect.width / 2, rect.bottom + 24);
+                    if (!arrived) {
+                        if (sawTries >= 3) sawDone = true;
+                        return;
+                    }
+                    await beat();
+                    await saw.sawThrough(paragraph);
+                    sawDone = true;
+                } catch {
+                    if (sawTries >= 3) sawDone = true;
+                } finally {
+                    working = false;
+                    gait.stop();
+                }
+            }
+        }
+
+        // Phase 5: climb on top of the heading. The stairs are cleared away the
+        // moment it is up, and the heading itself becomes the ledge it fishes
+        // from — scaffolding is only ever temporary.
+        if (sawDone && !perchDone && perchTries < 3) {
+            perchTries += 1;
+            const heading = document.querySelector('.message h2');
+            if (!heading || !heading.isConnected) {
+                perchDone = true;
+            } else {
+                working = true;
+                try {
+                    await beat();
+                    const rect = heading.getBoundingClientRect();
+                    await travelTo(rect.left + rect.width / 2, rect.top, rect);
+                    perchDone = true;
+                } catch {
+                    if (perchTries >= 3) perchDone = true;
+                } finally {
+                    working = false;
+                    gait.stop();
+                }
+            }
+        }
+
+        // Phase 6: fish the footer sentence out, letter by letter. Each catch is
+        // hoisted off the page and flung back down to lie broken on the floor.
+        // The show ends when the sentence is gone.
+        if (perchDone && !fishDone && fishing && typeof fishing.fishOnce === 'function') {
+            working = true;
+            // The last staircase swing left the hammer in hand; the rod is what
+            // this phase holds.
+            gait.putAway();
+            try {
+                const letters = splitSentence();
+                for (const letter of letters) {
+                    if (!letter.isConnected) continue;
+                    await fishing.fishOnce(letter);
+                    await wait(90);
+                }
+                fishing.hideRod();
+                fishDone = true;
+            } catch {
+                if (fishing && typeof fishing.hideRod === 'function') fishing.hideRod();
+                fishDone = true;
+            } finally {
+                working = false;
+                gait.stop();
+                gait.putAway();
+            }
+        }
     };
 
     const onSleepChange = (asleep) => {
         if (reduceMotion.matches) return;
         runId += 1;
-        if (!asleep || (volleyDone && finaleDone && pryDone)) return;
+        if (!asleep || (volleyDone && finaleDone && pryDone && sawDone && perchDone && fishDone)) return;
         const id = runId;
         lastKick = performance.now();
         void run(id);
     };
-
     // Aggressive cursor flee: while sprouted, sprint away from a close mouse
-    // and stop the moment it backs off. Driving keeps the figure up, so the
-    // sequence survives a scare.
+    // and stop the moment it backs off. It runs through `gait` rather than
+    // driving physics directly, so the leg cycle plays while it bolts.
     const updateFlee = () => {
-        if (!dot.el.classList.contains('sprouted')) {
+        if (working || !dot.el.classList.contains('sprouted')) {
             if (fleeing) {
                 fleeing = false;
-                dot.release();
+                gait.stop();
             }
             return;
         }
@@ -274,12 +484,11 @@ export function createCreature({dot, arrow}) {
         const dy = p.y - mouseY;
         if (Math.hypot(dx, dy) < FLEE_RADIUS) {
             const dir = dx >= 0 ? 1 : -1;
-            dot.drive(dir * FLEE_SPEED);
-            dot.el.classList.toggle('face-left', dir < 0);
+            gait.walk(dir);
             fleeing = true;
         } else if (fleeing) {
             fleeing = false;
-            dot.release();
+            gait.stop();
         }
     };
 
@@ -296,7 +505,7 @@ export function createCreature({dot, arrow}) {
         // wrong instant can strand a finished phase with no future event to
         // resume on. Re-kick while settled and incomplete.
         const kickTimer = setInterval(() => {
-            if (volleyDone && finaleDone && pryDone) {
+            if (volleyDone && finaleDone && pryDone && sawDone && perchDone && fishDone) {
                 clearInterval(kickTimer);
                 return;
             }
