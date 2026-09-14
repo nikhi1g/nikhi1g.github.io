@@ -29,6 +29,7 @@ const EXPECT_AXE = !flag('--no-axe');
 const EXPECT_PRY = !flag('--no-pry');
 const EXPECT_SAW = !flag('--no-saw');
 const EXPECT_CATCHES = Number(opt('--expect-catches', '1'));
+const EXPECT_CLEANUP = flag('--expect-cleanup');
 const ALLOW = args.filter((a, i) => args[i - 1] === '--allow');
 const REPORT = opt('--report', join(tmpdir(), '404-harness-report.json'));
 
@@ -209,6 +210,8 @@ async function main() {
             sawHalves: document.querySelectorAll('.saw-half').length,
             catches: document.querySelectorAll('.fish-catch').length,
             rod: document.querySelectorAll('#rod').length,
+            wiped: document.querySelectorAll('.glass-hole').length === 0,
+            remains: document.querySelectorAll('body > .letter, body > .word, body > .fish-catch, body > .bone-arrow, body > .bone-axe-thrown, body > .stair, body > .ladder-rail, body > .stair-riser, body > .pried-rule, body > .thrown-vacuum').length,
             iconHome: !!document.querySelector('header #theme-toggle')
         })`;
         let milestones = {};
@@ -236,7 +239,10 @@ async function main() {
             const pryOk = !EXPECT_PRY || (milestones.ruleGone === true && (milestones.rule || 0) > 0);
             const sawOk = !EXPECT_SAW || ((milestones.sawHalves || 0) >= 2 && (peak.stairs || 0) > 0);
             const catchOk = (milestones.catches || 0) >= EXPECT_CATCHES;
-            if (debrisOk && holeOk && axeOk && pryOk && sawOk && catchOk) {
+            // Opt-in: the cleanup pass only starts once the fishing loop has
+            // finished the whole sentence, which runs for minutes.
+            const cleanOk = !EXPECT_CLEANUP || (milestones.wiped === true && (milestones.remains || 0) === 0);
+            if (debrisOk && holeOk && axeOk && pryOk && sawOk && catchOk && cleanOk) {
                 milestonePass = true;
                 break;
             }
@@ -267,6 +273,12 @@ async function main() {
         }
         if (EXPECT_CATCHES > 0 && !((milestones.rod || 0) > 0)) {
             milestoneFailures.push({kind: 'milestone', text: 'fishing rod never appeared'});
+        }
+        if (EXPECT_CLEANUP && milestones.wiped !== true) {
+            milestoneFailures.push({kind: 'milestone', text: 'the glass socket was never wiped away'});
+        }
+        if (EXPECT_CLEANUP && (milestones.remains || 0) !== 0) {
+            milestoneFailures.push({kind: 'milestone', text: `${milestones.remains} swept/vacuumed items left on the page`});
         }
         if (EXPECT_HOLE && milestones.iconHome !== false) {
             milestoneFailures.push({kind: 'milestone', text: 'theme icon never left the header'});
