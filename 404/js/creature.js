@@ -1,6 +1,6 @@
 import {glassHole} from './glass.js';
 
-export function createCreature({dot, gait, stairs, saw, fishing, arrow, figure}) {
+export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, vacuum, arrow, figure}) {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     // Every destructive act is separated by a beat: the creature sizes up the
     // next target instead of machine-gunning the page apart.
@@ -26,6 +26,9 @@ export function createCreature({dot, gait, stairs, saw, fishing, arrow, figure})
     let perchDone = false;
     let perchTries = 0;
     let fishDone = false;
+    let wipeDone = false;
+    let sweepDone = false;
+    let vacuumDone = false;
     let working = false;
     let keepStairs = false;
     let runId = 0;
@@ -494,12 +497,96 @@ export function createCreature({dot, gait, stairs, saw, fishing, arrow, figure})
                 gait.putAway();
             }
         }
+
+        // Phase 7: clean up after itself. The socket the thrown axe left in the
+        // header is the one mess the creature made on purpose to leave behind, so
+        // it climbs back up to it and wipes it away — the cracks lift one stroke
+        // at a time until the glass is gone.
+        if (fishDone && !wipeDone && wipe && typeof wipe.wipeAway === 'function') {
+            const socket = document.querySelector('.glass-hole');
+            if (!socket || !socket.isConnected) {
+                wipeDone = true;
+            } else {
+                working = true;
+                try {
+                    await beat();
+                    const rect = socket.getBoundingClientRect();
+                    markTarget(socket);
+                    await travelTo(rect.left + rect.width / 2, rect.top, rect);
+                    await beat();
+                    await wipe.wipeAway(socket);
+                    wipeDone = true;
+                } catch {
+                    wipeDone = true;
+                } finally {
+                    working = false;
+                    gait.stop();
+                    gait.putAway();
+                }
+            }
+        }
+
+        // Phase 8: back down to the floor, then sweep everything lying on it out
+        // past the page edge. What is on the ground is exactly what the debris
+        // system has resting, plus the knocked-off words.
+        if (wipeDone && !sweepDone && sweep && typeof sweep.sweepAll === 'function') {
+            working = true;
+            try {
+                await beat();
+                markPoint(dot.pos().x, dot.world().ground);
+                // Step off the ledge and let gravity do the descent.
+                gait.hopDown(dot.pos().x < dot.world().left + 40 ? 1 : -1);
+                for (let guard = 0; guard < 60 && !dot.isGrounded(); guard += 1) await wait(80);
+                await wait(260);
+
+                const world = dot.world();
+                const onFloor = [...document.querySelectorAll('body > .letter, body > .word, body > .fish-catch, body > .bone-arrow, body > .bone-axe-thrown, body > .damage-fragment')]
+                    .filter((el) => {
+                        if (!el.isConnected) return false;
+                        const r = el.getBoundingClientRect();
+                        if (r.width < 1 || r.height < 1) return false;
+                        // Loose means sitting on a floor, not perched on a ledge.
+                        return r.bottom >= world.ground - 24;
+                    });
+                await sweep.sweepAll(onFloor);
+                sweepDone = true;
+            } catch {
+                sweepDone = true;
+            } finally {
+                working = false;
+                gait.stop();
+                gait.putAway();
+            }
+        }
+
+        // Phase 9: the last pass. Anything still on the page that should not be —
+        // spent weapons, strays, anything not on the ground — goes into the
+        // vacuum, and then the vacuum itself is thrown off the edge.
+        if (sweepDone && !vacuumDone && vacuum && typeof vacuum.suckAll === 'function') {
+            working = true;
+            try {
+                await beat();
+                const strays = [...document.querySelectorAll(
+                    'body > .bone-bow, body > .bone-rocket, body > .glass-hole, #version, .hint kbd, .bone-lasso, body > .stair, body > .ladder-rail, body > .stair-riser, body > .pried-rule, body > .thrown-vacuum'
+                )].filter((el) => el && el.isConnected);
+                markPoint(dot.pos().x, dot.world().ground);
+                await vacuum.suckAll(strays);
+                await vacuum.throwAway();
+                vacuumDone = true;
+            } catch {
+                vacuumDone = true;
+            } finally {
+                working = false;
+                gait.stop();
+                gait.putAway();
+            }
+        }
     };
 
     const onSleepChange = (asleep) => {
         if (reduceMotion.matches) return;
         runId += 1;
-        if (!asleep || (volleyDone && finaleDone && pryDone && sawDone && perchDone && fishDone)) return;
+        if (!asleep || (volleyDone && finaleDone && pryDone && sawDone && perchDone && fishDone && wipeDone && sweepDone && vacuumDone)) return;
         const id = runId;
         lastKick = performance.now();
         void run(id);
@@ -580,7 +667,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, arrow, figure})
         // wrong instant can strand a finished phase with no future event to
         // resume on. Re-kick while settled and incomplete.
         const kickTimer = setInterval(() => {
-            if (volleyDone && finaleDone && pryDone && sawDone && perchDone && fishDone) {
+            if (volleyDone && finaleDone && pryDone && sawDone && perchDone && fishDone && wipeDone && sweepDone && vacuumDone) {
                 clearInterval(kickTimer);
                 return;
             }
