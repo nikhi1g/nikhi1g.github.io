@@ -63,6 +63,7 @@ export function createCreature({dot, arrow, lasso}) {
             h1.insertBefore(gap, letter);
         }
 
+        document.body.appendChild(letter);
         const vx = impact && Number.isFinite(impact.vx)
             ? impact.vx * 0.18 + (Math.random() - 0.5) * 60
             : (Math.random() - 0.5) * 80;
