@@ -10,6 +10,8 @@ export function createCreature({dot, arrow}) {
     let volleyDone = false;
     let finaleDone = false;
     let finaleTries = 0;
+    let pryDone = false;
+    let pryTries = 0;
     let runId = 0;
     let lastKick = 0;
     let mouseX = null;
@@ -118,6 +120,42 @@ export function createCreature({dot, arrow}) {
         dot.spawnDebris(icon, rect.left, rect.top, vx, 80);
     };
 
+    // The lever: a stand-in rule element takes the footer's top border, tilts
+    // up off its far end while the creature leans, then tears free as debris.
+    const pryRule = async () => {
+        const footer = document.querySelector('footer');
+        if (!footer || footer.classList.contains('rule-gone')) return;
+        const rect = footer.getBoundingClientRect();
+        if (rect.width < 1) return;
+
+        const bar = document.createElement('span');
+        bar.className = 'pried-rule';
+        bar.setAttribute('aria-hidden', 'true');
+        bar.style.left = `${rect.left}px`;
+        bar.style.top = `${rect.top}px`;
+        bar.style.width = `${rect.width}px`;
+        document.body.appendChild(bar);
+        // The real border hands over to the stand-in on the same frame.
+        footer.classList.add('rule-gone');
+
+        const dir = dot.pos().x > rect.left + rect.width / 2 ? 1 : -1;
+        bar.style.transformOrigin = dir > 0 ? '0% 50%' : '100% 50%';
+        dot.el.classList.add('prying');
+        dot.el.classList.toggle('face-left', dir < 0);
+
+        // Load the lever, hold, then let it tear.
+        await new Promise((r) => setTimeout(r, 260));
+        bar.classList.add('is-levering');
+        await new Promise((r) => setTimeout(r, 520));
+
+        dot.el.classList.remove('prying');
+        const torn = bar.getBoundingClientRect();
+        bar.classList.remove('is-levering');
+        bar.style.transition = 'none';
+        dot.dropLine();
+        dot.spawnDebris(bar, torn.left, torn.top, dir * -60, -90, dir * -140);
+    };
+
     const run = async (id) => {
         const ready = await waitForSprouted(id);
         if (!ready || !isCurrent(id)) return;
@@ -184,12 +222,27 @@ export function createCreature({dot, arrow}) {
                 }
             }
         }
+
+        // Phase 3: pry the footer rule off. No projectile — the creature
+        // plants the axe handle under the rule and leans on it, so the rule
+        // levers up at one end, tears free, and falls. It was a walkable
+        // surface, so the page loses a floor for good.
+        if (finaleDone && !pryDone && pryTries < 3) {
+            pryTries += 1;
+            try {
+                await pryRule();
+            } catch {
+                if (pryTries >= 3) pryDone = true;
+                return;
+            }
+            pryDone = true;
+        }
     };
 
     const onSleepChange = (asleep) => {
         if (reduceMotion.matches) return;
         runId += 1;
-        if (!asleep || (volleyDone && finaleDone)) return;
+        if (!asleep || (volleyDone && finaleDone && pryDone)) return;
         const id = runId;
         lastKick = performance.now();
         void run(id);
@@ -234,7 +287,7 @@ export function createCreature({dot, arrow}) {
         // wrong instant can strand a finished phase with no future event to
         // resume on. Re-kick while settled and incomplete.
         const kickTimer = setInterval(() => {
-            if (volleyDone && finaleDone) {
+            if (volleyDone && finaleDone && pryDone) {
                 clearInterval(kickTimer);
                 return;
             }
