@@ -70,6 +70,26 @@ export function createGait(dot) {
         dot.drive(currentFacing * (ladder ? LADDER_CLIMB_SPEED : STAIR_CLIMB_SPEED));
     };
 
+    // One rung, one limb cycle. The climb keyframes normally run forever, which
+    // is why a driven climb blurred; here the cycle count is pinned to 1 and the
+    // class is re-added (after a forced reflow, exactly like `swinging`) so each
+    // rung replays the animation from its start instead of catching it mid-stride.
+    const stepClimb = (dir, mode) => {
+        setFacing(dir);
+        const ladder = mode === 'ladder';
+        const stateClass = ladder ? 'laddering' : 'climbing';
+        walking = false;
+        climbing = true;
+        element.classList.remove('walking', 'idle-bob');
+        element.style.setProperty(ladder ? '--ladder-cycle' : '--climb-cycle', ladder ? '0.62s' : '0.54s');
+        element.style.setProperty(ladder ? '--ladder-count' : '--climb-count', '1');
+        element.classList.remove(stateClass);
+        element.classList.toggle('climbing', !ladder);
+        element.classList.toggle('laddering', ladder);
+        void element.offsetWidth;
+        element.classList.add(stateClass);
+    };
+
     const stopClimb = () => {
         const wasClimbing = climbing;
         climbing = false;
@@ -221,6 +241,7 @@ export function createGait(dot) {
         swing,
         putAway,
         climb,
+        stepClimb,
         stopClimb,
         isClimbing
     };
