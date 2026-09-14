@@ -35,11 +35,19 @@ clean run. The harness therefore also asserts the observable end state:
 | `iconHome === false` | the icon actually left the header |
 | `ruleGone` + `rule > 0` | the footer rule was pried off and handed to physics |
 | `sawHalves >= 2` + `stairs > 0` | the paragraph was sawed in half from a hammered staircase |
-| `catches >= 1` + `rod > 0` | the rod appeared and a letter was fished off the page |
+| `catches >= 1` + `rod > 0` | the rod appeared and a word was fished off the page |
+| `wiped` and `remains === 0` | the cleanup pass removed the socket and every loose piece |
+
+Note which milestones are judged on their **peak** rather than the final
+snapshot. Phases 7-9 exist to remove the mess, so the axe, the glass socket, the
+pry bar and the caught words are all gone by the time a run ends; asserting on
+the end state reports failure for correct behaviour. Anything the sequence
+cleans up must be asserted on `peak`.
 
 `catches` defaults to `1` rather than the whole sentence: the footer is fished
-letter by letter at roughly 1.4s each, so a full sweep runs for minutes. Raise
-it with `--expect-catches <n>` when you are testing the whole finale.
+word by word at roughly 2.8s each, so a full sweep runs for minutes. Raise it
+with `--expect-catches <n>` when testing the whole finale, and add
+`--expect-cleanup` to require phases 7-9 to finish.
 
 If you add a phase, add its milestone. An assertion that can't fail is worse
 than no assertion.
@@ -52,7 +60,8 @@ than no assertion.
 | `--page <path>` | `/404.html` | page under test |
 | `--timeout <s>` | `240` | milestone deadline |
 | `--expect-debris <n>` | `3` | knocked-off glyph count |
-| `--expect-catches <n>` | `1` | fished letters required before passing |
+| `--expect-catches <n>` | `1` | fished words required before passing |
+| `--expect-cleanup` | off | also require the wipe/sweep/vacuum pass to finish (slow: minutes) |
 | `--no-axe` / `--no-hole` / `--no-pry` / `--no-saw` | off | skip finale milestones |
 | `--allow <substr>` | — | repeatable console-error allowlist |
 | `--report <path>` | tmp | JSON report destination |
@@ -86,6 +95,9 @@ noise rather than a regression.
 | `404/js/arrow.js` | bow, arrow, rocket, thrown axe on shared ballistics |
 | `404/js/saw.js` | hand saw; splits a target into two falling halves |
 | `404/js/fishing.js` | rod, cast, hook, hoist and fling |
+| `404/js/wipe.js` | washcloth; lifts a fracture away stroke by stroke |
+| `404/js/sweep.js` | broom; pushes loose pieces off the page edge |
+| `404/js/vacuum.js` | suction for the leftovers, then throws itself away |
 | `404/js/glass.js` | procedural impact-fracture decal |
 | `404/js/damage.js` | damage stage classes and LIFO break/fix log |
 | `404/js/gait.js` | walk, climb, lean, peer, hop and swing poses |
@@ -105,7 +117,13 @@ and written so a wake mid-flight resumes rather than restarts:
 4. **saw** — stairs are hammered up to the paragraph and it is sawed in half.
 5. **perch** — stairs up to the heading's top edge, which becomes a real ledge;
    the scaffolding is cleared behind it.
-6. **fishing** — the footer sentence is fished out letter by letter.
+6. **fishing** — the footer sentence is fished out word by word.
+7. **wipe** — climbs back to the shattered socket the axe left and wipes it
+   away, one crack stroke at a time.
+8. **sweep** — drops to the floor and brooms every loose piece out past the page
+   edge.
+9. **vacuum** — the catch-all: suctions what is left, then throws the vacuum
+   itself off the edge.
 
 ### Travel
 
