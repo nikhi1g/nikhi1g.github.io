@@ -86,11 +86,19 @@ export function createCreature({dot, arrow}) {
         const rect = icon.getBoundingClientRect();
         if (rect.width < 1 || rect.height < 1) return;
         if (!icon.dataset.yanked && !document.querySelector('.glass-hole')) {
+            // The socket has to hold the icon's exact slot. The toggle is
+            // pushed right by `margin-left: auto`, so copy the resolved
+            // margins before the icon leaves the flow or the decal packs left.
+            const iconStyle = window.getComputedStyle(icon);
             const hole = document.createElement('span');
             hole.className = 'glass-hole';
             hole.setAttribute('aria-hidden', 'true');
             hole.style.width = `${rect.width}px`;
             hole.style.height = `${rect.height}px`;
+            hole.style.marginLeft = iconStyle.marginLeft;
+            hole.style.marginRight = iconStyle.marginRight;
+            hole.style.marginTop = iconStyle.marginTop;
+            hole.style.marginBottom = iconStyle.marginBottom;
             hole.innerHTML = glassHole(Math.round(rect.width), Math.round(rect.height));
             icon.parentElement.insertBefore(hole, icon);
             icon.dataset.yanked = '1';
