@@ -178,25 +178,47 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
     const climbStairs = async (goalX, standY) => {
         if (!gait) return false;
         const ladder = typeof stairs.activeMode === 'function' && stairs.activeMode() === 'ladder';
+        const mode = ladder ? 'ladder' : 'stairs';
+        // One limb cycle per rung, not a fresh animation per rung: restarting
+        // the climb keyframes every step reset the pose to its first frame, so
+        // the limbs looked frozen while the body jerked upward. The limbs cycle
+        // continuously here and only the MOVEMENT is discrete.
         const cycleMs = ladder ? 620 : 540;
         const route = typeof stairs.route === 'function' ? stairs.route() : [];
+        if (route.length === 0) return false;
 
+        let started = false;
         for (const tread of route) {
             const centre = (tread.left + tread.right) / 2;
             const footY = tread.y - dot.radius;
             const p = dot.pos();
-            const alreadyThere = Math.abs(p.y - footY) < 2 && Math.abs(p.x - centre) < 6;
-            if (alreadyThere) continue;
-            const dir = centre < p.x ? -1 : 1;
-            gait.stepClimb(dir, ladder ? 'ladder' : 'stairs');
+            if (!started || tread === route[route.length - 1]) {
+                gait.climb(centre < p.x ? -1 : 1, mode);
+                started = true;
+            }
             dot.stepTo(centre, footY, cycleMs);
-            await wait(cycleMs + 60);
-            if (Math.abs(dot.pos().y - standY) < dot.radius && Math.abs(dot.pos().x - goalX) < 24) break;
+            await wait(cycleMs);
         }
 
         gait.stopClimb();
         gait.stop();
         return true;
+    };
+
+    // Walk to an x position with the leg cycle actually playing. `gait.walk`
+    // owns the animation; all this does is stop when it arrives, so the walk is
+    // used for travelling along a surface instead of sliding.
+    const walkTo = async (goalX, tolerance = 14) => {
+        if (!gait) return false;
+        for (let guard = 0; guard < 120; guard += 1) {
+            const p = dot.pos();
+            const gap = goalX - p.x;
+            if (Math.abs(gap) <= tolerance) break;
+            gait.walk(gap < 0 ? -1 : 1);
+            await wait(70);
+        }
+        gait.stop();
+        return Math.abs(dot.pos().x - goalX) <= tolerance * 2;
     };
 
     // Close any remaining gap to the goal the way a person would: hop. Used when
@@ -459,13 +481,31 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                     await beat();
                     const rect = heading.getBoundingClientRect();
                     markTarget(heading);
-                    // Only claim the perch if it actually got up there. Marking
-                    // this done on a failed climb is what left it fishing from
-                    // the floor while the sequence believed it was on the heading.
-                    const up = await travelTo(rect.left + rect.width / 2, rect.top, rect);
-                    if (up) perchDone = true;
-                    else if (perchTries >= 3) perchDone = true;
-                    else return;
+                    // The heading becomes a real surface first — a physics
+                    // platform the usual gravity and landing rules apply to — so
+                    // there is something to jump onto and something to stand on
+                    // while fishing.
+                    dot.addPlatform(rect.left, rect.right, rect.top);
+                    const middle = rect.left + rect.width / 2;
+                    // Then stairs up to just below its top edge, and a jump
+                    // across onto it. The last tread deliberately stops short so
+                    // the hop is the last move rather than a formality.
+                    const up = await travelTo(middle, rect.top + 30);
+                    if (!up) {
+                        if (perchTries >= 3) perchDone = true;
+                        else return;
+                    }
+                    const standing = dot.pos();
+                    const gap = middle - standing.x;
+                    if (Math.abs(gap) > 10) {
+                        // A real impulse, aimed to cross the gap and land on top.
+                        dot.hop(300, Math.max(-190, Math.min(190, gap / 0.62)));
+                        for (let guard = 0; guard < 60 && !dot.isGrounded(); guard += 1) await wait(60);
+                    }
+                    await wait(200);
+                    await clearStairs();
+                    keepStairs = false;
+                    perchDone = true;
                 } catch {
                     if (perchTries >= 3) perchDone = true;
                 } finally {
@@ -498,6 +538,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                 fishDone = true;
             } finally {
                 working = false;
+                gait.stopClimb();
                 gait.stop();
                 gait.putAway();
             }
@@ -547,6 +588,14 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                 gait.hopDown(dot.pos().x < dot.world().left + 40 ? 1 : -1);
                 for (let guard = 0; guard < 60 && !dot.isGrounded(); guard += 1) await wait(80);
                 await wait(260);
+                // Walk along the floor to the nearest loose piece, so the leg
+                // cycle plays instead of the creature sliding into position.
+                const nearest = [...document.querySelectorAll('body > .letter, body > .word, body > .fish-catch, body > .bone-arrow, body > .bone-axe-thrown, body > .damage-fragment')]
+                    .filter((el) => el.isConnected)
+                    .map((el) => el.getBoundingClientRect())
+                    .filter((r) => r.width >= 1)
+                    .sort((a, b) => Math.abs(a.left - dot.pos().x) - Math.abs(b.left - dot.pos().x))[0];
+                if (nearest) await walkTo(nearest.left + nearest.width / 2);
 
                 const world = dot.world();
                 const onFloor = [...document.querySelectorAll('body > .letter, body > .word, body > .fish-catch, body > .bone-arrow, body > .bone-axe-thrown, body > .damage-fragment')]
@@ -563,6 +612,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                 sweepDone = true;
             } finally {
                 working = false;
+                gait.stopClimb();
                 gait.stop();
                 gait.putAway();
             }
@@ -590,6 +640,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                 vacuumDone = true;
             } finally {
                 working = false;
+                gait.stopClimb();
                 gait.stop();
                 gait.putAway();
             }
