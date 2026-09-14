@@ -1,4 +1,6 @@
-export function createCreature({dot, arrow, lasso}) {
+import {glassHole} from './glass.js';
+
+export function createCreature({dot, arrow}) {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const SHOT_GAP_MS = 250;
     const FLEE_RADIUS = 170;
@@ -6,9 +8,8 @@ export function createCreature({dot, arrow, lasso}) {
 
     let started = false;
     let volleyDone = false;
-    let lassoDone = false;
-    let lassoTries = 0;
-    let lassoRunning = false;
+    let finaleDone = false;
+    let finaleTries = 0;
     let runId = 0;
     let lastKick = 0;
     let mouseX = null;
@@ -77,6 +78,38 @@ export function createCreature({dot, arrow, lasso}) {
         dot.spawnDebris(letter, rect.left, rect.top, vx, vy, (Math.random() - 0.5) * 120);
     };
 
+    // Axe finale: one spinning throw at the theme icon. The fracture decal
+    // takes the icon's socket and the icon itself drops under real gravity.
+    const knockOffIcon = (impact) => {
+        const icon = document.getElementById('theme-toggle');
+        if (!icon || !icon.isConnected) return;
+        const rect = icon.getBoundingClientRect();
+        if (rect.width < 1 || rect.height < 1) return;
+        if (!icon.dataset.yanked && !document.querySelector('.glass-hole')) {
+            const hole = document.createElement('span');
+            hole.className = 'glass-hole';
+            hole.setAttribute('aria-hidden', 'true');
+            hole.style.width = `${rect.width}px`;
+            hole.style.height = `${rect.height}px`;
+            hole.innerHTML = glassHole(Math.round(rect.width), Math.round(rect.height));
+            icon.parentElement.insertBefore(hole, icon);
+            icon.dataset.yanked = '1';
+        }
+        icon.style.position = 'fixed';
+        icon.style.left = `${rect.left}px`;
+        icon.style.top = `${rect.top}px`;
+        icon.style.width = `${rect.width}px`;
+        icon.style.height = `${rect.height}px`;
+        icon.style.margin = '0';
+        icon.style.zIndex = '5';
+        icon.style.pointerEvents = 'none';
+        document.body.appendChild(icon);
+        const vx = impact && Number.isFinite(impact.vx)
+            ? impact.vx * 0.1 + (Math.random() - 0.5) * 40
+            : (Math.random() - 0.5) * 60;
+        dot.spawnDebris(icon, rect.left, rect.top, vx, 80);
+    };
+
     const run = async (id) => {
         const ready = await waitForSprouted(id);
         if (!ready || !isCurrent(id)) return;
@@ -108,33 +141,47 @@ export function createCreature({dot, arrow, lasso}) {
                 }
                 await new Promise((resolve) => setTimeout(resolve, SHOT_GAP_MS));
             }
+            // DOM truth, not run freshness: no standing letters means done.
             if (splitHeading().length === 0) volleyDone = true;
             else if (isCurrent(id)) volleyDone = true;
             else return;
         }
 
-        if (volleyDone && !lassoDone && lasso && typeof lasso.sequence === 'function' && lassoTries < 3) {
-            // No freshness gate: a stale run finishing the yank is a good
-            // outcome, and the yank is idempotent, so overlapping attempts
-            // converge instead of corrupting.
-            lassoTries += 1;
-            lassoRunning = true;
-            try {
-                await lasso.sequence(() => document.getElementById('theme-toggle'));
-            } catch {
-                lassoRunning = false;
-                if (lassoTries >= 3) lassoDone = true;
-                return;
+        // Phase 2: one spinning axe at the theme icon. Same deterministic
+        // shape as the arrows: the throw resolves on impact, then the icon
+        // drops as debris and the fracture stays behind.
+        if (volleyDone && !finaleDone && arrow && typeof arrow.fireAxe === 'function' && finaleTries < 3) {
+            finaleTries += 1;
+            const icon = document.getElementById('theme-toggle');
+            if (!icon || !icon.isConnected) {
+                finaleDone = true;
+            } else {
+                const rect = icon.getBoundingClientRect();
+                if (rect.width < 1 || rect.height < 1) {
+                    finaleDone = true;
+                } else {
+                    let impact = null;
+                    try {
+                        impact = await arrow.fireAxe(rect);
+                    } catch {
+                        if (finaleTries >= 3) finaleDone = true;
+                        return;
+                    }
+                    try {
+                        knockOffIcon(impact);
+                    } catch {
+                        // The throw landed; a fumbled knock still ends the show.
+                    }
+                    finaleDone = true;
+                }
             }
-            lassoRunning = false;
-            lassoDone = true;
         }
     };
 
     const onSleepChange = (asleep) => {
         if (reduceMotion.matches) return;
         runId += 1;
-        if (!asleep || (volleyDone && lassoDone)) return;
+        if (!asleep || (volleyDone && finaleDone)) return;
         const id = runId;
         lastKick = performance.now();
         void run(id);
@@ -142,15 +189,8 @@ export function createCreature({dot, arrow, lasso}) {
 
     // Aggressive cursor flee: while sprouted, sprint away from a close mouse
     // and stop the moment it backs off. Driving keeps the figure up, so the
-    // shoot sequence survives a scare.
+    // sequence survives a scare.
     const updateFlee = () => {
-        if (lassoRunning) {
-            if (fleeing) {
-                fleeing = false;
-                dot.release();
-            }
-            return;
-        }
         if (!dot.el.classList.contains('sprouted')) {
             if (fleeing) {
                 fleeing = false;
@@ -172,6 +212,7 @@ export function createCreature({dot, arrow, lasso}) {
             dot.release();
         }
     };
+
     const start = () => {
         if (started || reduceMotion.matches) return;
         started = true;
@@ -185,7 +226,7 @@ export function createCreature({dot, arrow, lasso}) {
         // wrong instant can strand a finished phase with no future event to
         // resume on. Re-kick while settled and incomplete.
         const kickTimer = setInterval(() => {
-            if (volleyDone && lassoDone) {
+            if (volleyDone && finaleDone) {
                 clearInterval(kickTimer);
                 return;
             }
