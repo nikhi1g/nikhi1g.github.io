@@ -2,7 +2,6 @@ const STEP_RISE = 14;
 const STEP_RUN = 22;
 const STEP_WIDTH = 30;
 const MIN_OVERLAP = 6;
-const LADDER_RUN_THRESHOLD = 8;
 const WORK_REACH = 30;
 const FADE_MS = 200;
 const REDUCE_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
@@ -22,8 +21,12 @@ const removeElement = (element) => {
 
 export function createStairs(dot) {
     let plan = [];
-    // Remembered so the renderer knows whether this route is stepped or vertical.
-    let planMode = 'stairs';
+    // Each planTo call adds one LEG. A leg carries its own start/end indices into
+    // `plan` and its own classification, because a continued route (options.keep)
+    // never clears the previous legs — classifying the whole accumulated plan as
+    // one route is what made a later leg build rungs with the previous leg's
+    // rails, or steps with no rails at all.
+    let legs = [];
     const built = [];
     const elements = new Set();
     const pendingRemovals = new Map();
@@ -71,7 +74,7 @@ export function createStairs(dot) {
         built.length = 0;
         elements.clear();
         plan = [];
-        planMode = 'stairs';
+        legs = [];
     };
 
     // `keep` continues an existing staircase instead of replacing it: the new
@@ -140,6 +143,7 @@ export function createStairs(dot) {
         const horizontalSteps = 1 + Math.ceil(horizontalDistance / STEP_RUN);
 
         const stepCount = Math.max(1, verticalSteps, horizontalSteps);
+        const legStart = plan.length;
         let previous = null;
         for (let index = 0; index < stepCount; index += 1) {
             const horizontalIndex = Math.min(index, horizontalSteps - 1);
@@ -170,14 +174,15 @@ export function createStairs(dot) {
             previous = step;
         }
 
-        planMode = mode();
+        legs.push({start: legStart, end: plan.length, mode: classify(legStart, plan.length)});
         return plan.length;
     };
     const buildNext = () => {
         if (built.length >= plan.length) return false;
 
         const rect = plan[built.length];
-        const ladder = planMode === 'ladder';
+        const leg = legFor(built.length);
+        const ladder = leg ? leg.mode === 'ladder' : false;
         const element = document.createElement('div');
         // In ladder mode the same geometry is a rung strung between two rails.
         element.className = ladder ? 'stair rung' : 'stair';
@@ -193,11 +198,18 @@ export function createStairs(dot) {
 
         // A ladder needs its rails: two uprights spanning the whole route,
         // raised with the first rung.
-        if (ladder && built.length === 0) {
-            const last = plan[plan.length - 1];
-            const top = Math.min(rect.y, last.y);
-            const height = Math.abs(rect.y - last.y) + 6;
-            for (const x of [rect.left + 1, rect.right - 4]) {
+        if (ladder && leg && built.length === leg.start) {
+            // Rails are built from THIS leg's own rungs, so they line up with the
+            // rungs that are about to appear between them.
+            const rungs = plan.slice(leg.start, leg.end);
+            // A ladder's rungs all share one x, so the rails sit on that x — not
+            // on the leg's overall sweep, which for a staircase spans the run.
+            const left = rungs[0].left;
+            const right = rungs[0].right;
+            const top = Math.min(...rungs.map((rung) => rung.y));
+            const bottom = Math.max(...rungs.map((rung) => rung.y));
+            const height = bottom - top + 6;
+            for (const x of [left + 1, right - 4]) {
                 const rail = document.createElement('div');
                 rail.className = 'ladder-rail';
                 rail.style.position = 'fixed';
@@ -211,7 +223,7 @@ export function createStairs(dot) {
 
         // A step is not a step without its riser: the vertical face connecting
         // this tread back down to the one below it.
-        if (!ladder && built.length > 0) {
+        if (!ladder && built.length > leg.start) {
             const previous = plan[built.length - 1];
             const midX = (Math.max(previous.left, rect.left) + Math.min(previous.right, rect.right)) / 2;
             const height = Math.abs(previous.y - rect.y);
@@ -252,16 +264,27 @@ export function createStairs(dot) {
 
     const hasAny = () => built.length > 0;
 
-    const mode = () => {
-        if (plan.length < 2) return 'stairs';
-
-        let totalAdvance = 0;
-        for (let index = 1; index < plan.length; index += 1) {
-            totalAdvance += Math.abs(plan[index].left - plan[index - 1].left);
+    // Classification is per leg, over that leg's own steps only.
+    //
+    // A ladder is rungs stacked on one another — no horizontal advance at all.
+    // Anything that also travels sideways is a staircase and gets risers, which
+    // is the whole difference. Measuring a mean advance instead classified a
+    // staircase as a ladder whenever it was steep, and then drew two uprights
+    // spanning the entire diagonal with 30px rungs floating between them.
+    const classify = (from = 0, to = plan.length) => {
+        const slice = plan.slice(from, to);
+        if (slice.length < 2) return 'stairs';
+        for (let index = 1; index < slice.length; index += 1) {
+            if (Math.abs(slice[index].left - slice[index - 1].left) >= 2) return 'stairs';
         }
-        const meanAdvance = totalAdvance / (plan.length - 1);
-        return meanAdvance < LADDER_RUN_THRESHOLD ? 'ladder' : 'stairs';
+        return 'ladder';
     };
+
+    const legFor = (index) => legs.find((leg) => index >= leg.start && index < leg.end)
+        || legs[legs.length - 1]
+        || null;
+
+    const mode = () => (legs.length ? legs[legs.length - 1].mode : 'stairs');
 
     return {
         planTo,
@@ -271,7 +294,7 @@ export function createStairs(dot) {
         hasAny,
         clear,
         mode,
-        activeMode: () => planMode,
+        activeMode: () => mode(),
         // The treads actually built, in climb order, as absolute surface spans.
         // The climb walks this list one rung at a time.
         route: () => built
