@@ -71,7 +71,6 @@ export function createCreature({dot, arrow, lasso}) {
             : -140;
         dot.spawnDebris(letter, rect.left, rect.top, vx, vy, (Math.random() - 0.5) * 120);
     };
-
     const run = async (id) => {
         const ready = await waitForSprouted(id);
         if (!ready || !isCurrent(id) || done) return;
@@ -79,10 +78,12 @@ export function createCreature({dot, arrow, lasso}) {
 
         const letters = splitHeading();
         if (letters.length === 0) return;
-
         for (const letter of letters) {
             if (!isCurrent(id) || done) return;
             if (!dot.isAsleep()) return;
+            if (!letter.isConnected) continue;
+            const rect = letter.getBoundingClientRect();
+            if (!rect || rect.width < 1 || rect.height < 1) continue;
             let impact = null;
             try {
                 impact = await arrow.fire(rect);
