@@ -1,0 +1,58 @@
+/* Broom: a runtime-created SVG group (#broom) inside #arm-r, revealed only while
+   .dot carries .sweeping. The push stroke lives on the bare .broom-push wrapper
+   — see saw.css on why a CSS animation cannot sit on a group that carries a
+   transform attribute. */
+
+#broom {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.dot.sprouted.sweeping #broom {
+    opacity: 1;
+}
+
+/* Icon-space stroke-width 3 maps back to the rig's 2.1 through the 0.70 scale. */
+#broom .broom-handle,
+#broom .broom-head,
+#broom .broom-bristles {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+#broom .broom-head {
+    fill: var(--bg);
+    stroke-width: 2.4;
+}
+
+#broom .broom-bristles {
+    stroke-width: 2;
+    opacity: 0.8;
+}
+
+/* The push: a short shove out and a slower recovery, over and over. */
+@keyframes broomPush {
+    0%   { transform: translate(0, 0) rotate(0deg); }
+    35%  { transform: translate(-1.6px, 1.1px) rotate(-7deg); }
+    100% { transform: translate(1.1px, -0.5px) rotate(3deg); }
+}
+
+.dot.sweeping #broom .broom-push {
+    animation: broomPush 0.46s ease-in-out infinite;
+}
+
+/* The whole body leans into the work. */
+.dot.sweeping #torso {
+    transform: rotate(6deg);
+    transform-origin: 15px 42px;
+    transition: transform 0.24s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dot.sweeping #broom .broom-push {
+        animation: none;
+    }
+}
