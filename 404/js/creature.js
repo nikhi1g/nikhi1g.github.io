@@ -8,6 +8,7 @@ export function createCreature({dot, arrow, lasso}) {
     let volleyDone = false;
     let lassoDone = false;
     let lassoTries = 0;
+    let lassoRunning = false;
     let runId = 0;
     let lastKick = 0;
     let mouseX = null;
@@ -112,17 +113,21 @@ export function createCreature({dot, arrow, lasso}) {
             else return;
         }
 
-        // Phase 2: summon the lasso, crack it twice wide, and on the third
-        if (volleyDone && !lassoDone && lasso && typeof lasso.sequence === 'function') {
-            if (!isCurrent(id)) return;
+        if (volleyDone && !lassoDone && lasso && typeof lasso.sequence === 'function' && lassoTries < 3) {
+            // No freshness gate: a stale run finishing the yank is a good
+            // outcome, and the yank is idempotent, so overlapping attempts
+            // converge instead of corrupting.
             lassoTries += 1;
+            lassoRunning = true;
             try {
                 await lasso.sequence(() => document.getElementById('theme-toggle'));
             } catch {
+                lassoRunning = false;
                 if (lassoTries >= 3) lassoDone = true;
                 return;
             }
-            if (isCurrent(id) || lassoTries >= 3) lassoDone = true;
+            lassoRunning = false;
+            lassoDone = true;
         }
     };
 
@@ -139,6 +144,13 @@ export function createCreature({dot, arrow, lasso}) {
     // and stop the moment it backs off. Driving keeps the figure up, so the
     // shoot sequence survives a scare.
     const updateFlee = () => {
+        if (lassoRunning) {
+            if (fleeing) {
+                fleeing = false;
+                dot.release();
+            }
+            return;
+        }
         if (!dot.el.classList.contains('sprouted')) {
             if (fleeing) {
                 fleeing = false;
