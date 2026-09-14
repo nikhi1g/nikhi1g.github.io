@@ -206,9 +206,23 @@ footer.rule-gone {
     will-change: left, top, transform;
 }
 
-/* Levering: the far end stays put while the near end lifts. */
-.pried-rule.is-levering {
-    transform: rotate(-7deg);
+/* First blow: the rule holds, but it is visibly broken — the solid line becomes
+   a fractured one, thickened where the cracks run. */
+.pried-rule.is-cracked {
+    border-top-style: dashed;
+    border-top-width: 2px;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
+    opacity: 0.85;
+}
+
+/* Second blow: the rule comes apart into shards that fall and settle. */
+.rule-shard {
+    position: fixed;
+    z-index: 3;
+    background: var(--sub);
+    border-radius: 0.5px;
+    pointer-events: none;
+    will-change: left, top, transform;
 }
 
 @media (prefers-reduced-motion: reduce) {
