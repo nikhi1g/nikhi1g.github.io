@@ -8,6 +8,8 @@ import {createGait} from './gait.js';
 import {createDamage} from './damage.js';
 import {createStairs} from './stairs.js';
 import {createArrow} from './arrow.js';
+import {createSaw} from './saw.js';
+import {createFishing} from './fishing.js';
 import {createCreature} from './creature.js';
 
 initTheme();
@@ -21,7 +23,9 @@ const gait = createGait(dot);
 const damage = createDamage(dot);
 const stairs = createStairs(dot);
 const arrow = createArrow(dot);
-createCreature({dot, gait, damage, stairs, arrow}).start();
+const saw = createSaw(dot);
+const fishing = createFishing(dot);
+createCreature({dot, gait, damage, stairs, saw, fishing, arrow}).start();
 
 dot.start();
 
