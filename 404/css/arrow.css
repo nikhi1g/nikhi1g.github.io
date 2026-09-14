@@ -181,3 +181,29 @@
         transition: none;
     }
 }
+.bone-axe-thrown {
+    position: fixed;
+    z-index: 1;
+    width: 30px;
+    height: 30px;
+    pointer-events: none;
+    transform-origin: 50% 50%;
+    will-change: left, top, transform;
+}
+
+.bone-axe-thrown svg {
+    display: block;
+    width: 30px;
+    height: 30px;
+    overflow: visible;
+}
+
+.bone-axe__handle,
+.bone-axe__head {
+    fill: var(--bg);
+    stroke: var(--fg);
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+}
