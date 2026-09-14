@@ -276,8 +276,8 @@ export function createLasso(dot) {
         await wait(60);
         await trackTipTo({x: h.x, y: h.y + 20}, 0.3);
     };
-
     const yankIcon = async (getIcon) => {
+        const icon = typeof getIcon === 'function' ? getIcon() : getIcon;
         if (!icon || !icon.isConnected) return false;
         const rect = icon.getBoundingClientRect();
         if (rect.width < 1 || rect.height < 1) return false;
@@ -350,8 +350,4 @@ export function createLasso(dot) {
         await crack({x: h2.x - 250, y: h2.y - 190});
         return yankIcon(getIcon);
     };
-
-    dot.onStep(step);
-
-    return {summon, crack, yankIcon, sequence};
 }
