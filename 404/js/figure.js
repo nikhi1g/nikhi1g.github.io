@@ -15,8 +15,25 @@ export function initFigure(dot) {
     let mouseX = null;
     let mouseY = null;
     let sprouted = false;
+    // When the pointer has been still for a while the creature stops watching it
+    // and looks at whatever it is about to do instead. The creature sets this.
+    let lookTarget = null;
+    const setLookTarget = (point) => {
+        if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+            lookTarget = null;
+            return;
+        }
+        lookTarget = {x: point.x, y: point.y};
+    };
+    // The point the eye should actually track right now.
+    const gazePoint = () => {
+        if (lookTarget) return lookTarget;
+        if (mouseX === null || mouseY === null) return null;
+        return {x: mouseX, y: mouseY};
+    };
     const aimEye = () => {
-        if (mouseX === null) return;
+        const gaze = gazePoint();
+        if (!gaze) return;
 
         let centerX;
         let centerY;
@@ -44,8 +61,8 @@ export function initFigure(dot) {
             maxReachCss = pupilReach;
         }
 
-        const dx = mouseX - centerX;
-        const dy = mouseY - centerY;
+        const dx = gaze.x - centerX;
+        const dy = gaze.y - centerY;
         const distance = Math.hypot(dx, dy);
         const target = sprouted ? irisEl : pupilEl;
         if (!distance) {
@@ -112,4 +129,6 @@ export function initFigure(dot) {
             statusDot.classList.remove('sprouted');   // any motion curls it back up
         }
     });
+
+    return {setLookTarget};
 }
