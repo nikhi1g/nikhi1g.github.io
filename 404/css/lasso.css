@@ -1,0 +1,70 @@
+.bone-lasso {
+    position: fixed;
+    inset: 0;
+    z-index: 4;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.25s ease-out;
+}
+
+.bone-lasso.is-visible {
+    opacity: 1;
+}
+
+.bone-lasso__rope {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+}
+
+.bone-lasso__loop {
+    fill: none;
+    stroke: var(--acc);
+    stroke-width: 1.6;
+    vector-effect: non-scaling-stroke;
+}
+
+/* Shattered socket left behind where the theme icon was yanked out. */
+.glass-hole {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    pointer-events: none;
+}
+
+.glass-hole svg {
+    display: block;
+    overflow: visible;
+}
+
+.glass-hole__crack {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 1.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+    opacity: 0.85;
+}
+
+.glass-hole__chip {
+    fill: var(--bg);
+    stroke: var(--fg);
+    stroke-width: 1.2;
+    vector-effect: non-scaling-stroke;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bone-lasso,
+    .glass-hole,
+    .glass-hole svg {
+        animation: none;
+        transition: none;
+    }
+}
