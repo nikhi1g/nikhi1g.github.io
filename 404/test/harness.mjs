@@ -26,6 +26,7 @@ const TIMEOUT_S = Number(opt('--timeout', '150'));
 const EXPECT_DEBRIS = Number(opt('--expect-debris', '3'));
 const EXPECT_HOLE = !flag('--no-hole');
 const EXPECT_AXE = !flag('--no-axe');
+const EXPECT_PRY = !flag('--no-pry');
 const ALLOW = args.filter((a, i) => args[i - 1] === '--allow');
 const REPORT = opt('--report', join(tmpdir(), '404-harness-report.json'));
 
@@ -194,15 +195,14 @@ async function main() {
         await call('Log.enable');
         await call('Network.enable');
 
-        // Drive to completion: the full show ends with the glass hole and a
-        // detached icon. Polling milestones (not just errors) catches silent
-        // deaths where a swallowed exception halts the sequence cleanly.
         const milestoneScript = `JSON.stringify({
             cls: document.querySelector('.dot')?.className || null,
             arrows: document.querySelectorAll('.bone-arrow').length,
             axe: document.querySelectorAll('.bone-axe-thrown').length,
             debris: document.querySelectorAll('body > .letter').length,
             hole: document.querySelectorAll('.glass-hole').length,
+            rule: document.querySelectorAll('.pried-rule').length,
+            ruleGone: !!document.querySelector('footer.rule-gone'),
             iconHome: !!document.querySelector('header #theme-toggle')
         })`;
         let milestones = {};
@@ -218,7 +218,8 @@ async function main() {
             const debrisOk = (milestones.debris || 0) >= EXPECT_DEBRIS;
             const holeOk = !EXPECT_HOLE || (milestones.hole || 0) > 0;
             const axeOk = !EXPECT_AXE || (milestones.axe || 0) > 0;
-            if (debrisOk && holeOk && axeOk) {
+            const pryOk = !EXPECT_PRY || (milestones.ruleGone === true && (milestones.rule || 0) > 0);
+            if (debrisOk && holeOk && axeOk && pryOk) {
                 milestonePass = true;
                 break;
             }
@@ -234,6 +235,9 @@ async function main() {
         }
         if (EXPECT_HOLE && !(milestones.hole > 0)) {
             milestoneFailures.push({kind: 'milestone', text: 'glass hole never appeared'});
+        }
+        if (EXPECT_PRY && !(milestones.ruleGone === true && (milestones.rule || 0) > 0)) {
+            milestoneFailures.push({kind: 'milestone', text: 'footer rule was never pried off'});
         }
         if (EXPECT_HOLE && milestones.iconHome !== false) {
             milestoneFailures.push({kind: 'milestone', text: 'theme icon never left the header'});
