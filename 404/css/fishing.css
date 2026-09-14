@@ -1,0 +1,81 @@
+/* Fishing rod: the rod is an SVG group appended into #arm-r at runtime, which
+   is why its styles are path-level only — the arm carries it, exactly like
+   #axe and #hammer in tools.css. */
+#rod {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+}
+
+/* The rod is only ever drawn while the creature is sprouted and fishing — a
+   plain ball must never render a floating rod. */
+.dot.sprouted.fishing #rod {
+    opacity: 1;
+}
+
+/* Lucide-style authoring at 24x24, scaled 0.70 by the nested transform, so the
+   icon-space stroke-width is 2.1 / 0.70 = 3 to match the rig's bones. */
+#rod .rod-blank,
+#rod .rod-tip,
+#rod .rod-grip,
+#rod .rod-reel {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+#rod .rod-reel {
+    fill: var(--bg);
+}
+
+/* The line and hook cannot live in the rig's viewBox, so they get their own
+   full-screen layer in viewport pixels. */
+.fishing-line-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 4;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease-out;
+}
+
+.fishing-line-layer.is-visible {
+    opacity: 1;
+}
+
+.fishing-line {
+    fill: none;
+    stroke: var(--sub);
+    stroke-width: 1;
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
+}
+
+.fishing-hook {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+}
+
+/* A hooked piece of the page: it keeps its own type metrics (copied inline by
+   the module) and only gains fixed positioning while it is off the page. */
+.fish-catch {
+    position: fixed;
+    z-index: 3;
+    margin: 0;
+    pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #rod,
+    .fishing-line-layer {
+        transition: none;
+    }
+}
