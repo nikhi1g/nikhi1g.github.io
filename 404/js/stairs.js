@@ -22,6 +22,8 @@ const removeElement = (element) => {
 
 export function createStairs(dot) {
     let plan = [];
+    // Remembered so the renderer knows whether this route is stepped or vertical.
+    let planMode = 'stairs';
     const built = [];
     const elements = new Set();
     const pendingRemovals = new Map();
@@ -69,6 +71,7 @@ export function createStairs(dot) {
         built.length = 0;
         elements.clear();
         plan = [];
+        planMode = 'stairs';
     };
 
     // `keep` continues an existing staircase instead of replacing it: the new
@@ -167,15 +170,17 @@ export function createStairs(dot) {
             previous = step;
         }
 
+        planMode = mode();
         return plan.length;
     };
-
     const buildNext = () => {
         if (built.length >= plan.length) return false;
 
         const rect = plan[built.length];
+        const ladder = planMode === 'ladder';
         const element = document.createElement('div');
-        element.className = 'stair';
+        // In ladder mode the same geometry is a rung strung between two rails.
+        element.className = ladder ? 'stair rung' : 'stair';
         // Positioned inline as well as in CSS: `body` is a flex container, so a
         // tread that ever lacked `position: fixed` (a stylesheet that failed to
         // load, a slow first paint) would become a flex item and steal width
@@ -185,6 +190,42 @@ export function createStairs(dot) {
         element.style.top = `${rect.y}px`;
         element.style.width = `${Math.max(0, rect.right - rect.left)}px`;
         document.body.appendChild(element);
+
+        // A ladder needs its rails: two uprights spanning the whole route,
+        // raised with the first rung.
+        if (ladder && built.length === 0) {
+            const last = plan[plan.length - 1];
+            const top = Math.min(rect.y, last.y);
+            const height = Math.abs(rect.y - last.y) + 6;
+            for (const x of [rect.left + 1, rect.right - 4]) {
+                const rail = document.createElement('div');
+                rail.className = 'ladder-rail';
+                rail.style.position = 'fixed';
+                rail.style.left = `${x}px`;
+                rail.style.top = `${top}px`;
+                rail.style.height = `${height}px`;
+                document.body.appendChild(rail);
+                elements.add(rail);
+            }
+        }
+
+        // A step is not a step without its riser: the vertical face connecting
+        // this tread back down to the one below it.
+        if (!ladder && built.length > 0) {
+            const previous = plan[built.length - 1];
+            const midX = (Math.max(previous.left, rect.left) + Math.min(previous.right, rect.right)) / 2;
+            const height = Math.abs(previous.y - rect.y);
+            if (height > 0.5) {
+                const riser = document.createElement('div');
+                riser.className = 'stair-riser';
+                riser.style.position = 'fixed';
+                riser.style.left = `${midX}px`;
+                riser.style.top = `${Math.min(previous.y, rect.y)}px`;
+                riser.style.height = `${height}px`;
+                document.body.appendChild(riser);
+                elements.add(riser);
+            }
+        }
 
         // Reading layout before adding the final state makes the CSS transition run
         // for each individual hammer/build action instead of being skipped.
@@ -229,6 +270,13 @@ export function createStairs(dot) {
         teardownNext,
         hasAny,
         clear,
-        mode
+        mode,
+        activeMode: () => planMode,
+        // The treads actually built, in climb order, as absolute surface spans.
+        // The climb walks this list one rung at a time.
+        route: () => built
+            .map((record, index) => plan[index])
+            .filter(Boolean)
+            .map((step) => ({left: step.left, right: step.right, y: step.y}))
     };
 }
