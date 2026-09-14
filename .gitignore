@@ -2,3 +2,6 @@
 .idea/
 node_modules/
 _site/
+
+# Local dev scratch (the test harness spawns its own server)
+.local-serve.py
