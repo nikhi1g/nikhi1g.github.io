@@ -110,6 +110,12 @@ export function createGait(dot) {
         element.classList.toggle('holding-hammer', hammer);
     };
 
+    // Stows whatever tool is in hand. Without this the last swing's class
+    // survives the end of the show and the creature re-appears holding it.
+    const putAway = () => {
+        element.classList.remove('holding-axe', 'holding-hammer', 'swinging');
+    };
+
     const startNextSwing = () => {
         if (swingActive || swingQueue.length === 0) return;
         swingActive = true;
@@ -213,6 +219,7 @@ export function createGait(dot) {
         peer,
         hopDown,
         swing,
+        putAway,
         climb,
         stopClimb,
         isClimbing
