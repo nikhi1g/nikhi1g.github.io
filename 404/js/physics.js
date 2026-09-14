@@ -106,6 +106,20 @@ export function createDot() {
     };
     const standingOn = (x, y) => surfacesAt(x).find((s) => Math.abs(y - s.y) < 0.5) || null;
     const stepDot = (dt) => {
+        // A scripted climb step owns the dot for its duration: eased, grounded,
+        // and velocity-free, so nothing snaps and the figure never wakes.
+        if (stepGoal) {
+            const t = Math.min(1, (performance.now() - stepStarted) / stepDuration);
+            const eased = t < 0.5 ? 2 * t * t : 1 - 2 * (1 - t) * (1 - t);
+            dotX = stepFrom.x + (stepGoal.x - stepFrom.x) * eased;
+            dotY = stepFrom.y + (stepGoal.y - stepFrom.y) * eased;
+            dotVX = 0;
+            dotVY = 0;
+            contactNow = true;
+            surfaceNow = 'platform';
+            if (t >= 1) clearStep();
+            return;
+        }
         const world = dotWorld();
         const resting = standingOn(dotX, dotY);
         const contact = !!resting && dotVY === 0;
@@ -265,6 +279,29 @@ export function createDot() {
         dotVY = -Math.abs(vy);
         dotVX = vx;
     };
+    // A scripted move, used only by the creature's climbs: one smooth step onto
+    // the next rung, landed exactly. Physics keeps owning the dot afterwards, so
+    // if the rung it is aiming at were ever missing it simply falls.
+    let stepFrom = null;
+    let stepGoal = null;
+    let stepStarted = 0;
+    let stepDuration = 0;
+    const stepTo = (x, y, ms = 500) => {
+        const finite = Number.isFinite(x) && Number.isFinite(y);
+        if (!finite) return false;
+        stepFrom = {x: dotX, y: dotY};
+        stepGoal = {x, y};
+        stepDuration = Math.max(1, Number.isFinite(ms) ? ms : 500);
+        stepStarted = performance.now();
+        driven = false;
+        dotVX = 0;
+        dotVY = 0;
+        return true;
+    };
+    const clearStep = () => {
+        stepFrom = null;
+        stepGoal = null;
+    };
     // Chopped-off page bits fall with the same constants and the same floors.
     const spawnDebris = (el, x, y, vx, vy, spin = null) => {
         el.style.position = 'fixed';
@@ -369,6 +406,8 @@ export function createDot() {
         drive,
         release,
         hop,
+        stepTo,
+        clearStep,
         spawnDebris,
         clearDebris
     };
