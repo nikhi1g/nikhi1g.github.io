@@ -1,0 +1,79 @@
+/* Vacuum: a runtime-created SVG group (#vacuum) inside #arm-r, revealed only
+   while .dot carries .vacuuming. The motor judder sits on the bare
+   .vacuum-jitter wrapper — see saw.css on why a CSS animation cannot live on a
+   group that carries a transform attribute. */
+
+#vacuum {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.dot.sprouted.vacuuming #vacuum {
+    opacity: 1;
+}
+
+/* Icon-space stroke-width 3 maps back to the rig's 2.1 through the 0.70 scale. */
+#vacuum .vacuum-body,
+#vacuum .vacuum-hose,
+#vacuum .vacuum-nozzle,
+#vacuum .vacuum-wheel {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+#vacuum .vacuum-body {
+    stroke-width: 2.6;
+}
+
+#vacuum .vacuum-wheel {
+    fill: var(--bg);
+    stroke-width: 2.2;
+}
+
+#vacuum .vacuum-hose {
+    stroke-width: 2.4;
+}
+
+/* A running motor: fast, mechanical, barely there. */
+@keyframes vacuumJudder {
+    0%, 100% { transform: translate(0, 0); }
+    20% { transform: translate(0.3px, -0.22px); }
+    40% { transform: translate(-0.26px, 0.2px); }
+    60% { transform: translate(0.14px, 0.24px); }
+    80% { transform: translate(-0.2px, -0.14px); }
+}
+
+.dot.vacuuming #vacuum .vacuum-jitter {
+    animation: vacuumJudder 0.08s steps(1, end) infinite;
+}
+
+/* The body leans into the suction and both arms come forward. */
+.dot.vacuuming #arm-r {
+    transform: rotate(-14deg);
+    transform-origin: 15px 27px;
+    transition: transform 0.22s ease-out;
+}
+
+.dot.vacuuming #arm-l {
+    transform: rotate(-22deg);
+    transform-origin: 15px 27px;
+    transition: transform 0.22s ease-out;
+}
+
+/* The thrown-away vacuum, mid-flight. */
+.thrown-vacuum {
+    position: fixed;
+    z-index: 3;
+    pointer-events: none;
+    width: 30px;
+    height: 30px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dot.vacuuming #vacuum .vacuum-jitter {
+        animation: none;
+    }
+}
