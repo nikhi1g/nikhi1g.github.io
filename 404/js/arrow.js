@@ -4,10 +4,10 @@ const VERTICAL_CLEARANCE = 20;
 
 const CLEANUP_DELAY = 0;
 
-const ARROW_WIDTH = 18;
+const ARROW_WIDTH = 24;
 const ARROW_HEIGHT = 8;
 const ARROW_DRAW_DURATION = 170;
-const ARROW_FLIGHT_TIME = 0.35;
+const ARROW_FLIGHT_TIME = 0.4375;
 
 const ROCKET_WIDTH = 28;
 const ROCKET_HEIGHT = 12;
@@ -36,6 +36,8 @@ const wait = (duration) => new Promise((resolve) => {
 
 export function createArrow(dot) {
     const creature = dot.el;
+    let bow = null;
+    let nocked = null;
 
     const handPosition = () => {
         const position = dot.pos();
@@ -55,6 +57,27 @@ export function createArrow(dot) {
             && Math.abs(target.x - position.x) <= MAX_HORIZONTAL_DISTANCE;
     };
 
+    const ensureBow = () => {
+        if (bow) return bow;
+        bow = document.createElement('div');
+        bow.className = 'bone-bow';
+        bow.setAttribute('aria-hidden', 'true');
+        bow.innerHTML = `
+            <svg viewBox="0 0 10 30" width="10" height="30" aria-hidden="true" focusable="false">
+                <path class="bone-bow__limb" d="M2 1 Q8 8 8 15 Q8 22 2 29"></path>
+                <line class="bone-bow__string" x1="2" y1="1" x2="2" y2="29"></line>
+            </svg>
+            <div class="bone-nocked">
+                <svg viewBox="0 0 24 8" width="24" height="8" aria-hidden="true" focusable="false">
+                    <line class="bone-arrow__shaft" x1="6" y1="4" x2="19" y2="4"></line>
+                    <polygon class="bone-arrow__tip" points="18,1.2 24,4 18,6.8"></polygon>
+                </svg>
+            </div>`;
+        document.body.appendChild(bow);
+        nocked = bow.querySelector('.bone-nocked');
+        return bow;
+    };
+
     const aimAt = (rect) => {
         const position = dot.pos();
         const target = targetCentre(rect);
@@ -62,6 +85,15 @@ export function createArrow(dot) {
 
         creature.style.setProperty('--aim', `${angle}`);
         creature.classList.add('holding-bow', 'drawing');
+
+        if (prefersReducedMotion()) return;
+        const hand = handPosition();
+        const bowEl = ensureBow();
+        const flightAngle = Math.atan2(target.y - hand.y, target.x - hand.x) * 180 / Math.PI;
+        bowEl.style.left = `${hand.x}px`;
+        bowEl.style.top = `${hand.y}px`;
+        bowEl.style.setProperty('--bow-angle', `${flightAngle}deg`);
+        bowEl.classList.add('is-visible', 'is-drawing');
     };
 
     const makeArrow = () => {
@@ -69,11 +101,9 @@ export function createArrow(dot) {
         arrow.className = 'bone-arrow';
         arrow.setAttribute('aria-hidden', 'true');
         arrow.innerHTML = `
-            <svg viewBox="0 0 18 8" width="18" height="8" aria-hidden="true" focusable="false">
-                <line class="bone-arrow__shaft" x1="3.2" y1="4" x2="13.4" y2="4"></line>
-                <circle class="bone-arrow__knob" cx="2.2" cy="2.6" r="1.2"></circle>
-                <circle class="bone-arrow__knob" cx="2.2" cy="5.4" r="1.2"></circle>
-                <polygon class="bone-arrow__tip" points="13.2,1.4 17,4 13.2,6.6"></polygon>
+            <svg viewBox="0 0 24 8" width="24" height="8" aria-hidden="true" focusable="false">
+                <line class="bone-arrow__shaft" x1="6" y1="4" x2="19" y2="4"></line>
+                <polygon class="bone-arrow__tip" points="18,1.2 24,4 18,6.8"></polygon>
             </svg>`;
         return arrow;
     };
@@ -105,11 +135,13 @@ export function createArrow(dot) {
 
         if (prefersReducedMotion()) {
             creature.classList.remove('drawing', 'holding-bow');
-            return;
+            return null;
         }
 
         await wait(drawDuration);
         creature.classList.remove('drawing');
+        if (bow) bow.classList.remove('is-drawing');
+        if (nocked) nocked.style.opacity = '0';
 
         const origin = handPosition();
         const target = targetCentre(rect);
@@ -132,13 +164,17 @@ export function createArrow(dot) {
 
         await wait(flightTime * 1000);
         creature.classList.remove('holding-bow');
+        if (bow) bow.classList.remove('is-visible');
+        if (nocked) nocked.style.opacity = '';
         if (CLEANUP_DELAY > 0) {
             setTimeout(() => spawn.remove(), CLEANUP_DELAY);
         }
+
+        return {vx, vy: vy + GRAVITY * flightTime};
     };
 
     const fire = async (rect) => {
-        await fireProjectile(rect, {
+        return fireProjectile(rect, {
             kind: 'arrow',
             drawDuration: ARROW_DRAW_DURATION,
             flightTime: ARROW_FLIGHT_TIME,
@@ -148,7 +184,7 @@ export function createArrow(dot) {
     };
 
     const fireRocket = async (rect) => {
-        await fireProjectile(rect, {
+        return fireProjectile(rect, {
             kind: 'rocket',
             drawDuration: ROCKET_DRAW_DURATION,
             flightTime: ROCKET_FLIGHT_TIME,
