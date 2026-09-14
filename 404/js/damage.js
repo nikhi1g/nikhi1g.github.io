@@ -1,5 +1,7 @@
 const TARGET_DEFINITIONS = [
-    {selector: 'main', stages: ['dmg-tilt', 'dmg-crack', 'dmg-split', 'dmg-dim'], letters: false},
+    // Deliberately no `main`: the card's rect is what physics derives the floor
+    // and wall bounds from, so any stage that transformed or outlined the card
+    // moved the world's own edges. Nothing may resize the bounding box.
     {selector: 'h1', stages: ['dmg-tilt', 'dmg-crack', 'dmg-dim', 'dmg-shatter'], letters: true},
     {selector: '.message h2', stages: ['dmg-tilt', 'dmg-crack', 'dmg-dim', 'dmg-shatter'], letters: true},
     {selector: '.message p', stages: ['dmg-tilt', 'dmg-crack', 'dmg-dim'], letters: false},
