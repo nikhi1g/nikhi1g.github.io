@@ -2,7 +2,13 @@ import {glassHole} from './glass.js';
 
 export function createCreature({dot, arrow}) {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const SHOT_GAP_MS = 250;
+    // Every destructive act is separated by a beat: the creature sizes up the
+    // next target instead of machine-gunning the page apart.
+    const BEAT_MIN_MS = 1000;
+    const BEAT_MAX_MS = 2000;
+    const beat = () => new Promise((resolve) => {
+        setTimeout(resolve, BEAT_MIN_MS + Math.random() * (BEAT_MAX_MS - BEAT_MIN_MS));
+    });
     const FLEE_RADIUS = 170;
     const FLEE_SPEED = 170;
 
@@ -165,6 +171,7 @@ export function createCreature({dot, arrow}) {
         if (!volleyDone) {
             if (!arrow || typeof arrow.fire !== 'function') return;
             const letters = splitHeading();
+            await beat();
             for (const letter of letters) {
                 if (!isCurrent(id)) return;
                 if (!dot.isAsleep()) return;
@@ -185,7 +192,7 @@ export function createCreature({dot, arrow}) {
                         continue;
                     }
                 }
-                await new Promise((resolve) => setTimeout(resolve, SHOT_GAP_MS));
+                await beat();
             }
             // DOM truth, not run freshness: no standing letters means done.
             if (splitHeading().length === 0) volleyDone = true;
@@ -207,6 +214,7 @@ export function createCreature({dot, arrow}) {
                     finaleDone = true;
                 } else {
                     let impact = null;
+                    await beat();
                     try {
                         impact = await arrow.fireAxe(rect);
                     } catch {
@@ -229,6 +237,7 @@ export function createCreature({dot, arrow}) {
         // surface, so the page loses a floor for good.
         if (finaleDone && !pryDone && pryTries < 3) {
             pryTries += 1;
+            await beat();
             try {
                 await pryRule();
             } catch {
