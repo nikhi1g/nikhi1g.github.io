@@ -9,6 +9,11 @@ const ARROW_HEIGHT = 8;
 const ARROW_DRAW_DURATION = 170;
 const ARROW_FLIGHT_TIME = 0.4375;
 
+const AXE_WIDTH = 30;
+const AXE_HEIGHT = 30;
+const AXE_DRAW_DURATION = 220;
+const AXE_FLIGHT_TIME = 0.6;
+
 const ROCKET_WIDTH = 28;
 const ROCKET_HEIGHT = 12;
 const ROCKET_DRAW_DURATION = 140;
@@ -108,6 +113,19 @@ export function createArrow(dot) {
         return arrow;
     };
 
+    // Thrown axe: Lucide axe paths (same set as the held tool in 404.html,
+    // ISC License) at a readable 30px. Debris spin turns it into a spin.
+    const makeAxe = () => {
+        const axe = document.createElement('div');
+        axe.className = 'bone-axe-thrown';
+        axe.setAttribute('aria-hidden', 'true');
+        axe.innerHTML = `
+            <svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true" focusable="false">
+                <path class="bone-axe__handle" d="m14 12-8.381 8.38a1 1 0 0 1-3.001-3L11 9" />
+                <path class="bone-axe__head" d="M15 15.5a.5.5 0 0 0 .5.5A6.5 6.5 0 0 0 22 9.5a.5.5 0 0 0-.5-.5h-1.672a2 2 0 0 1-1.414-.586l-5.062-5.062a1.205 1.205 0 0 0-1.704 0L9.352 5.648a1.205 1.205 0 0 0 0 1.704l5.062 5.062A2 2 0 0 1 15 13.828z" />
+            </svg>`;
+        return axe;
+    };
     const makeRocket = () => {
         const rocket = document.createElement('div');
         rocket.className = 'bone-rocket';
@@ -130,7 +148,7 @@ export function createArrow(dot) {
         width,
         height
     }) => {
-        const spawn = kind === 'rocket' ? makeRocket() : makeArrow();
+        const spawn = kind === 'rocket' ? makeRocket() : kind === 'axe' ? makeAxe() : makeArrow();
         aimAt(rect);
 
         if (prefersReducedMotion()) {
@@ -173,16 +191,6 @@ export function createArrow(dot) {
         return {vx, vy: vy + GRAVITY * flightTime};
     };
 
-    const fire = async (rect) => {
-        return fireProjectile(rect, {
-            kind: 'arrow',
-            drawDuration: ARROW_DRAW_DURATION,
-            flightTime: ARROW_FLIGHT_TIME,
-            width: ARROW_WIDTH,
-            height: ARROW_HEIGHT
-        });
-    };
-
     const fireRocket = async (rect) => {
         return fireProjectile(rect, {
             kind: 'rocket',
@@ -193,10 +201,21 @@ export function createArrow(dot) {
         });
     };
 
+    const fireAxe = async (rect) => {
+        return fireProjectile(rect, {
+            kind: 'axe',
+            drawDuration: AXE_DRAW_DURATION,
+            flightTime: AXE_FLIGHT_TIME,
+            width: AXE_WIDTH,
+            height: AXE_HEIGHT
+        });
+    };
+
     return {
         canHit,
         aimAt,
         fire,
-        fireRocket
+        fireRocket,
+        fireAxe
     };
 }
