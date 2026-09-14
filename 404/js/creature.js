@@ -7,7 +7,9 @@ export function createCreature({dot, arrow, lasso}) {
     let started = false;
     let volleyDone = false;
     let lassoDone = false;
+    let lassoTries = 0;
     let runId = 0;
+    let lastKick = 0;
     let mouseX = null;
     let mouseY = null;
     let fleeing = false;
@@ -105,20 +107,22 @@ export function createCreature({dot, arrow, lasso}) {
                 }
                 await new Promise((resolve) => setTimeout(resolve, SHOT_GAP_MS));
             }
-            if (isCurrent(id)) volleyDone = true;
+            if (splitHeading().length === 0) volleyDone = true;
+            else if (isCurrent(id)) volleyDone = true;
             else return;
         }
 
         // Phase 2: summon the lasso, crack it twice wide, and on the third
-        // throw hook the theme icon and yank it to the ground.
         if (volleyDone && !lassoDone && lasso && typeof lasso.sequence === 'function') {
             if (!isCurrent(id)) return;
+            lassoTries += 1;
             try {
                 await lasso.sequence(() => document.getElementById('theme-toggle'));
             } catch {
+                if (lassoTries >= 3) lassoDone = true;
                 return;
             }
-            if (isCurrent(id)) lassoDone = true;
+            if (isCurrent(id) || lassoTries >= 3) lassoDone = true;
         }
     };
 
@@ -127,6 +131,7 @@ export function createCreature({dot, arrow, lasso}) {
         runId += 1;
         if (!asleep || (volleyDone && lassoDone)) return;
         const id = runId;
+        lastKick = performance.now();
         void run(id);
     };
 
@@ -155,7 +160,6 @@ export function createCreature({dot, arrow, lasso}) {
             dot.release();
         }
     };
-
     const start = () => {
         if (started || reduceMotion.matches) return;
         started = true;
@@ -165,6 +169,21 @@ export function createCreature({dot, arrow, lasso}) {
         });
         dot.onStep(updateFlee);
         dot.onSleepChange(onSleepChange);
+        // Watchdog: sleep events are the normal trigger, but a wake at the
+        // wrong instant can strand a finished phase with no future event to
+        // resume on. Re-kick while settled and incomplete.
+        const kickTimer = setInterval(() => {
+            if (volleyDone && lassoDone) {
+                clearInterval(kickTimer);
+                return;
+            }
+            if (reduceMotion.matches) return;
+            if (!dot.isAsleep() || !dot.el.classList.contains('sprouted')) return;
+            if (performance.now() - lastKick < 3000) return;
+            lastKick = performance.now();
+            runId += 1;
+            void run(runId);
+        }, 2000);
         if (dot.isAsleep()) onSleepChange(true);
     };
 
