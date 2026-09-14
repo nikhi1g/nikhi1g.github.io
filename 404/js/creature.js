@@ -575,8 +575,12 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
             working = true;
             try {
                 await beat();
+                // The catch-all, so the page ends clean whatever the broom
+                // missed: structural leftovers first, then any loose debris
+                // still lying about.
                 const strays = [...document.querySelectorAll(
-                    'body > .bone-bow, body > .bone-rocket, body > .glass-hole, #version, .hint kbd, .bone-lasso, body > .stair, body > .ladder-rail, body > .stair-riser, body > .pried-rule, body > .thrown-vacuum'
+                    'body > .bone-bow, body > .bone-rocket, body > .glass-hole, #version, .hint kbd, .bone-lasso, body > .stair, body > .ladder-rail, body > .stair-riser, body > .pried-rule, body > .thrown-vacuum,'
+                    + ' body > .letter, body > .word, body > .fish-catch, body > .bone-arrow, body > .bone-axe-thrown, body > .damage-fragment'
                 )].filter((el) => el && el.isConnected);
                 markPoint(dot.pos().x, dot.world().ground);
                 await vacuum.suckAll(strays);
