@@ -212,6 +212,17 @@ async function main() {
             rod: document.querySelectorAll('#rod').length,
             wiped: document.querySelectorAll('.glass-hole').length === 0,
             remains: document.querySelectorAll('body > .letter, body > .word, body > .fish-catch, body > .bone-arrow, body > .bone-axe-thrown, body > .stair, body > .ladder-rail, body > .stair-riser, body > .pried-rule, body > .thrown-vacuum').length,
+            perched: (function () {
+                const dotEl = document.querySelector('.dot');
+                const heading = document.querySelector('.message h2');
+                if (!dotEl || !heading) return false;
+                const d = dotEl.getBoundingClientRect();
+                const h = heading.getBoundingClientRect();
+                // Standing ON the heading: feet at its top edge, inside its span.
+                return Math.abs(d.bottom - h.top) < 16
+                    && d.left >= h.left - 24
+                    && d.right <= h.right + 24;
+            })(),
             iconHome: !!document.querySelector('header #theme-toggle')
         })`;
         let milestones = {};
@@ -245,7 +256,11 @@ async function main() {
             // Opt-in: the cleanup pass only starts once the fishing loop has
             // finished the whole sentence, which runs for minutes.
             const cleanOk = !EXPECT_CLEANUP || (milestones.wiped === true && (milestones.remains || 0) === 0);
-            if (debrisOk && holeOk && axeOk && pryOk && sawOk && catchOk && cleanOk) {
+            // The perch is transient (he leaves it again to sweep), so it can
+            // only be judged on the peak: he must at some point have stood on
+            // the heading rather than fishing from the floor.
+            const perchOk = !EXPECT_CLEANUP || peak.perched === true;
+            if (debrisOk && holeOk && axeOk && pryOk && sawOk && catchOk && cleanOk && perchOk) {
                 milestonePass = true;
                 break;
             }
@@ -283,6 +298,9 @@ async function main() {
         }
         if (EXPECT_CLEANUP && milestones.wiped !== true) {
             milestoneFailures.push({kind: 'milestone', text: 'the glass socket was never wiped away'});
+        }
+        if (EXPECT_CLEANUP && peak.perched !== true) {
+            milestoneFailures.push({kind: 'milestone', text: 'never stood on top of the heading'});
         }
         if (EXPECT_CLEANUP && (milestones.remains || 0) !== 0) {
             milestoneFailures.push({kind: 'milestone', text: `${milestones.remains} swept/vacuumed items left on the page`});
