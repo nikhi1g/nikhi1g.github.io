@@ -140,6 +140,12 @@
 .dot.asleep.wary:not(.sprouted) > .eye {
     transform: scale(1) rotate(calc(var(--gaze, 0deg) - 90deg));
     clip-path: polygon(100% 50%, 0% 12%, 0% 88%);
+    /* The base transition is a spring (overshoot 1.56) tuned for the pop-in
+       scale. On a rotation that spring overshoots the cursor and wobbles back,
+       and a large change swings past the target — so while tracking, the
+       rotation gets its own short linear ease. The narrowing itself keeps an
+       ease so the cone still closes rather than snapping. */
+    transition: transform 0.12s linear, clip-path 0.2s ease-out;
 }
 
 /* In the cone the pupil sits at the wide end, on the axis, and the cone's own
