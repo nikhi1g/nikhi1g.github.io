@@ -26,6 +26,17 @@ export function initFigure(dot) {
     // level, not a flag. The rig's eye narrows toward a cone as it rises, so
     // aimEye blends the iris from aimed to pinned by the same value.
     let squinting = 0;
+    // Published gaze angles, kept CONTINUOUS rather than wrapped to a single
+    // turn, so a cursor crossing straight down does not make the eye unwind a
+    // whole revolution. null until the first aim.
+    let gazeAngle = null;
+    let gazeRigAngle = null;
+    // Carry `raw` to whichever revolution is nearest `prev`: the result differs
+    // from prev by at most 180 degrees, so the eye always turns the short way.
+    const unwrapAngle = (prev, raw) => {
+        if (prev === null) return raw;
+        return prev + ((((raw - prev) % 360) + 540) % 360) - 180;
+    };
     // When the pointer has been still for a while the creature stops watching it
     // and looks at whatever it is about to do instead. The creature sets this.
     let lookTarget = null;
@@ -81,13 +92,22 @@ export function initFigure(dot) {
         // the narrowed eyes are cones rotated by this, so it is published before
         // the early returns below.
         if (distance) {
-            const bearing = Math.round(Math.atan2(dx, -dy) * 180 / Math.PI);
-            statusDot.style.setProperty('--gaze', `${bearing}deg`);
+            const bearing = Math.atan2(dx, -dy) * 180 / Math.PI;
+            // Unwrapped, NOT clamped to (-180, 180]. atan2 jumps from 179 to
+            // -179 as the cursor crosses straight down, and CSS then rotates the
+            // eye 358 degrees the long way round — the spin-back. Accumulating
+            // the shortest delta keeps the published angle continuous, so the
+            // eye always turns the short way and never unwinds.
+            gazeAngle = unwrapAngle(gazeAngle, bearing);
+            statusDot.style.setProperty('--gaze', `${gazeAngle.toFixed(1)}deg`);
             // The rig gets its own copy. `.face-left` mirrors the whole rig with
             // `scale: -1 1`, and a reflection is not a rotation: it negates the
             // bearing. Rotating the eyeball by the raw screen bearing would aim
             // the cone at the cursor's mirror image whenever it faces left.
-            statusDot.style.setProperty('--gaze-rig', `${bearing * horizontalDirection}deg`);
+            // Unwrapped separately, because flipping facing negates the target
+            // and would otherwise be its own long way round.
+            gazeRigAngle = unwrapAngle(gazeRigAngle, bearing * horizontalDirection);
+            statusDot.style.setProperty('--gaze-rig', `${gazeRigAngle.toFixed(1)}deg`);
         }
 
         // While narrowed the cone carries the aim: it is rotated to the bearing
