@@ -1,6 +1,7 @@
-/* Fishing rod: the rod is an SVG group appended into #arm-r at runtime, which
+/* Fishing rod: the rod is an SVG group appended into #arm-l at runtime, which
    is why its styles are path-level only — the arm carries it, exactly like
-   #axe and #hammer in tools.css. */
+   #axe and #hammer in tools.css (mirrored onto the left hand; see the
+   nested-transform comment in fishing.js's ensureRod). */
 #rod {
     opacity: 0;
     pointer-events: none;
