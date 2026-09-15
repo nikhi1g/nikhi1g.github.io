@@ -15,6 +15,10 @@ export function initFigure(dot) {
     let mouseX = null;
     let mouseY = null;
     let sprouted = false;
+    // A creature-ordered ball (the startle curl) suppresses the automatic
+    // re-sprout until the creature calls sproutFigure. A user drop clears it,
+    // so the figure still unfolds on its own after being thrown.
+    let manualBall = false;
     // When the pointer has been still for a while the creature stops watching it
     // and looks at whatever it is about to do instead. The creature sets this.
     let lookTarget = null;
@@ -80,7 +84,9 @@ export function initFigure(dot) {
     window.addEventListener('mousemove', (event) => {
         mouseX = event.clientX;
         mouseY = event.clientY;
-        if (dot.isAsleep()) aimEye();
+        // A startled ball keeps watching the pointer even while it is still in
+        // the air, so the aim is not gated on being settled.
+        if (dot.isAsleep() || manualBall) aimEye();
     });
     // Idle blinks: a lid-drop every few seconds, sometimes twice in quick succession.
     let blinkTimer;
@@ -105,30 +111,62 @@ export function initFigure(dot) {
             scheduleBlink();
         }, 2600 + Math.random() * 3800);
     };
-    const aimWhileAsleep = () => {
-        if (!dot.isAsleep()) return;
+    // The eye tracks its gaze target for as long as there is an eye to aim:
+    // while settled, and throughout an ordered ball, which spans the startle
+    // hop and so is not settled for most of its life.
+    const aimWhileWatching = () => {
+        if (!dot.isAsleep() && !manualBall) return;
         aimEye();
-        requestAnimationFrame(aimWhileAsleep);
+        requestAnimationFrame(aimWhileWatching);
+    };
+    const doCurl = () => {
+        sprouted = false;
+        clearBlink();
+        pupilEl.style.removeProperty('transform');
+        irisEl.style.removeProperty('transform');
+        statusDot.classList.remove('sprouted');
+    };
+    // Ordered ball: the creature wants the ball held, eye narrowed and locked
+    // on the pointer, until it calls sproutFigure. The aim loop is restarted
+    // here because the startle hop leaves the dot awake, and the settled loop
+    // would have already stopped.
+    const curlUp = () => {
+        manualBall = true;
+        clearTimeout(sproutTimer);
+        doCurl();
+        statusDot.classList.add('wary');
+        requestAnimationFrame(aimWhileWatching);
+    };
+    const sproutFigure = () => {
+        manualBall = false;
+        statusDot.classList.remove('wary');
+        if (!dot.isAsleep()) return;
+        sprouted = true;
+        statusDot.classList.add('sprouted');
     };
     dot.onSleepChange((asleep) => {
         if (asleep) {
             scheduleBlink();
-            requestAnimationFrame(aimWhileAsleep);
-            // Settled: give it a beat, then unfold the rig.
-            if (!reduceMotion.matches) sproutTimer = setTimeout(() => {
+            requestAnimationFrame(aimWhileWatching);
+            // Settled: give it a beat, then unfold the rig — unless the ball
+            // was ordered and is still being held.
+            if (!manualBall && !reduceMotion.matches) sproutTimer = setTimeout(() => {
                 sprouted = true;
                 statusDot.classList.add('sprouted');
             }, 1200);
         } else {
             clearTimeout(blinkTimer);
             clearTimeout(sproutTimer);
-            sprouted = false;
-            clearBlink();
-            pupilEl.style.removeProperty('transform');
-            irisEl.style.removeProperty('transform');
-            statusDot.classList.remove('sprouted');   // any motion curls it back up
+            // Only a user grab or drop curls the figure now. Creature hops,
+            // falls and scripted steps wake the dot without touching the rig.
+            const userCaused = dot.isDragging()
+                || (typeof dot.consumeDrop === 'function' && dot.consumeDrop());
+            if (!userCaused) return;
+            manualBall = false;
+            statusDot.classList.remove('wary');
+            doCurl();
         }
     });
 
-    return {setLookTarget};
+    return {setLookTarget, curlUp, sproutFigure};
 }
