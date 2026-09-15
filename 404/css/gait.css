@@ -216,24 +216,6 @@
     animation: gaitLadderKnee var(--ladder-cycle, 0.9s) linear var(--ladder-count, infinite);
     animation-delay: -0.45s;
 }
-.dot.sprouted.face-left.walking #shin-l {
-    animation-delay: -0.35s;
-}
-.dot.sprouted.face-left.walking #shin-r {
-    animation-delay: 0s;
-}
-.dot.sprouted.face-left.climbing #shin-l {
-    animation-delay: -0.4s;
-}
-.dot.sprouted.face-left.climbing #shin-r {
-    animation-delay: 0s;
-}
-.dot.sprouted.face-left.laddering #shin-l {
-    animation-delay: -0.45s;
-}
-.dot.sprouted.face-left.laddering #shin-r {
-    animation-delay: 0s;
-}
 .dot.sprouted.laddering #torso {
     transform-origin: 15px 42px;
     animation: gaitLadderTorsoSway var(--ladder-cycle, 0.9s) linear var(--ladder-count, infinite);
@@ -351,33 +333,7 @@
         transition: none;
     }
 }
-
-/* --- Mirrored cycles run backwards. The rig is mirrored with a negative scale,
-   so a keyframe that swings "forward" in screen space actually swings against
-   the direction of travel once flipped. Reversing the animation direction for
-   the mirrored rig puts the limbs back in step with the walk. --- */
-.dot.sprouted.face-left.walking #leg-l,
-.dot.sprouted.face-left.walking #leg-r,
-.dot.sprouted.face-left.walking #shin-l,
-.dot.sprouted.face-left.walking #shin-r,
-.dot.sprouted.face-left.walking #arm-l,
-.dot.sprouted.face-left.walking #arm-r,
-.dot.sprouted.face-left.walking #fore-l,
-.dot.sprouted.face-left.walking #fore-r,
-.dot.sprouted.face-left.climbing #leg-l,
-.dot.sprouted.face-left.climbing #leg-r,
-.dot.sprouted.face-left.climbing #shin-l,
-.dot.sprouted.face-left.climbing #shin-r,
-.dot.sprouted.face-left.climbing #arm-l,
-.dot.sprouted.face-left.climbing #arm-r,
-.dot.sprouted.face-left.laddering #leg-l,
-.dot.sprouted.face-left.laddering #leg-r,
-.dot.sprouted.face-left.laddering #shin-l,
-.dot.sprouted.face-left.laddering #shin-r,
-.dot.sprouted.face-left.laddering #arm-l,
-.dot.sprouted.face-left.laddering #arm-r,
-.dot.sprouted.face-left.laddering #fore-l,
-.dot.sprouted.face-left.laddering #fore-r,
-.dot.sprouted.face-left.laddering #torso {
-    animation-direction: reverse;
-}
+/* --- No face-left gait overrides: the scale mirror above already mirrors each
+   cycle, so the mirrored walk is the correct walk facing the other way.
+   animation-direction/delay overrides here time-reverse the knee fold and
+   re-pair it to the wrong leg. --- */
