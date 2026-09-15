@@ -27,6 +27,10 @@ export function createStairs(dot) {
     // The uprights of the ladder currently being raised, if any. Rails span
     // only the rungs built so far and grow with each new rung.
     let railState = null;
+    // A rung takes TWO hammer strokes, so every swing produces something: the
+    // first raises the rails to the height the next rung will sit at, the
+    // second lays the rung between them. This is which half comes next.
+    let railsReady = false;
 
     const clear = () => {
         for (const record of built) dot.removePlatform(record.id);
@@ -37,6 +41,7 @@ export function createStairs(dot) {
         plan = [];
         legs = [];
         railState = null;
+        railsReady = false;
     };
 
     // `keep` continues an existing ladder instead of replacing it: the new rungs
@@ -115,18 +120,46 @@ export function createStairs(dot) {
         legs.push({start: legStart, end: plan.length});
         return plan.length;
     };
-    const buildNext = () => {
-        if (built.length >= plan.length) return false;
-
+    // Stroke one: carry the uprights up to the next rung's height. The rails
+    // span only what has been built, so they are never taller than the ladder.
+    const raiseRails = () => {
         const rect = plan[built.length];
         const leg = legFor(built.length);
+        if (!rect || !leg) return false;
+
+        // A ladder's rungs all share one x, so the rails sit on that x.
+        if (!railState || railState.leg !== leg) {
+            const rails = [];
+            for (const x of [rect.left + 1, rect.right - 4]) {
+                const rail = document.createElement('div');
+                rail.className = 'ladder-rail';
+                rail.style.position = 'fixed';
+                rail.style.left = `${x}px`;
+                document.body.appendChild(rail);
+                elements.add(rail);
+                rails.push(rail);
+            }
+            railState = {leg, top: rect.y, bottom: rect.y, rails};
+        } else {
+            railState.top = Math.min(railState.top, rect.y);
+            railState.bottom = Math.max(railState.bottom, rect.y);
+        }
+        for (const rail of railState.rails) {
+            rail.style.top = `${railState.top}px`;
+            rail.style.height = `${railState.bottom - railState.top + 6}px`;
+        }
+        return true;
+    };
+
+    // Stroke two: the rung itself, which is also the platform to stand on.
+    const layRung = () => {
+        const rect = plan[built.length];
+        if (!rect) return false;
+
         const element = document.createElement('div');
-        // Every build is a ladder rung strung between two rails. There is no
-        // staircase anymore: the creature walks to the shaft's x first, then
-        // climbs straight up.
         element.className = 'stair rung';
         // Positioned inline as well as in CSS: `body` is a flex container, so a
-        // tread that ever lacked `position: fixed` (a stylesheet that failed to
+        // rung that ever lacked `position: fixed` (a stylesheet that failed to
         // load, a slow first paint) would become a flex item and steal width
         // from the card — which moves the physics bounds with it.
         element.style.position = 'fixed';
@@ -135,36 +168,8 @@ export function createStairs(dot) {
         element.style.width = `${Math.max(0, rect.right - rect.left)}px`;
         document.body.appendChild(element);
 
-        // The rails grow one rung at a time: the two uprights span only the
-        // rungs built so far and extend upward with each new rung, so they are
-        // never taller than the ladder itself.
-        if (leg) {
-            // A ladder's rungs all share one x, so the rails sit on that x.
-            if (!railState || railState.leg !== leg) {
-                const rails = [];
-                for (const x of [rect.left + 1, rect.right - 4]) {
-                    const rail = document.createElement('div');
-                    rail.className = 'ladder-rail';
-                    rail.style.position = 'fixed';
-                    rail.style.left = `${x}px`;
-                    document.body.appendChild(rail);
-                    elements.add(rail);
-                    rails.push(rail);
-                }
-                railState = {leg, top: rect.y, bottom: rect.y, rails};
-            } else {
-                railState.top = Math.min(railState.top, rect.y);
-                railState.bottom = Math.max(railState.bottom, rect.y);
-            }
-            for (const rail of railState.rails) {
-                rail.style.top = `${railState.top}px`;
-                rail.style.height = `${railState.bottom - railState.top + 6}px`;
-            }
-        }
-
-
-        // Reading layout before adding the final state makes the CSS transition run
-        // for each individual hammer/build action instead of being skipped.
+        // Reading layout before adding the final state makes the CSS transition
+        // run for each individual hammer stroke instead of being skipped.
         void element.offsetWidth;
         element.classList.add('built');
 
@@ -172,6 +177,20 @@ export function createStairs(dot) {
         built.push({id, element});
         elements.add(element);
         return true;
+    };
+
+    // One hammer stroke. Returns what it built, or null when the ladder is done,
+    // so the caller can swing until there is nothing left to make.
+    const nextStroke = () => {
+        if (built.length >= plan.length) return null;
+        if (!railsReady) {
+            if (!raiseRails()) return null;
+            railsReady = true;
+            return 'rails';
+        }
+        if (!layRung()) return null;
+        railsReady = false;
+        return 'rung';
     };
 
     const isComplete = () => built.length === plan.length;
@@ -212,6 +231,7 @@ export function createStairs(dot) {
         plan = [];
         legs = [];
         railState = null;
+        railsReady = false;
         return thrown;
     };
 
@@ -230,7 +250,7 @@ export function createStairs(dot) {
     };
     return {
         planTo,
-        buildNext,
+        nextStroke,
         lastBuilt,
         isComplete,
         demolish,
