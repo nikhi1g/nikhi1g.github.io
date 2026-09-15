@@ -189,6 +189,24 @@
     left: 0.5px;
     transform: none;
 }
+
+/* The ball blinks: the lid drops right across the eye.
+
+   Both rules sit AFTER the cone deliberately. A blink and the cone have equal
+   specificity, so on a tie the later rule wins — with the cone last, a wary ball
+   could not blink at all.
+
+   The wary variant keeps the cone's rotation and squashes along the cone's own
+   cross-axis, so the lid closes across the narrowed eye rather than resetting it
+   to a round one for the 90ms of the blink. */
+.dot.asleep.blinking:not(.sprouted) > .eye {
+    transform: scale(1) scaleY(0.08);
+    transition: transform 0.07s ease-in;
+}
+.dot.asleep.wary.blinking:not(.sprouted) > .eye {
+    transform: scale(1) rotate(calc(var(--gaze, 0deg) + 90deg)) scaleY(0.08);
+    transition: transform 0.07s ease-in;
+}
 /* The ball-state eye hands over completely to the rig's own eye. */
 .dot.sprouted > .eye {
     display: none;
