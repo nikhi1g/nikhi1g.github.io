@@ -34,7 +34,7 @@ clean run. The harness therefore also asserts the observable end state:
 | `hole > 0` | the fracture decal took the theme icon's socket |
 | `iconHome === false` | the icon actually left the header |
 | `ruleGone` + `rule > 0` | the footer rule was pried off and handed to physics |
-| `sawHalves >= 2` + `stairs > 0` | the paragraph was sawed in half from a hammered staircase |
+| `sawHalves >= 2` + `stairs > 0` | the paragraph was sawed in half from a hammered ladder |
 | `catches >= 1` + `rod > 0` | the rod appeared and a word was fished off the page |
 | `wiped` and `remains === 0` | the cleanup pass removed the socket and every loose piece |
 
@@ -76,7 +76,15 @@ noise rather than a regression.
   not verification; it only proves the file parses.
 - **Never trust a preview pane as proof of failure.** Hidden/background pages
   get no animation frames, so a paused sequence looks identical to a broken
-  one. The harness disables background throttling; use it instead.
+  one. The harness disables background throttling; use it instead. This applies
+  to any terminal/side-by-side browser pane too: a backgrounded tab never
+  reaches the later phases at all, so `#saw` never gets built and the sequence
+  looks stuck. To inspect art or state visually, drive your own headless Chrome
+  with `--disable-background-timer-throttling`,
+  `--disable-backgrounding-occluded-windows` and `--disable-renderer-backgrounding`
+  (copy the launch flags from `harness.mjs`) and capture a clipped
+  `Page.captureScreenshot` with a `scale` — magnifying the raster keeps stroke
+  weights honest, whereas shrinking the viewBox exaggerates them.
 - **Commit per file** with a scoped message (e.g. `404 arrow: …`), unless one
   logical change genuinely spans files.
 - **No dependencies, no build step.** Plain CSS and ES modules only.
@@ -101,7 +109,7 @@ noise rather than a regression.
 | `404/js/glass.js` | procedural impact-fracture decal |
 | `404/js/damage.js` | damage stage classes and LIFO break/fix log |
 | `404/js/gait.js` | walk, climb, lean, peer, hop and swing poses |
-| `404/js/stairs.js` | stair geometry, tread elements, platform registration |
+| `404/js/stairs.js` | ladder geometry, rungs and rails, platform registration, demolition |
 | `404/css/*.css` | one stylesheet per concern, mirroring the modules |
 | `404/test/harness.mjs` | console-error + milestone harness |
 
@@ -114,9 +122,9 @@ and written so a wake mid-flight resumes rather than restarts:
 2. **finale** — a thrown axe takes the theme icon; a fracture decal holds the socket.
 3. **pry** — the axe handle levers the footer rule off, permanently removing
    that walkable surface.
-4. **saw** — stairs are hammered up to the paragraph and it is sawed in half.
-5. **perch** — stairs up to the heading's top edge, which becomes a real ledge;
-   the scaffolding is cleared behind it.
+4. **saw** — a ladder is hammered up to the paragraph and it is sawed in half.
+5. **perch** — a ladder up to the heading's top edge, which becomes a real ledge;
+   the scaffolding is wrecked behind it.
 6. **fishing** — the footer sentence is fished out word by word.
 7. **wipe** — climbs back to the shattered socket the axe left and wipes it
    away, one crack stroke at a time.
@@ -125,14 +133,45 @@ and written so a wake mid-flight resumes rather than restarts:
 9. **vacuum** — the catch-all: suctions what is left, then throws the vacuum
    itself off the edge.
 
+Only one sequence ever runs at a time. Both the sleep event and the watchdog
+start runs, and every walk wakes the dot — which fires another sleep event — so
+without that gate two sequences hammer and climb the same ladder at once.
+
 ### Travel
 
-`travelTo(goalX, standY, standOn)` is the only way the creature moves the page:
-hammer one tread per swing, climb, and — when `standOn` is given — promote that
-rect to a real platform and clear the scaffolding. Passing the previous leg's
-stairs through with `{keep: true}` is what lets it travel in legs without ever
-losing the tread under its feet; losing it would drop the creature out of its
-climb pose and collapse it back into a ball.
+`travelTo(goalX, standY, standOn)` is the only way the creature moves the page.
+It travels in two moves, never diagonally: **walk** to the exact x it has to
+climb from, then hammer a **ladder** straight up, one rung per swing, stepping
+onto each rung as it appears. There are no staircases.
 
-The flee reflex is parked for the whole of phases 4-6 (`working`), because
-otherwise a passing cursor drags the creature off its own staircase.
+`standOn` is the ELEMENT that becomes the ledge, not a rect. It is registered
+with `dot.anchorPlatform`, so the surface exists only while that element is on
+the page and follows its box — the invariant that keeps every surface the
+creature stands on something the user can actually see. Passing the previous
+leg's ladder through with `{keep: true}` is what lets it travel in legs without
+ever losing the rung under its feet; losing it would drop the creature out of
+its climb pose and collapse it back into a ball.
+
+A ladder is never faded away. Once the creature is on something real the whole
+thing is **demolished**: rungs and rails stop being platforms and are handed to
+the debris system to fall and clutter the floor, where the sweep and vacuum
+passes collect them like anything else.
+
+### The cursor
+
+Sensing is measured as a gap to the **rig's** box (`.figure`), not `.dot` — the
+ball is 20px and the sprouted figure is a ~30×74 SVG that overflows it, so
+measuring `.dot` senses only the head.
+
+- **A direct poke always wins**, even mid-phase: the creature hops up and away,
+  curls into a ball, and watches the cursor suspiciously for `SCARE_MS` with its
+  eye narrowed (`.wary`) and its pupil tracking the pointer. The stare is timed
+  from the **landing**, because that is when the ball's eye appears. Release
+  needs the cursor well clear (`SCARE_RELEASE`), or a still cursor re-triggers
+  the hop forever. The ladder it was on is knocked down with it.
+- **Mere proximity** only walks it away, and only while it is not `working` —
+  otherwise a passing cursor drags the creature off its own ladder.
+
+Only a user grab or drop curls the figure back into a ball. A fall or a scripted
+hop does not: `dot.consumeDrop()` latches the release so the creature's own
+motion is never mistaken for the user letting go.
