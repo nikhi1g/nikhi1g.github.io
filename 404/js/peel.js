@@ -62,22 +62,27 @@ export function createPeel(root) {
     function build() {
         if (curl && curl.isConnected) return true;
         if (!usable()) return false;
+        // The card itself loses its corner: peel.css clips `main` on the fold
+        // diagonal, so the element genuinely ends there and there is no card
+        // face left under the flap to give it away.
         card.classList.add('peel-ready');
         // Adopt a peel another handle already built: start() must be safe to
         // call once per sequence watchdog, not once per handle object.
-        curl = card.querySelector(':scope > .peel-curl');
-        bedEl = card.querySelector(':scope > .peel-bed');
+        curl = document.body.querySelector(':scope > .peel-curl');
         hinge = curl ? curl.querySelector('.peel-hinge') : null;
-        if (curl && bedEl && hinge) return true;
+        bedEl = curl ? curl.querySelector('.peel-bed') : null;
+        if (curl && hinge && bedEl) {
+            place();
+            return true;
+        }
         if (curl) curl.remove();
-        if (bedEl) bedEl.remove();
-        bedEl = document.createElement('div');
-        bedEl.setAttribute('class', 'peel-bed');
-        bedEl.setAttribute('aria-hidden', 'true');
 
         curl = document.createElement('div');
         curl.setAttribute('class', 'peel-curl');
         curl.setAttribute('aria-hidden', 'true');
+
+        bedEl = document.createElement('div');
+        bedEl.setAttribute('class', 'peel-bed');
 
         hinge = document.createElement('div');
         hinge.setAttribute('class', 'peel-hinge');
@@ -86,10 +91,26 @@ export function createPeel(root) {
         flap.setAttribute('class', 'peel-flap');
 
         hinge.appendChild(flap);
+        curl.appendChild(bedEl);
         curl.appendChild(hinge);
-        card.appendChild(bedEl);
-        card.appendChild(curl);
+        // On `body`, not in the card: the card is clipped, and a child of a
+        // clipped element would be cut off exactly where the curl overhangs.
+        document.body.appendChild(curl);
+        place();
+        window.addEventListener('resize', place);
         return true;
+    }
+
+    // Park the curl on the card's bottom-right corner, in viewport coordinates,
+    // and keep the clip and the curl the same size.
+    function place() {
+        if (!curl || !usable()) return;
+        const box = card.getBoundingClientRect();
+        const size = Math.round(Math.min(88, box.width * 0.13, box.height * 0.22));
+        card.style.setProperty('--peel-size', `${size}px`);
+        curl.style.setProperty('--peel-size', `${size}px`);
+        curl.style.left = `${box.right - size}px`;
+        curl.style.top = `${box.bottom - size}px`;
     }
 
     function setVars(liftDeg, skewDeg) {
@@ -129,7 +150,9 @@ export function createPeel(root) {
         started = true;
         card.classList.add('peeling');
         if (prefersReducedMotion()) {
-            card.classList.add('peel-still');
+            // On the curl, not the card: the flap lives on `body` now, so a
+            // class on the card would never reach it.
+            curl.classList.add('peel-still');
             return api;
         }
         clock = 0;
@@ -140,20 +163,21 @@ export function createPeel(root) {
 
     function stop() {
         started = false;
-        if (raf) cancelAnimationFrame(raf);
+        cancelAnimationFrame(raf);
         raf = 0;
         return api;
     }
 
     function reset() {
         stop();
+        window.removeEventListener('resize', place);
         if (curl && curl.isConnected) curl.remove();
-        if (bedEl && bedEl.isConnected) bedEl.remove();
         curl = null;
         bedEl = null;
         hinge = null;
         if (card && card.isConnected) {
-            card.classList.remove('peel-ready', 'peeling', 'peel-still');
+            card.classList.remove('peel-ready', 'peeling');
+            card.style.removeProperty('--peel-size');
         }
         return api;
     }
