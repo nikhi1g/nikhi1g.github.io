@@ -189,9 +189,19 @@ Two states, because the ball and the rig have different eyes:
   deliberately does **not** also translate the pupil in this state — doing both
   doubles the rotation and slides the pupil off the axis. Narrowing is one
   `clip-path`, so intermediate stages are just wider triangles.
-- **Rig (`.squinting`)** — an SVG eyeball cannot take a `clip-path` wedge as
-  cleanly, so it closes vertically instead. The blink rule is listed after it so
-  a blink still wins over a squint.
+- **Rig (`.squinting`)** — the same cone, clipped out of the SVG `#eyeball` with
+  `transform-box: fill-box` so the percentages and rotation origin resolve
+  against the eyeball rather than the whole viewport, and with the iris pinned
+  to the wide end by `figure.js`. It is aimed by `--gaze-rig`, **not** `--gaze`:
+  `.face-left` mirrors the whole rig with `scale: -1 1`, and a reflection is not
+  a rotation — it negates the bearing. Aiming the rig's cone with the raw screen
+  bearing points it at the cursor's mirror image whenever it faces left. The
+  blink rule is listed after it so a blink still wins over a squint.
+
+The cone is cut narrow enough (`22%`/`78%` on the ball) that its edges shave the
+top and bottom off the pupil. That crop is the point: a cone merely smaller than
+the pupil reads as a small eye, whereas one that clips the black reads as
+suspicion.
 
 Never narrow the eye with `scaleY` on `.eye`: it scales the pupil along with the
 sclera, and the eye reads as a thin crescent with a smeared pupil.
