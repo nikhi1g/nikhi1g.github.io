@@ -77,6 +77,12 @@
     transform-origin: 15.6px 10.6px;
     transition: transform 0.07s ease-in;
 }
+/* Backing away from the cursor: the rig narrows its eye. The blink rule below
+   is deliberately listed after this one, so a blink still wins over a squint. */
+.dot.sprouted.squinting #eyeball {
+    transform: scaleY(0.5);
+    transition: transform 0.16s ease-out;
+}
 .dot.sprouted.blinking #eyeball {
     transform: scaleY(0.08);
 }
@@ -117,9 +123,32 @@
     opacity: 1;
     transform: scale(1);
 }
-/* Startled ball: the lid narrows while the pupil keeps tracking the mouse. */
+/* Startled ball: the eye narrows to a cone that points where it is looking.
+
+   Squashing it with scaleY was wrong — it scaled the pupil along with the
+   sclera, so the eye read as a thin crescent with a smeared pupil. Instead the
+   disc is clipped to a triangle: apex forward, wide end at the back. The
+   `border-radius` circle still clips too, so the wide end keeps the disc's own
+   arc and the shape reads as a cone rather than a hard triangle.
+
+   The whole eye is rotated to the gaze bearing (--gaze, published by figure.js
+   clockwise from twelve o'clock), so the apex aims at the cursor. The clip is
+   authored pointing along local +x, which is bearing 90deg, hence the -90.
+
+   Narrowing is a single clip-path, so intermediate stages are just wider
+   triangles — the shape can be animated open or shut without touching JS. */
 .dot.asleep.wary:not(.sprouted) > .eye {
-    transform: scale(1) scaleY(0.55);
+    transform: scale(1) rotate(calc(var(--gaze, 0deg) - 90deg));
+    clip-path: polygon(100% 50%, 0% 12%, 0% 88%);
+}
+
+/* In the cone the pupil sits at the wide end, on the axis, and the cone's own
+   edges crop it — so it is placed here rather than aimed by JS, which would
+   fight the rotation the cone is already carrying. */
+.dot.asleep.wary:not(.sprouted) > .eye > .pupil {
+    top: 3.19px;
+    left: 0.5px;
+    transform: none;
 }
 /* The ball-state eye hands over completely to the rig's own eye. */
 .dot.sprouted > .eye {
