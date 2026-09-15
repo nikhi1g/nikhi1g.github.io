@@ -69,6 +69,22 @@ export function initFigure(dot) {
         const dy = gaze.y - centerY;
         const distance = Math.hypot(dx, dy);
         const target = sprouted ? irisEl : pupilEl;
+
+        // The gaze bearing, clockwise from twelve o'clock, in SCREEN space —
+        // the mirrored rig must not flip it. The narrowed ball eye is a cone
+        // rotated by this, so it is published before the early return below.
+        if (distance) {
+            statusDot.style.setProperty(
+                '--gaze',
+                `${Math.round(Math.atan2(dx, -dy) * 180 / Math.PI)}deg`
+            );
+        }
+
+        // While narrowed the cone carries the aim: it is rotated to the bearing
+        // and the pupil is pinned to its wide end by CSS. Translating the pupil
+        // as well would double up on that rotation and slide it off the axis.
+        if (manualBall && !sprouted) return;
+
         if (!distance) {
             target.style.transform = 'translate(0px, 0px)';
             return;
@@ -125,6 +141,8 @@ export function initFigure(dot) {
         pupilEl.style.removeProperty('transform');
         irisEl.style.removeProperty('transform');
         statusDot.classList.remove('sprouted');
+        // The rig's squint belongs to the rig; the ball has its own wedge.
+        statusDot.classList.remove('squinting');
     };
     // Ordered ball: the creature wants the ball held, eye narrowed and locked
     // on the pointer, until it calls sproutFigure. The aim loop is restarted
@@ -143,6 +161,13 @@ export function initFigure(dot) {
         if (!dot.isAsleep()) return;
         sprouted = true;
         statusDot.classList.add('sprouted');
+    };
+
+    // The rig narrows its eye while it is backing away from the cursor. This is
+    // the sprouted counterpart of the wary ball's Pac-Man wedge: the rig's eye
+    // is an SVG eyeball, so it squints by closing vertically instead.
+    const setSquint = (on) => {
+        statusDot.classList.toggle('squinting', Boolean(on));
     };
     dot.onSleepChange((asleep) => {
         if (asleep) {
@@ -168,5 +193,5 @@ export function initFigure(dot) {
         }
     });
 
-    return {setLookTarget, curlUp, sproutFigure};
+    return {setLookTarget, curlUp, sproutFigure, setSquint};
 }
