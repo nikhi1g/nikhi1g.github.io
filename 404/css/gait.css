@@ -374,18 +374,23 @@
     transition: transform 0.25s ease-out;
 }
 
-/* --- Swing: a single re-triggerable chop/hammer stroke on the tool arm. Wind
-   up eases out, the strike eases in, and the arm holds its landed pose until
-   the "swinging" class is removed. --- */
+/* --- Swing: ONE self-contained chop/hammer stroke on the tool arm: wind up,
+   strike, recover to rest. The recovery is part of the keyframes on purpose.
+
+   It used to end at the landed pose and hold it with `animation-fill-mode:
+   forwards`, so removing the class snapped the arm back to neutral in a single
+   frame. Two strokes therefore read as four movements — strike, snap, strike,
+   snap — which is why a two-stroke rung looked like three. Ending at rest means
+   there is nothing to snap back from, and each call is exactly one stroke. --- */
 @keyframes gaitSwingArm {
     0% { transform: rotate(0deg); animation-timing-function: ease-out; }
-    30% { transform: rotate(-70deg); animation-timing-function: ease-in; }
-    100% { transform: rotate(45deg); }
+    26% { transform: rotate(-70deg); animation-timing-function: ease-in; }
+    58% { transform: rotate(45deg); animation-timing-function: ease-out; }
+    100% { transform: rotate(0deg); }
 }
 .dot.sprouted.swinging #arm-r {
     transform-origin: 15px 27px;
     animation: gaitSwingArm 0.42s;
-    animation-fill-mode: forwards;
 }
 
 @media (prefers-reduced-motion: reduce) {
