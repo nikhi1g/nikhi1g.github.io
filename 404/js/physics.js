@@ -34,6 +34,9 @@ export function createDot() {
     let dotPointerX = 0;
     let dotPointerY = 0;
     let dotDragTime = 0;
+    // Latched on release: the next wake this causes is a user drop, which is
+    // one of the two things allowed to curl the figure back into a ball.
+    let userDrop = false;
     let dotAsleep = false;
     const sleepListeners = [];
     const onSleepChange = (fn) => {
@@ -73,6 +76,12 @@ export function createDot() {
     };
     // Every walkable surface, in one list: the footer rule, the card floor, and any
     // platform the creature has built. Each is {y, left, right, kind}.
+    //
+    // A platform may instead be ANCHORED to a page element. It then exists only
+    // for as long as that element is on the page, and it follows the element's
+    // box. That is the invariant that keeps the creature honest: every surface
+    // it can stand on is something visible. An unanchored platform is owned by
+    // whoever registered it and must be removed by hand.
     const platforms = [];
     let platformSeq = 0;
     const addPlatform = (left, right, y) => {
@@ -80,12 +89,42 @@ export function createDot() {
         platforms.push({id, left, right, y: y - dotRadius, kind: 'platform'});
         return id;
     };
+    const anchorPlatform = (element) => {
+        if (!element) return 0;
+        // Idempotent: a phase that retries its approach anchors the same ledge
+        // again, and stacking duplicate surfaces on one element is never right.
+        const existing = platforms.find((platform) => platform.el === element);
+        if (existing) return existing.id;
+        const id = ++platformSeq;
+        platforms.push({id, el: element, left: 0, right: 0, y: 0, kind: 'platform'});
+        refreshAnchors();
+        return id;
+    };
+    // Resolved once per animation frame rather than per surface query: the
+    // integrator runs at a fixed 240Hz substep and asks for surfaces several
+    // times per step, and a getBoundingClientRect per platform per substep is
+    // a layout read the simulation does not need.
+    const refreshAnchors = () => {
+        for (let i = platforms.length - 1; i >= 0; i -= 1) {
+            const platform = platforms[i];
+            if (!platform.el) continue;
+            if (!platform.el.isConnected) {
+                platforms.splice(i, 1);
+                continue;
+            }
+            const box = platform.el.getBoundingClientRect();
+            if (box.width < 1 || box.height < 1) {
+                platforms.splice(i, 1);
+                continue;
+            }
+            platform.left = box.left;
+            platform.right = box.right;
+            platform.y = box.top - dotRadius;
+        }
+    };
     const removePlatform = (id) => {
         const i = platforms.findIndex((p) => p.id === id);
         if (i >= 0) platforms.splice(i, 1);
-    };
-    const clearPlatforms = () => {
-        platforms.length = 0;
     };
     const surfacesAt = (x) => {
         const world = dotWorld();
@@ -175,6 +214,9 @@ export function createDot() {
         }
     };
     const animateDot = (time) => {
+        // Anchored platforms track their elements once per frame, before the
+        // substeps read them.
+        refreshAnchors();
         if (dotLastTime === undefined) dotLastTime = time;
         const frame = Math.min((time - dotLastTime) / 1000, 0.05);
         dotLastTime = time;
@@ -194,6 +236,7 @@ export function createDot() {
         const asleep = !dotDragging && dotVY === 0 && (driven ? contactNow : dotVX === 0);
         if (asleep !== dotAsleep) {
             dotAsleep = asleep;
+            if (asleep) userDrop = false;
             statusDot.classList.toggle('asleep', asleep);
             for (const listener of sleepListeners) {
                 try {
@@ -255,6 +298,7 @@ export function createDot() {
     });
     statusDot.addEventListener('pointerup', (event) => {
         dotDragging = false;
+        userDrop = true;
         // Released: keep the throw velocity, clamped so a fast flick stays on-screen.
         const throwLimit = 12 * pixelsPerMetre;
         dotVX = Math.max(-throwLimit, Math.min(throwLimit, dotVX));
@@ -390,9 +434,15 @@ export function createDot() {
         isAsleep: () => dotAsleep,
         isDragging: () => dotDragging,
         isGrounded: () => contactNow,
-        surface: () => surfaceNow,
         pos: () => ({x: dotX, y: dotY}),
         velocity: () => ({vx: dotVX, vy: dotVY}),
+        // falls must not read as drops, so this clears on read.
+        consumeDrop: () => {
+            const dropped = userDrop;
+            userDrop = false;
+            return dropped;
+        },
+        surface: () => surfaceNow,
         world: dotWorld,
         surfacesAt,
         surfaceSpan: () => {
@@ -401,7 +451,7 @@ export function createDot() {
         },
         addPlatform,
         removePlatform,
-        clearPlatforms,
+        anchorPlatform,
         dropLine,
         drive,
         release,
