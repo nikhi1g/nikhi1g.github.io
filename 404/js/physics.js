@@ -96,26 +96,12 @@ export function createDot() {
         const existing = platforms.find((platform) => platform.el === element);
         if (existing) return existing.id;
         const id = ++platformSeq;
-        // An anchored ledge gets a drawn line along its top edge. A heading or a
-        // decal is not visibly a floor, so without this the creature appears to
-        // stand on nothing; the rule it started on was a real line, and this
-        // keeps every surface it uses just as legible.
-        const mark = document.createElement('span');
-        mark.className = 'ledge';
-        mark.setAttribute('aria-hidden', 'true');
-        mark.style.position = 'fixed';
-        document.body.appendChild(mark);
-        platforms.push({id, el: element, mark, left: 0, right: 0, y: 0, kind: 'platform'});
+        platforms.push({id, el: element, left: 0, right: 0, y: 0, kind: 'platform'});
         refreshAnchors();
-        // Size it first, then release the draw on the next frame, so the line
-        // grows from its middle out to both edges instead of appearing whole.
-        void mark.offsetWidth;
-        mark.classList.add('drawn');
         return id;
     };
     const dropPlatform = (index) => {
-        const [gone] = platforms.splice(index, 1);
-        if (gone && gone.mark) gone.mark.remove();
+        platforms.splice(index, 1);
     };
     // Resolved once per animation frame rather than per surface query: the
     // integrator runs at a fixed 240Hz substep and asks for surfaces several
@@ -137,11 +123,6 @@ export function createDot() {
             platform.left = box.left;
             platform.right = box.right;
             platform.y = box.top - dotRadius;
-            if (platform.mark) {
-                platform.mark.style.left = `${box.left}px`;
-                platform.mark.style.top = `${box.top}px`;
-                platform.mark.style.width = `${box.width}px`;
-            }
         }
     };
     const removePlatform = (id) => {
