@@ -123,7 +123,7 @@
     opacity: 1;
     transform: scale(1);
 }
-/* Startled ball: the eye narrows to a cone that points where it is looking.
+/* Startled ball: the eye narrows to a cone, pupil end toward the cursor.
 
    Squashing it with scaleY was wrong — it scaled the pupil along with the
    sclera, so the eye read as a thin crescent with a smeared pupil. Instead the
@@ -132,13 +132,15 @@
    arc and the shape reads as a cone rather than a hard triangle.
 
    The whole eye is rotated to the gaze bearing (--gaze, published by figure.js
-   clockwise from twelve o'clock), so the apex aims at the cursor. The clip is
-   authored pointing along local +x, which is bearing 90deg, hence the -90.
+   clockwise from twelve o'clock). The PUPIL end is what faces the cursor and
+   the apex trails behind it, so the clip — authored pointing along local +x,
+   which is bearing 90deg — is turned to point the opposite way: +90 rather
+   than -90.
 
    Narrowing is a single clip-path, so intermediate stages are just wider
    triangles — the shape can be animated open or shut without touching JS. */
 .dot.asleep.wary:not(.sprouted) > .eye {
-    transform: scale(1) rotate(calc(var(--gaze, 0deg) - 90deg));
+    transform: scale(1) rotate(calc(var(--gaze, 0deg) + 90deg));
     clip-path: polygon(100% 50%, 0% 12%, 0% 88%);
     /* The base transition is a spring (overshoot 1.56) tuned for the pop-in
        scale. On a rotation that spring overshoots the cursor and wobbles back,
