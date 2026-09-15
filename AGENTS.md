@@ -179,14 +179,16 @@ measuring `.dot` senses only the head.
 
 Two states, because the ball and the rig have different eyes:
 
-- **Ball (`.wary`)** — the white disc is clipped to a **cone**: apex forward,
-  wide end at the back, with the pupil pinned to the wide end. The whole eye is
-  rotated to `--gaze` (published by `figure.js` as a bearing clockwise from
-  twelve o'clock, in screen space) so the apex aims at the cursor. Because the
-  cone carries the aim, `aimEye` deliberately does **not** also translate the
-  pupil in this state — doing both doubles the rotation and slides the pupil off
-  the axis. Narrowing is one `clip-path`, so intermediate stages are just wider
-  triangles.
+- **Ball (`.wary`)** — the white disc is clipped to a **cone**, with the pupil
+  pinned to the cone's wide end. The whole eye is rotated to `--gaze`
+  (published by `figure.js` as a bearing clockwise from twelve o'clock, in
+  screen space) so that the **pupil end faces the cursor** and the apex trails
+  behind it. That is the `+ 90deg` in the rule: the clip is authored pointing
+  along local `+x`, so aiming the apex at the cursor instead (`- 90deg`) points
+  the whole eye backwards. Because the cone carries the aim, `aimEye`
+  deliberately does **not** also translate the pupil in this state — doing both
+  doubles the rotation and slides the pupil off the axis. Narrowing is one
+  `clip-path`, so intermediate stages are just wider triangles.
 - **Rig (`.squinting`)** — an SVG eyeball cannot take a `clip-path` wedge as
   cleanly, so it closes vertically instead. The blink rule is listed after it so
   a blink still wins over a squint.
