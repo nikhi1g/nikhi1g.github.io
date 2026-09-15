@@ -177,6 +177,35 @@ export function createGait(dot) {
         });
     };
 
+    // A boot with the lead foot. `onImpact` fires at the moment the foot is
+    // extended — the caller uses it to launch whatever is being kicked, so the
+    // hit lands with the pose rather than before or after it.
+    const KICK_DURATION = 460;
+    const KICK_IMPACT = 200;
+    const kick = (dir, onImpact) => {
+        setFacing(dir);
+        walking = false;
+        element.classList.remove('walking', 'idle-bob');
+        dot.drive(0);
+        dot.release();
+        if (prefersReducedMotion()) {
+            if (typeof onImpact === 'function') onImpact();
+            return Promise.resolve();
+        }
+        element.classList.remove('kicking');
+        void element.offsetWidth;
+        element.classList.add('kicking');
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                if (typeof onImpact === 'function') onImpact();
+            }, KICK_IMPACT);
+            setTimeout(() => {
+                element.classList.remove('kicking');
+                resolve();
+            }, KICK_DURATION);
+        });
+    };
+
     const swing = (kind) => new Promise((resolve) => {
         swingQueue.push({kind: kind === 'hammer' ? 'hammer' : 'axe', resolve});
         startNextSwing();
@@ -244,6 +273,7 @@ export function createGait(dot) {
         peer,
         hopDown,
         swing,
+        kick,
         putAway,
         climb,
         stepClimb,

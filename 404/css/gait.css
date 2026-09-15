@@ -96,6 +96,53 @@
     animation: gaitTorsoWalkBob var(--walk-cycle, 0.7s) linear infinite;
 }
 
+/* --- Kick: the lead leg cocks back, snaps out straight, and returns. The
+   impact is at 45%, which is what gait.js's KICK_IMPACT is timed to, so the
+   thing being kicked launches exactly as the foot reaches full extension. The
+   torso leans back to counterweight it and the arms fly up. --- */
+@keyframes gaitKickHip {
+    0% { transform: rotate(0deg); }
+    25% { transform: rotate(-26deg); }
+    45% { transform: rotate(52deg); }
+    70% { transform: rotate(34deg); }
+    100% { transform: rotate(0deg); }
+}
+@keyframes gaitKickKnee {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(42deg); }
+    45% { transform: rotate(-6deg); }
+    70% { transform: rotate(8deg); }
+}
+@keyframes gaitKickStance {
+    0%, 100% { transform: rotate(0deg); }
+    45% { transform: rotate(-12deg); }
+}
+@keyframes gaitKickTorso {
+    0%, 100% { transform: rotate(0deg); }
+    45% { transform: rotate(-14deg); }
+    70% { transform: rotate(-8deg); }
+}
+@keyframes gaitKickArm {
+    0%, 100% { transform: rotate(0deg); }
+    45% { transform: rotate(-54deg); }
+}
+.dot.sprouted.kicking #leg-r {
+    animation: gaitKickHip 0.46s ease-out 1;
+}
+.dot.sprouted.kicking #shin-r {
+    animation: gaitKickKnee 0.46s ease-out 1;
+}
+.dot.sprouted.kicking #leg-l {
+    animation: gaitKickStance 0.46s ease-out 1;
+}
+.dot.sprouted.kicking #torso {
+    animation: gaitKickTorso 0.46s ease-out 1;
+}
+.dot.sprouted.kicking #arm-l,
+.dot.sprouted.kicking #arm-r {
+    animation: gaitKickArm 0.46s ease-out 1;
+}
+
 /* --- Stair climb: a high, deliberate step-up. The lead leg swings up hard with
    a much deeper knee fold than the walk (so the foot clears the tread), then the
    knee extends as the torso pushes up off the planted foot. Legs run 50% out of
@@ -296,6 +343,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+    .dot.sprouted.kicking #leg-l,
+    .dot.sprouted.kicking #leg-r,
+    .dot.sprouted.kicking #shin-r,
+    .dot.sprouted.kicking #arm-l,
+    .dot.sprouted.kicking #arm-r,
+    .dot.sprouted.kicking #torso,
     .dot.sprouted.idle-bob #torso,
     .dot.sprouted.idle-bob #hair,
     .dot.sprouted.walking #leg-l,
