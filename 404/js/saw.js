@@ -3,7 +3,7 @@
 // helper) and from creature.js's knockOffLetter (turn a live element into
 // fixed-position physics debris by copying its computed text metrics).
 
-const SAW_CUT_MS = 1800;     // one continuous chainsaw cut
+const SAW_CUT_MS = 1800;     // one continuous run of strokes
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -27,6 +27,67 @@ export function createSaw(dot) {
     // g maps the 24x24 icon's handle anchor onto that same point at the same
     // 0.70 scale. As a child of #arm-r it is carried by every arm rotation
     // for free — see tools.css's comment on why it must stay there.
+
+    // The blade, in icon space. A hand saw's plate is a long triangle: deep at
+    // the heel, tapering to the toe. Only the spine (the stiff back edge) and
+    // the two depths are authored — the toothed edge is derived from them, so
+    // the plate cannot be drawn inconsistently with its own teeth.
+    //
+    // The depths matter: the plate must stay well deeper than its own stroke
+    // width, or the outline floods the interior and the saw reads as a solid
+    // dark wedge instead of a blade.
+    const HEEL_SPINE = {x: 6.5, y: 17.4};
+    const TOE_SPINE = {x: 21.4, y: 5.9};
+    const HEEL_DEPTH = 4.6;
+    const TOE_DEPTH = 1.9;
+    const TEETH = 10;
+    const TOOTH_DEPTH = 0.8;
+
+    // Path coordinates are rounded so the emitted `d` stays readable.
+    const round2 = (value) => Math.round(value * 100) / 100;
+
+    // Blade axis, and the outward normal the teeth bite along.
+    const axis = () => {
+        const run = {x: TOE_SPINE.x - HEEL_SPINE.x, y: TOE_SPINE.y - HEEL_SPINE.y};
+        const length = Math.hypot(run.x, run.y);
+        const unit = {x: run.x / length, y: run.y / length};
+        return {length, unit, normal: {x: -unit.y, y: unit.x}};
+    };
+
+    const HEEL_EDGE = (() => {
+        const {normal} = axis();
+        return {x: HEEL_SPINE.x + normal.x * HEEL_DEPTH, y: HEEL_SPINE.y + normal.y * HEEL_DEPTH};
+    })();
+    const TOE_EDGE = (() => {
+        const {normal} = axis();
+        return {x: TOE_SPINE.x + normal.x * TOE_DEPTH, y: TOE_SPINE.y + normal.y * TOE_DEPTH};
+    })();
+
+    // A real saw is defined by its teeth, so they are cut geometrically rather
+    // than eyeballed: walk the toothed edge in equal steps and alternate tip
+    // and gullet, each tip displaced along the edge's outward normal. Changing
+    // TEETH or TOOTH_DEPTH re-cuts them correctly with no other edits.
+    const toothPath = () => {
+        const run = {x: TOE_EDGE.x - HEEL_EDGE.x, y: TOE_EDGE.y - HEEL_EDGE.y};
+        const length = Math.hypot(run.x, run.y);
+        const unit = {x: run.x / length, y: run.y / length};
+        // Outward normal: the teeth bite away from the spine.
+        const normal = {x: -unit.y, y: unit.x};
+        const step = length / TEETH;
+        const along = (distance) => ({
+            x: HEEL_EDGE.x + unit.x * distance,
+            y: HEEL_EDGE.y + unit.y * distance
+        });
+        let path = `M${round2(HEEL_EDGE.x)} ${round2(HEEL_EDGE.y)}`;
+        for (let tooth = 0; tooth < TEETH; tooth += 1) {
+            const crest = along((tooth + 0.5) * step);
+            const gullet = along((tooth + 1) * step);
+            path += ` L${round2(crest.x + normal.x * TOOTH_DEPTH)} ${round2(crest.y + normal.y * TOOTH_DEPTH)}`;
+            path += ` L${round2(gullet.x)} ${round2(gullet.y)}`;
+        }
+        return path;
+    };
+
     const ensureSaw = () => {
         if (sawGroup && sawGroup.isConnected) return sawGroup;
         const armR = creature.querySelector('#arm-r');
@@ -41,57 +102,54 @@ export function createSaw(dot) {
         outer.setAttribute('id', 'saw');
         outer.setAttribute('transform', 'rotate(38 22.5 38.5)');
 
-        // The engine judder lives on this bare wrapper: `outer` and `inner` both
-        // carry a `transform` attribute for the grip, and a CSS transform
+        // The cutting stroke lives on this bare wrapper: `outer` and `inner`
+        // both carry a `transform` attribute for the grip, and a CSS transform
         // animation would replace that attribute outright and lose the grip.
-        const jitter = document.createElementNS(SVG_NS, 'g');
-        jitter.setAttribute('class', 'chainsaw-jitter');
+        const stroke = document.createElementNS(SVG_NS, 'g');
+        stroke.setAttribute('class', 'saw-stroke');
 
         const inner = document.createElementNS(SVG_NS, 'g');
         inner.setAttribute('transform', 'translate(11.271042 28.783493) rotate(-41) scale(0.70)');
 
-        // Chainsaw, authored at 24x24 with the grip anchor at (3,21) so the
-        // nested transform puts the power head in the fist and the bar out
-        // ahead of it. Read left-to-right: rear handle, power head with a top
-        // handle, then the guide bar.
-        const body = document.createElementNS(SVG_NS, 'path');
-        body.setAttribute('class', 'chainsaw-body');
-        body.setAttribute('d', 'M1.4 15.6 h6.4 a2.2 2.2 0 0 1 2.2 2.2 v1.6 a2.2 2.2 0 0 1 -2.2 2.2 h-6.4 a2.2 2.2 0 0 1 -2.2 -2.2 v-1.6 a2.2 2.2 0 0 1 2.2 -2.2 z');
+        // Hand saw, authored at 24x24 with the grip anchor at (3,21) so the
+        // nested transform puts the handle in the fist and the blade out ahead
+        // of it. Read heel-to-toe: closed D-handle, blade plate, toothed edge.
+        const blade = document.createElementNS(SVG_NS, 'path');
+        blade.setAttribute('class', 'saw-blade');
+        blade.setAttribute('d',
+            `M${round2(HEEL_SPINE.x)} ${round2(HEEL_SPINE.y)} L${round2(TOE_SPINE.x)} ${round2(TOE_SPINE.y)}`
+            + ` L${round2(TOE_EDGE.x)} ${round2(TOE_EDGE.y)} L${round2(HEEL_EDGE.x)} ${round2(HEEL_EDGE.y)} Z`
+        );
 
-        const topHandle = document.createElementNS(SVG_NS, 'path');
-        topHandle.setAttribute('class', 'chainsaw-handle');
-        topHandle.setAttribute('d', 'M1.8 15.6 q3.2 -3.8 6.6 -0.5');
+        const teeth = document.createElementNS(SVG_NS, 'path');
+        teeth.setAttribute('class', 'saw-teeth');
+        teeth.setAttribute('d', toothPath());
 
-        const rearHandle = document.createElementNS(SVG_NS, 'path');
-        rearHandle.setAttribute('class', 'chainsaw-handle');
-        rearHandle.setAttribute('d', 'M-1.6 17.4 q-2.6 0.6 -2.2 3.1');
+        // The closed D-handle at the heel. Two subpaths with evenodd fill: the
+        // outer grip and the hole the fingers actually pass through, which is
+        // centred on the grip anchor (3,21) so the fist lands inside it.
+        const handle = document.createElementNS(SVG_NS, 'path');
+        handle.setAttribute('class', 'saw-handle');
+        handle.setAttribute('fill-rule', 'evenodd');
+        handle.setAttribute('d',
+            `M${round2(HEEL_SPINE.x)} ${round2(HEEL_SPINE.y)} L2.6 19.5 Q1.1 21.3 1.9 23.5`
+            + ` Q2.9 25.6 6.0 24.6 L${round2(HEEL_EDGE.x)} ${round2(HEEL_EDGE.y)} Z`
+            + ' M5.5 20.0 Q3.3 21.0 3.5 22.6 Q3.9 23.8 5.9 23.0 Z'
+        );
 
-        // The guide bar: a closed loop so the chain can run around it.
-        const bar = document.createElementNS(SVG_NS, 'path');
-        bar.setAttribute('class', 'chainsaw-bar');
-        bar.setAttribute('d', 'M8.4 17.8 L21.6 4.9 Q23.1 5.5 22.8 6.6 L9.8 19.4 Q8.6 18.8 8.4 17.8 Z');
+        // The spine is doubled up so the back of the blade reads as the thick,
+        // rigid edge it is — that asymmetry is what makes it a saw and not a
+        // knife at this size.
+        const spine = document.createElementNS(SVG_NS, 'path');
+        spine.setAttribute('class', 'saw-spine');
+        spine.setAttribute('d', `M${HEEL_SPINE.x} ${HEEL_SPINE.y} L${TOE_SPINE.x} ${TOE_SPINE.y}`);
 
-        // Chain links are drawn as marching dashes along that same loop — the
-        // dash offset animates, so the chain visibly runs around the bar
-        // instead of the whole saw just wobbling.
-        const chain = document.createElementNS(SVG_NS, 'path');
-        chain.setAttribute('class', 'chainsaw-chain');
-        chain.setAttribute('d', 'M8.4 17.8 L21.6 4.9 Q23.1 5.5 22.8 6.6 L9.8 19.4 Q8.6 18.8 8.4 17.8 Z');
-
-        const sprocket = document.createElementNS(SVG_NS, 'circle');
-        sprocket.setAttribute('class', 'chainsaw-sprocket');
-        sprocket.setAttribute('cx', '9.6');
-        sprocket.setAttribute('cy', '18.2');
-        sprocket.setAttribute('r', '1.5');
-
-        inner.appendChild(bar);
-        inner.appendChild(chain);
-        inner.appendChild(body);
-        inner.appendChild(topHandle);
-        inner.appendChild(rearHandle);
-        inner.appendChild(sprocket);
-        jitter.appendChild(inner);
-        outer.appendChild(jitter);
+        inner.appendChild(blade);
+        inner.appendChild(teeth);
+        inner.appendChild(spine);
+        inner.appendChild(handle);
+        stroke.appendChild(inner);
+        outer.appendChild(stroke);
         armR.appendChild(outer);
 
         sawGroup = outer;
