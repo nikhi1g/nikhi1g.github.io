@@ -1,15 +1,15 @@
-/* Chainsaw tool: a runtime-created SVG group (#saw) appended inside #arm-r —
+/* Hand saw tool: a runtime-created SVG group (#saw) appended inside #arm-r —
    see tools.css's comment for why it must stay a child of #arm-r rather than
    the SVG root. Visibility and the whole cutting animation are driven by the
    .sawing state class saw.js toggles on .dot.
 
    Three nested groups, and the nesting matters:
-     #saw            -> grip rotation (transform ATTRIBUTE)
-       .chainsaw-jitter -> engine judder (CSS animation; no attribute transform,
-                           so the animation has nothing to clobber)
-         art          -> icon translate/rotate/scale (transform ATTRIBUTE)
+     #saw          -> grip rotation (transform ATTRIBUTE)
+       .saw-stroke -> the reciprocating cut (CSS animation; no attribute
+                      transform, so the animation has nothing to clobber)
+         art       -> icon translate/rotate/scale (transform ATTRIBUTE)
    A CSS transform animation replaces a transform attribute outright, so the
-   judder cannot live on either of the outer groups without losing the grip. */
+   stroke cannot live on either of the outer groups without losing the grip. */
 
 #saw {
     opacity: 0;
@@ -20,68 +20,63 @@
     opacity: 1;
 }
 
-/* Icon-space stroke-width 3 maps back to the rig's 2.1 through the tool's
-   0.70 nested scale, exactly as tools.css does for #axe/#hammer. */
-#saw .chainsaw-body,
-#saw .chainsaw-handle,
-#saw .chainsaw-bar,
-#saw .chainsaw-sprocket {
-    fill: none;
+/* Stroke weights are deliberately lighter than the 3 that tools.css uses for
+   #axe/#hammer. Those are chunky solid glyphs; a saw is a thin plate, and a
+   stroke as wide as the plate is deep floods the interior and turns the whole
+   tool into a dark wedge. The plate reads only if its outline is finer than
+   its depth (4.6 icon units at the heel, 1.9 at the toe). */
+#saw .saw-blade,
+#saw .saw-handle {
+    fill: var(--bg);
     stroke: var(--fg);
-    stroke-width: 3;
+    stroke-width: 1.3;
     stroke-linecap: round;
     stroke-linejoin: round;
 }
 
-/* Teeth marching around the guide bar. A solid stroke with dashes reads as
-   chain links, and animating the dash offset is what actually sells a running
-   chain — far more than wobbling the whole tool would. */
-#saw .chainsaw-chain {
+/* The spine is the blade's thick, rigid back edge — the one heavy line. */
+#saw .saw-spine {
     fill: none;
     stroke: var(--fg);
-    stroke-width: 2.6;
+    stroke-width: 1.9;
+    stroke-linecap: round;
+}
+
+/* The teeth: a real sawtooth zigzag cut by saw.js. Mitred joins so each tooth
+   comes to a point instead of being rounded off into a bump. */
+#saw .saw-teeth {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 0.9;
     stroke-linecap: butt;
-    stroke-dasharray: 1.1 1.5;
+    stroke-linejoin: miter;
+    stroke-miterlimit: 4;
 }
 
-#saw .chainsaw-sprocket {
-    fill: var(--bg);
-    stroke-width: 2;
+/* The cutting stroke: the saw is driven back and forth ALONG its own blade
+   axis, which at the 38deg grip is this diagonal. A saw cuts by reciprocating,
+   so this is the whole animation — no buzz, no wobble. */
+@keyframes sawStroke {
+    0%, 100% { transform: translate(-1.15px, 1.1px); }
+    50% { transform: translate(1.15px, -1.1px); }
 }
 
-/* Engine judder: a fast two-frame buzz, not a smooth wobble. */
-@keyframes chainsawBuzz {
-    0%, 100% { transform: translate(0, 0); }
-    25% { transform: translate(0.34px, -0.28px); }
-    50% { transform: translate(-0.3px, 0.24px); }
-    75% { transform: translate(0.18px, 0.3px); }
+/* The arm follows the stroke, leaning into the push and easing off the pull. */
+@keyframes sawArm {
+    0%, 100% { transform: rotate(-5deg); }
+    50% { transform: rotate(-1deg); }
 }
 
-/* The chain itself, running around the bar loop. */
-@keyframes chainsawRun {
-    to { stroke-dashoffset: -31; }
-}
-
-/* The brace: the body of the saw is pushed into the cut and bucked. */
-@keyframes chainsawBrace {
-    0%, 100% { transform: rotate(-6deg); }
-    50% { transform: rotate(-2deg); }
-}
-
-.dot.sawing #saw .chainsaw-jitter {
-    animation: chainsawBuzz 0.09s steps(1, end) infinite;
-}
-
-.dot.sawing #saw .chainsaw-chain {
-    animation: chainsawRun 0.32s linear infinite;
+.dot.sawing #saw .saw-stroke {
+    animation: sawStroke 0.34s ease-in-out infinite;
 }
 
 .dot.sawing #arm-r {
     transform-origin: 15px 27px;
-    animation: chainsawBrace 0.42s ease-in-out infinite;
+    animation: sawArm 0.34s ease-in-out infinite;
 }
 
-/* The free hand braces the work while the other runs the saw. */
+/* The free hand braces the work while the other drives the saw. */
 .dot.sawing #arm-l {
     transform: rotate(-16deg);
     transform-origin: 15px 27px;
@@ -97,8 +92,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .dot.sawing #saw .chainsaw-jitter,
-    .dot.sawing #saw .chainsaw-chain,
+    .dot.sawing #saw .saw-stroke,
     .dot.sawing #arm-r {
         animation: none;
     }
