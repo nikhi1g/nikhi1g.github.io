@@ -222,6 +222,18 @@ The eyeball is concentric with the skull and kept well inside it. It used to be
 `r6.6` offset to `(15.6, 10.6)`, which left a thick crescent of head on one side
 and — once the squint rotated it — pushed the sclera past the rim on the other.
 
+A narrowed ball still **blinks**, and two things are needed for that. The blink
+rules are listed AFTER the cone rule: a blink and the cone have equal
+specificity, so on a tie the later rule wins, and with the cone last a wary ball
+could not blink at all. And the wary blink keeps the cone's rotation, squashing
+along the cone's own cross-axis, so the lid closes across the narrowed eye
+instead of resetting it to a round one for the blink's 90ms.
+
+The idle blink cadence (2.6-6.4s) is longer than the startle stare, and the hop
+cancels whatever blink was pending, so a curled creature would usually unfold
+without ever blinking. `scheduleBlink(firstDelay)` brings the first one forward
+to about 0.5-1.2s after it lands.
+
 Never narrow the eye with `scaleY` on `.eye`: it scales the pupil along with the
 sclera, and the eye reads as a thin crescent with a smeared pupil.
 
