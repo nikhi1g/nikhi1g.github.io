@@ -25,6 +25,10 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
     const SCARE_MS = 5000;       // how long the wary ball holds
     const SCARE_HOP_VY = 380;    // up
     const SCARE_HOP_VX = 160;    // and away
+    // The saw stands back by the blade's reach and closer to the text than the
+    // old arm's-length 24, so the spinning blade actually touches the line.
+    const SAW_REACH = 13;
+    const SAW_STANDOFF = 10;
 
     // Everything the creature can knock loose, as one selector. It lives in one
     // place because the sweep and the vacuum have to agree on what counts as a
@@ -593,10 +597,15 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                     await beat();
                     const rect = paragraph.getBoundingClientRect();
                     markTarget(paragraph);
-                    // Stand one arm's length under the text so the saw bites
-                    // through the middle of it. Never saw from where we happen
-                    // to be: if the approach failed, walking away is wrong.
-                    const arrived = await travelTo(rect.left + rect.width / 2, rect.bottom + 24);
+                    // Stand so the BLADE meets the text, not so the body does.
+                    // The saw is held out ahead of the fist, so standing dead
+                    // under the centre put the blade off to one side of the
+                    // words it was supposed to be cutting. Stand back by the
+                    // blade's reach and face the cut, and the blade lands on
+                    // the middle of the line; saw.js then derives the split
+                    // from where the blade actually is.
+                    const middle = rect.left + rect.width / 2;
+                    const arrived = await travelTo(middle + SAW_REACH, rect.bottom + SAW_STANDOFF);
                     if (!arrived) {
                         if (!interrupted()) sawTries += 1;
                         return;
@@ -604,6 +613,9 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                     // The ladder left a hammer in hand; stow it before the cut
                     // so only the saw is held.
                     gait.putAway();
+                    // Turn to the work: the blade is forward of the fist, so
+                    // facing the cut is what points it at the text.
+                    gait.setFacing(middle < dot.pos().x ? -1 : 1);
                     await beat();
                     await saw.sawThrough(paragraph);
                     sawDone = true;
