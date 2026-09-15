@@ -5,3 +5,4 @@ _site/
 
 # Local dev scratch (the test harness spawns its own server)
 .local-serve.py
+future_bugs_fix.md
