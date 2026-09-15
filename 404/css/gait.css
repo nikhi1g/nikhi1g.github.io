@@ -60,36 +60,40 @@
     0%, 50%, 100% { transform: translateY(0); }
     25%, 75% { transform: translateY(-0.5px); }
 }
+/* The cycle period is a variable so gait.js can match the stride to the ground
+   speed: a fleeing creature walks faster, and a fixed period would read as
+   skating. Opposite limbs stay half a cycle apart, hence the negative half
+   period as a delay. */
 .dot.sprouted.walking #leg-l {
-    animation: gaitLegSwing 0.7s linear infinite;
+    animation: gaitLegSwing var(--walk-cycle, 0.7s) linear infinite;
 }
 .dot.sprouted.walking #leg-r {
-    animation: gaitLegSwing 0.7s linear infinite;
-    animation-delay: -0.35s;
+    animation: gaitLegSwing var(--walk-cycle, 0.7s) linear infinite;
+    animation-delay: calc(var(--walk-cycle, 0.7s) / -2);
 }
 .dot.sprouted.walking #shin-l {
-    animation: gaitShinSwing 0.7s linear infinite;
+    animation: gaitShinSwing var(--walk-cycle, 0.7s) linear infinite;
 }
 .dot.sprouted.walking #shin-r {
-    animation: gaitShinSwing 0.7s linear infinite;
-    animation-delay: -0.35s;
+    animation: gaitShinSwing var(--walk-cycle, 0.7s) linear infinite;
+    animation-delay: calc(var(--walk-cycle, 0.7s) / -2);
 }
 .dot.sprouted.walking #arm-r {
-    animation: gaitArmSwing 0.7s linear infinite;
+    animation: gaitArmSwing var(--walk-cycle, 0.7s) linear infinite;
 }
 .dot.sprouted.walking #arm-l {
-    animation: gaitArmSwing 0.7s linear infinite;
-    animation-delay: -0.35s;
+    animation: gaitArmSwing var(--walk-cycle, 0.7s) linear infinite;
+    animation-delay: calc(var(--walk-cycle, 0.7s) / -2);
 }
 .dot.sprouted.walking #fore-r {
-    animation: gaitForeSwing 0.7s linear infinite;
+    animation: gaitForeSwing var(--walk-cycle, 0.7s) linear infinite;
 }
 .dot.sprouted.walking #fore-l {
-    animation: gaitForeSwing 0.7s linear infinite;
-    animation-delay: -0.35s;
+    animation: gaitForeSwing var(--walk-cycle, 0.7s) linear infinite;
+    animation-delay: calc(var(--walk-cycle, 0.7s) / -2);
 }
 .dot.sprouted.walking #torso {
-    animation: gaitTorsoWalkBob 0.7s linear infinite;
+    animation: gaitTorsoWalkBob var(--walk-cycle, 0.7s) linear infinite;
 }
 
 /* --- Stair climb: a high, deliberate step-up. The lead leg swings up hard with

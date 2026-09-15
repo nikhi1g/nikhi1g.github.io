@@ -48,15 +48,20 @@ export function createGait(dot) {
         dot.release();
     };
 
-    const walk = (dir) => {
+    // `pace` scales the walk speed. The leg cycle is driven by CSS, so its
+    // period is also scaled to keep the stride matched to the ground speed —
+    // otherwise a fast walk looks like skating and a slow one like moonwalking.
+    const walk = (dir, pace = 1) => {
+        const scale = Number.isFinite(pace) ? Math.max(0.1, pace) : 1;
         setFacing(dir);
         climbing = false;
         walking = true;
+        element.style.setProperty('--walk-cycle', `${(0.7 / scale).toFixed(3)}s`);
         element.classList.add('walking');
         element.classList.remove('idle-bob');
         element.classList.remove('climbing');
         element.classList.remove('laddering');
-        dot.drive(currentFacing * WALK_SPEED);
+        dot.drive(currentFacing * WALK_SPEED * scale);
     };
     const climb = (dir, mode) => {
         setFacing(dir);
