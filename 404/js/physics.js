@@ -107,6 +107,10 @@ export function createDot() {
         document.body.appendChild(mark);
         platforms.push({id, el: element, mark, left: 0, right: 0, y: 0, kind: 'platform'});
         refreshAnchors();
+        // Size it first, then release the draw on the next frame, so the line
+        // grows from its middle out to both edges instead of appearing whole.
+        void mark.offsetWidth;
+        mark.classList.add('drawn');
         return id;
     };
     const dropPlatform = (index) => {
@@ -201,6 +205,22 @@ export function createDot() {
         if (dotX < world.left || dotX > world.right) {
             dotX = Math.max(world.left, Math.min(world.right, dotX));
             dotVX *= -wallRestitution;
+        }
+        // The launch roll ends AT the end of the footer rule, one ball's radius
+        // in, and never runs off it. Before this the ball rolled past the rule's
+        // end, dropped to the card floor and bounced off the outer wall; it is
+        // supposed to come to rest on the line it was delivered onto, and only
+        // meet the floor later, once the creature pries that line away.
+        if (dotSelfRoll && !lineGone) {
+            const rollEnd = world.lineRight - dotRadius;
+            const rollStart = world.lineLeft + dotRadius;
+            if (dotX > rollEnd) {
+                dotX = rollEnd;
+                dotVX = 0;
+            } else if (dotX < rollStart) {
+                dotX = rollStart;
+                dotVX = 0;
+            }
         }
         if (dotY < world.top) {
             dotY = world.top;
