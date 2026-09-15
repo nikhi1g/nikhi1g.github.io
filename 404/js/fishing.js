@@ -6,11 +6,21 @@
 // reach elements anywhere on the page, which the rig's 30x74 viewBox cannot
 // express. So the line and hook are drawn in a separate full-screen overlay in
 // viewport pixels, anchored to the rod's TIP via getScreenCTM.
+//
+// The cast runs in four distinct stages:
+// (1) load/wind up — rod draws back behind the body, line reeled in tight;
+// (2) cast — rod whips forward, line pays out toward the target;
+// (3) pull back — rod hauls back with the catch on the line;
+// (4) toss down — the catch is flung down to the ground.
 
-const CAST_MS = 1150;     // hand -> target: the hook has to travel, it should read as a throw
-const DRAW_MS = 700;      // a real beat with the hook on before it takes the weight
-const HOIST_MS = 950;     // and the catch comes up slowly, against gravity
+const LOAD_MS = 450;      // (1) load/wind up: rod draws back, line reeled in tight
+const CAST_MS = 750;      // (2) cast: rod whips forward, line pays out toward target
+const HOOK_BEAT_MS = 120; // beat where the hook strikes the target before the haul
+const PULLBACK_MS = 850;  // (3) pull back: rod hauls back with the catch on the line
+const TOSS_MS = 350;      // (4) toss down: catch flung down to the ground
 const ARC_LIFT = 0.42;    // how high the cast bows, as a fraction of the span
+
+const STAGES = ['load', 'cast', 'pullback', 'toss'];
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -48,6 +58,14 @@ export function createFishing(dot) {
     let overlay = null;
     let lineEl = null;
     let hookEl = null;
+
+    const setStage = (stage) => {
+        for (const s of STAGES) creature.classList.toggle(`fishing-${s}`, s === stage);
+    };
+
+    const clearStages = () => {
+        for (const s of STAGES) creature.classList.remove(`fishing-${s}`);
+    };
 
     // The fist, in viewport pixels, so the caught piece is reeled up to
     // where the hand actually is.
@@ -174,6 +192,7 @@ export function createFishing(dot) {
         if (!lineEl) return;
         // A quadratic control point lifted above the midpoint makes the line
         // bow like a rod under load instead of reading as a straight laser.
+        // A bow of 0 produces an unlifted midpoint: a taut, straight line.
         const midX = (from.x + to.x) / 2;
         const midY = (from.y + to.y) / 2;
         const lift = Math.hypot(to.x - from.x, to.y - from.y) * (bow ?? ARC_LIFT);
@@ -188,6 +207,7 @@ export function createFishing(dot) {
     };
 
     const hideRod = () => {
+        clearStages();
         creature.classList.remove('fishing');
         if (overlay) overlay.classList.remove('is-visible');
         if (lineEl) lineEl.setAttribute('d', '');
@@ -230,11 +250,9 @@ export function createFishing(dot) {
             showRod();
             if (overlay) overlay.classList.add('is-visible');
         } catch {
+            clearStages();
             return false;
         }
-
-        const hand = handPoint();
-        const goal = catchPoint();
 
         if (prefersReducedMotion()) {
             const rect = detach(target);
@@ -243,44 +261,66 @@ export function createFishing(dot) {
             return true;
         }
 
-        // Cast: the hook arcs out to just above the target, trailing from
-        // the rod tip rather than the fist.
-        await tween(CAST_MS, (t) => {
-            const eased = t * t * (3 - 2 * t);
-            const from = rodTipPoint();
-            const here = catchPoint();
-            drawLine(from, {
-                x: from.x + (here.x - from.x) * eased,
-                y: from.y + (here.y - from.y) * eased - Math.sin(eased * Math.PI) * 26
+        try {
+            // Stage 1: Load / wind up — rod draws back behind the body, line reeled in tight.
+            setStage('load');
+            await tween(LOAD_MS, () => {
+                const tip = rodTipPoint();
+                drawLine(tip, {x: tip.x, y: tip.y + 5}, 0);
             });
-        });
-        drawLine(rodTipPoint(), goal);
-        await wait(DRAW_MS);
 
-        // Hoist: the catch leaves the page flow and is reeled up to the fist.
-        const rect = detach(target);
-        const lifted = {left: rect.left, top: rect.top};
-        await tween(HOIST_MS, (t) => {
-            const eased = t * t * (3 - 2 * t);
-            const hand = handPoint();
-            lifted.left = rect.left + (hand.x - rect.width / 2 - rect.left) * eased;
-            lifted.top = rect.top + (hand.y - rect.height / 2 - rect.top) * eased;
-            target.style.left = `${lifted.left}px`;
-            target.style.top = `${lifted.top}px`;
-            drawLine(rodTipPoint(), {x: lifted.left + rect.width / 2, y: lifted.top + rect.height / 2});
-        });
+            // Stage 2: Cast — rod whips forward, line pays out toward target in an arc.
+            setStage('cast');
+            await tween(CAST_MS, (t) => {
+                const eased = t * t * (3 - 2 * t);
+                const from = rodTipPoint();
+                const here = catchPoint();
+                const hookX = from.x + (here.x - from.x) * eased;
+                const hookY = from.y + (here.y - from.y) * eased - Math.sin(eased * Math.PI) * 26;
+                drawLine(from, {x: hookX, y: hookY}, ARC_LIFT);
+            });
+            drawLine(rodTipPoint(), catchPoint(), ARC_LIFT);
+            await wait(HOOK_BEAT_MS);
 
-        // Fling: released at the top of the swing so it falls and settles.
-        const release = handPoint();
-        hideRod();
-        dot.spawnDebris(
-            target,
-            release.x - rect.width / 2,
-            release.y - rect.height / 2,
-            (Math.random() - 0.5) * 70,
-            -60
-        );
-        return true;
+            // Stage 3: Pull back — rod hauls back, taking the weight on a taut line.
+            setStage('pullback');
+            const rect = detach(target);
+            const lifted = {left: rect.left, top: rect.top};
+            await tween(PULLBACK_MS, (t) => {
+                const eased = t * t * (3 - 2 * t);
+                const hand = handPoint();
+                lifted.left = rect.left + (hand.x - rect.width / 2 - rect.left) * eased;
+                lifted.top = rect.top + (hand.y - rect.height / 2 - rect.top) * eased;
+                target.style.left = `${lifted.left}px`;
+                target.style.top = `${lifted.top}px`;
+                drawLine(rodTipPoint(), {
+                    x: lifted.left + rect.width / 2,
+                    y: lifted.top + rect.height / 2
+                }, 0);
+            });
+
+            // Stage 4: Toss down — catch is flung down to the ground as physics debris.
+            setStage('toss');
+            if (overlay) overlay.classList.remove('is-visible');
+            if (lineEl) lineEl.setAttribute('d', '');
+            const release = handPoint();
+            dot.spawnDebris(
+                target,
+                release.x - rect.width / 2,
+                release.y - rect.height / 2,
+                (Math.random() - 0.5) * 60,
+                60
+            );
+            await wait(TOSS_MS);
+
+            clearStages();
+            hideRod();
+            return true;
+        } catch {
+            clearStages();
+            hideRod();
+            return false;
+        }
     };
 
     return {fishOnce, hideRod};

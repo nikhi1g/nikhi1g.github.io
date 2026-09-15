@@ -14,6 +14,36 @@
     opacity: 1;
 }
 
+/* Cast stage poses: #arm-l carries the rod through four distinct motions:
+   (1) load/wind up: rod draws back behind the creature, line tight;
+   (2) cast: rod whips forward and downward toward the target;
+   (3) pull back: rod hauls back with the weight of the catch on the line;
+   (4) toss down: arm snaps forward/down to fling the catch to the floor. */
+.dot.sprouted.fishing #arm-l {
+    transform-origin: 15px 27px;
+    transition: transform 0.24s ease-out;
+}
+
+.dot.sprouted.fishing.fishing-load #arm-l {
+    transform: rotate(32deg);
+    transition: transform 0.32s ease-out;
+}
+
+.dot.sprouted.fishing.fishing-cast #arm-l {
+    transform: rotate(-100deg);
+    transition: transform 0.18s cubic-bezier(0.12, 0.8, 0.32, 1);
+}
+
+.dot.sprouted.fishing.fishing-pullback #arm-l {
+    transform: rotate(6deg);
+    transition: transform 0.28s ease-out;
+}
+
+.dot.sprouted.fishing.fishing-toss #arm-l {
+    transform: rotate(-50deg);
+    transition: transform 0.18s ease-in;
+}
+
 /* Lucide-style authoring at 24x24, scaled 0.70 by the nested transform, so the
    icon-space stroke-width is 2.1 / 0.70 = 3 to match the rig's bones. */
 #rod .rod-blank,
@@ -81,7 +111,8 @@
 
 @media (prefers-reduced-motion: reduce) {
     #rod,
-    .fishing-line-layer {
+    .fishing-line-layer,
+    .dot.sprouted.fishing #arm-l {
         transition: none;
     }
 }
