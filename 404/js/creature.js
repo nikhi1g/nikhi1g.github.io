@@ -15,8 +15,11 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
     // Pointer thresholds, all measured as a gap in CSS px from the rig's own
     // box (see pointerGap) rather than from the ball's centre.
     const FLEE_GAP = 140;        // walk away while the cursor is this close
-    const FLEE_PACE_MIN = 0.35;  // an unhurried shuffle at the edge of that box
-    const FLEE_PACE_MAX = 2.1;   // a full bolt with the cursor on top of it
+    // Pace multipliers on the walk speed. The floor is a brisk walk, not a
+    // shuffle: an eased curve off a 0.35 floor crawled at 20px/s halfway across
+    // the box, which read as not fleeing at all.
+    const FLEE_PACE_MIN = 1;     // already walking properly at the box edge
+    const FLEE_PACE_MAX = 3.4;   // a full bolt with the cursor on top of it
     const SCARE_GAP = 4;         // hovering the body itself startles it
     const SCARE_RELEASE = 90;    // and it will not settle until the cursor is this far
     const SCARE_MS = 5000;       // how long the wary ball holds
@@ -37,6 +40,23 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         '.stair',
         '.ladder-rail'
     ].map((cls) => `body > ${cls}`).join(', ');
+
+    // Phase tracing, for reporting where the sequence actually got to. Logged
+    // via console.info so it is never mistaken for a page error by the harness.
+    let tracedPhase = null;
+    const phase = (name, detail) => {
+        if (name === tracedPhase && !detail) return;
+        tracedPhase = name;
+        const extra = detail ? ` ${detail}` : '';
+        console.info(`[404] phase: ${name}${extra}`);
+    };
+    // The remaining work, so a stalled run says what it is still waiting on.
+    const pending = () => [
+        ['volley', volleyDone], ['finale', finaleDone], ['pry', pryDone],
+        ['saw', sawDone], ['perch', perchDone], ['fishing', fishDone],
+        ['wipe', wipeDone], ['kick', kickDone], ['sweep', sweepDone],
+        ['vacuum', vacuumDone]
+    ].filter(([, done]) => !done).map(([name]) => name).join(',') || 'none';
 
     let started = false;
     let volleyDone = false;
@@ -422,6 +442,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
     // climb the same ladder at once, which is what made it loop and fall off.
     // `runId` still owns abort; this only owns exclusivity.
     let active = false;
+    let tracedPending = null;
     const run = async (id) => {
         if (active) return;
         active = true;
@@ -429,6 +450,13 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
             await runSequence(id);
         } finally {
             active = false;
+            // Reported only when it changes, so a stalled sequence logs once
+            // rather than every watchdog kick.
+            const left = pending();
+            if (left !== tracedPending) {
+                tracedPending = left;
+                console.info(`[404] remaining: ${left}`);
+            }
         }
     };
 
@@ -439,6 +467,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         // Phase 1: three arrows into the heading. A wake aborts the loop, but
         // the next sleep resumes on whatever letters are still standing.
         if (!volleyDone) {
+            phase('volley');
             if (!arrow || typeof arrow.fire !== 'function') return;
             const letters = splitHeading();
             markTarget(letters[0]);
@@ -476,6 +505,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         // shape as the arrows: the throw resolves on impact, then the icon
         // drops as debris and the fracture stays behind.
         if (volleyDone && !finaleDone && arrow && typeof arrow.fireAxe === 'function' && finaleTries < PHASE_TRIES) {
+            phase('finale', `try ${finaleTries + 1}`);
             const icon = document.getElementById('theme-toggle');
             markTarget(icon);
             if (!icon || !icon.isConnected) {
@@ -511,6 +541,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         // levers up at one end, tears free, and falls. It was a walkable
         // surface, so the page loses a floor for good.
         if (finaleDone && !pryDone && pryTries < PHASE_TRIES) {
+            phase('pry', `try ${pryTries + 1}`);
             await beat();
             try {
                 await pryRule();
@@ -526,6 +557,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         // parks the flee reflex for the duration — otherwise the cursor would
         // drag the creature off its own ladder mid-climb.
         if (pryDone && !sawDone && saw && typeof saw.sawThrough === 'function' && sawTries < PHASE_TRIES) {
+            phase('saw', `try ${sawTries + 1}`);
             const paragraph = document.querySelector('.message p');
             if (!paragraph || !paragraph.isConnected) {
                 sawDone = true;
@@ -562,6 +594,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         // moment it is up, and the heading itself becomes the ledge it fishes
         // from — scaffolding is only ever temporary.
         if (sawDone && !perchDone && perchTries < PHASE_TRIES) {
+            phase('perch', `try ${perchTries + 1}`);
             const heading = document.querySelector('.message h2');
             if (!heading || !heading.isConnected) {
                 perchDone = true;
@@ -571,20 +604,22 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                     await beat();
                     const rect = heading.getBoundingClientRect();
                     markTarget(heading);
-                    // The heading becomes a real surface first — a physics
-                    // platform the usual gravity and landing rules apply to — so
-                    // there is something to jump onto and something to stand on
-                    // while fishing.
-                    dot.anchorPlatform(heading);
                     const middle = rect.left + rect.width / 2;
-                    // Then a ladder up to just below its top edge, and a jump
-                    // across onto it. The last rung deliberately stops short so
-                    // the hop is the last move rather than a formality.
+                    // A ladder up to just below the heading's top edge. The last
+                    // rung deliberately stops short so the hop is the last move
+                    // rather than a formality.
                     const up = await travelTo(middle, rect.top + 30);
                     if (!up) {
                         if (!interrupted()) perchTries += 1;
                         return;
                     }
+                    // Only NOW does the heading become a real surface: the
+                    // creature is at the top of its ladder and lays the ledge
+                    // from there, and the line draws itself out from the middle.
+                    // Anchoring it before the climb made the line appear while
+                    // it was still on the floor, out of nowhere.
+                    dot.anchorPlatform(heading);
+                    await wait(560);
                     // Aim the jump from the actual ballistics rather than a
                     // fixed impulse: a hard-clamped horizontal velocity cannot
                     // cross a wide gap, which is what left it short of the ledge
@@ -632,6 +667,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         // The show ends when the sentence is gone.
         if (perchDone && !fishDone && fishing && typeof fishing.fishOnce === 'function'
             && fishTries < PHASE_TRIES) {
+            phase('fishing', `try ${fishTries + 1}`);
             working = true;
             // The last ladder rung left the hammer in hand; the rod is what
             // this phase holds.
@@ -668,6 +704,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         // at a time until the glass is gone.
         if (fishDone && !wipeDone && wipe && typeof wipe.wipeAway === 'function'
             && wipeTries < PHASE_TRIES) {
+            phase('wipe', `try ${wipeTries + 1}`);
             const socket = document.querySelector('.glass-hole');
             if (!socket || !socket.isConnected) {
                 wipeDone = true;
@@ -701,6 +738,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         // RIGHT so it ends up standing beside it facing left, and boots it clean
         // off the page — up and away to the left, ignoring walls and floors.
         if (wipeDone && !kickDone && kickTries < PHASE_TRIES) {
+            phase('kick', `try ${kickTries + 1}`);
             const icon = document.getElementById('theme-toggle');
             if (!icon || !icon.isConnected) {
                 kickDone = true;
@@ -710,13 +748,22 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                     await beat();
                     const rect = icon.getBoundingClientRect();
                     markTarget(icon);
-                    // Stand on the icon's right, a stride away, at its own
-                    // height. travelTo walks there and raises a ladder if the
-                    // icon came to rest somewhere off the floor.
-                    const from = rect.right + KICK_STANCE;
-                    const there = await travelTo(from, rect.bottom);
+                    // Stand on the icon's right, a stride away. The stance has
+                    // to be CLAMPED inside the walkable world: the icon usually
+                    // comes to rest near the right-hand wall, and a goal past
+                    // that wall can never be reached, so the approach failed
+                    // forever and the phase sat there retrying.
+                    const world = dot.world();
+                    const from = Math.min(rect.right + KICK_STANCE, world.right - 1);
+                    // No ladder when the icon is already down on the floor —
+                    // a one-rung ladder to nowhere is just a stumble.
+                    const onFloor = Math.abs(rect.bottom - (world.ground + dot.radius)) < 28;
+                    const there = onFloor
+                        ? await walkTo(from, 10)
+                        : await travelTo(from, rect.bottom);
                     if (!there) {
                         if (!interrupted()) kickTries += 1;
+                        phase('kick', `approach failed (from=${Math.round(from)})`);
                         return;
                     }
                     await beat();
@@ -749,6 +796,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         // system has resting, plus the knocked-off words.
         if (kickDone && !sweepDone && sweep && typeof sweep.sweepAll === 'function'
             && sweepTries < PHASE_TRIES) {
+            phase('sweep', `try ${sweepTries + 1}`);
             working = true;
             try {
                 await beat();
@@ -795,6 +843,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         // vacuum, and then the vacuum itself is thrown off the edge.
         if (sweepDone && !vacuumDone && vacuum && typeof vacuum.suckAll === 'function'
             && vacuumTries < PHASE_TRIES) {
+            phase('vacuum', `try ${vacuumTries + 1}`);
             working = true;
             try {
                 await beat();
@@ -950,11 +999,14 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
             // hurried. Outside the box alarm is 0 and it is left alone.
             const alarm = Math.min(1, Math.max(0,
                 (FLEE_GAP - gap) / (FLEE_GAP - SCARE_GAP)));
-            // Eased so the near half of the box carries most of the change:
-            // a cursor at the far edge barely stirs it.
+            // Pace builds gently at first and hard near the end, but off a
+            // brisk floor so it is always plainly running away.
             const urgency = alarm * alarm;
             gait.walk(awayFromPointer(), FLEE_PACE_MIN + (FLEE_PACE_MAX - FLEE_PACE_MIN) * urgency);
-            setFleeing(alarm);
+            // The eye narrows FASTER than the pace builds — square-rooted, so it
+            // is already visibly suspicious while the cursor is still some way
+            // off and reaches full narrowness before the cursor arrives.
+            setFleeing(Math.sqrt(alarm));
         } else if (fleeing) {
             setFleeing(0);
         }
