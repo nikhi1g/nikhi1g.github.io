@@ -522,6 +522,9 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                         if (sawTries >= 3) sawDone = true;
                         return;
                     }
+                    // The ladder left a hammer in hand; stow it before the cut
+                    // so only the saw is held.
+                    gait.putAway();
                     await beat();
                     await saw.sawThrough(paragraph);
                     sawDone = true;
@@ -741,6 +744,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
     const allDone = () => volleyDone && finaleDone && pryDone && sawDone
         && perchDone && fishDone && wipeDone && sweepDone && vacuumDone;
 
+    // The dot settling is the normal trigger to (re)start the sequence.
     const onSleepChange = (asleep) => {
         if (reduceMotion.matches) return;
         runId += 1;
@@ -749,15 +753,26 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         lastKick = performance.now();
         void run(id);
     };
-    // How far the cursor is from the rig, in CSS px, measured to the nearest
-    // edge of the figure's own box — 0 while the cursor is over the figure.
-    // The ball's centre is the wrong reference: the sprouted rig is ~74px tall
-    // and hangs below that point, so a box centred on it both misses the body
-    // and fires on empty space above the head.
+
+    // How far the cursor is from the creature, in CSS px, measured to the
+    // nearest edge of its box — 0 while the cursor is over it.
+    //
+    // The box has to be the RIG's, not `.dot`'s: `.dot` is the 20px ball, and
+    // the sprouted figure is a ~30x74 SVG that overflows it. Measuring `.dot`
+    // senses only the head, so hovering the body did nothing and the distance
+    // to the torso read as far away.
+    const senseBox = () => {
+        const rig = dot.el.classList.contains('sprouted')
+            ? dot.el.querySelector('.figure')
+            : null;
+        const box = (rig || dot.el).getBoundingClientRect();
+        return box && (box.width >= 1 || box.height >= 1) ? box : null;
+    };
+
     const pointerGap = () => {
         if (mouseX === null || mouseY === null) return Infinity;
-        const box = dot.el.getBoundingClientRect();
-        if (!box || (box.width < 1 && box.height < 1)) return Infinity;
+        const box = senseBox();
+        if (!box) return Infinity;
         const dx = Math.max(box.left - mouseX, 0, mouseX - box.right);
         const dy = Math.max(box.top - mouseY, 0, mouseY - box.bottom);
         return Math.hypot(dx, dy);
@@ -765,8 +780,8 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
 
     // Which way is away from the cursor, along x.
     const awayFromPointer = () => {
-        const box = dot.el.getBoundingClientRect();
-        const centre = box && box.width ? box.left + box.width / 2 : dot.pos().x;
+        const box = senseBox();
+        const centre = box ? box.left + box.width / 2 : dot.pos().x;
         return centre - mouseX >= 0 ? 1 : -1;
     };
 
@@ -774,6 +789,11 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
     // ball, and watches the cursor suspiciously for SCARE_MS. Whatever it was
     // doing is aborted — every phase's `finally` stands down the tool in hand —
     // and it picks the sequence back up once it settles.
+    //
+    // A poke always wins, even mid-phase. The ladder it was on is knocked down
+    // with it: leaving one standing would strand a half-built route for the
+    // next leg to continue from, and the pieces belong on the floor with the
+    // rest of the debris anyway.
     const startScare = () => {
         runId += 1;
         scared = true;
@@ -781,8 +801,11 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         const away = awayFromPointer();
         fleeing = false;
         gait.stop();
+        gait.stopClimb();
         gait.putAway();
         gait.setFacing(away);
+        if (stairs && stairs.hasAny()) stairs.demolish();
+        keepStairs = false;
         dot.hop(SCARE_HOP_VY, away * SCARE_HOP_VX);
         if (figure && typeof figure.curlUp === 'function') figure.curlUp();
     };
@@ -814,16 +837,20 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
             if (gap >= SCARE_RELEASE && performance.now() >= scareUntil) endScare();
             return;
         }
+        // A direct poke always startles, even mid-phase: it is the one cursor
+        // interaction the creature never ignores.
+        if (gap <= SCARE_GAP && !reduceMotion.matches
+            && dot.el.classList.contains('sprouted')) {
+            startScare();
+            return;
+        }
+        // Mere proximity only walks it away, and only when it is not working —
+        // otherwise a cursor drifting past drags it off its own ladder.
         if (working || !dot.el.classList.contains('sprouted')) {
             if (fleeing) {
                 fleeing = false;
                 gait.stop();
             }
-            return;
-        }
-        // Touching the figure startles; merely being near it only walks it off.
-        if (gap <= SCARE_GAP && !reduceMotion.matches) {
-            startScare();
             return;
         }
         if (gap < FLEE_GAP) {
