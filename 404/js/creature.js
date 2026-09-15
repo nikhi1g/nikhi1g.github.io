@@ -56,6 +56,15 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
     let pryDone = false;
     let sawDone = false;
     let perchDone = false;
+    let kickDone = false;
+    let kickTries = 0;
+    // The boot that clears the theme icon off the page: how far to the icon's
+    // right it stands, and the launch it imparts — up and to the left, hard
+    // enough to carry it past the edge.
+    const KICK_STANCE = 22;
+    const KICK_VX = 520;
+    const KICK_VY = 640;
+    const KICK_SPIN = -900;
     let fishDone = false;
     let wipeDone = false;
     let sweepDone = false;
@@ -687,10 +696,58 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
             }
         }
 
-        // Phase 8: back down to the floor, then sweep everything lying on it out
+        // Phase 8: the theme icon has been lying where the axe dropped it since
+        // phase 2. The creature drops to the floor, builds a ladder on the icon's
+        // RIGHT so it ends up standing beside it facing left, and boots it clean
+        // off the page — up and away to the left, ignoring walls and floors.
+        if (wipeDone && !kickDone && kickTries < PHASE_TRIES) {
+            const icon = document.getElementById('theme-toggle');
+            if (!icon || !icon.isConnected) {
+                kickDone = true;
+            } else {
+                working = true;
+                try {
+                    await beat();
+                    const rect = icon.getBoundingClientRect();
+                    markTarget(icon);
+                    // Stand on the icon's right, a stride away, at its own
+                    // height. travelTo walks there and raises a ladder if the
+                    // icon came to rest somewhere off the floor.
+                    const from = rect.right + KICK_STANCE;
+                    const there = await travelTo(from, rect.bottom);
+                    if (!there) {
+                        if (!interrupted()) kickTries += 1;
+                        return;
+                    }
+                    await beat();
+                    if (interrupted()) return;
+                    // Face the icon and boot it: up and to the left, with a
+                    // hard spin. `escape` is what lets it leave the page instead
+                    // of bouncing off the card wall.
+                    const launched = await new Promise((resolve) => {
+                        void gait.kick(-1, () => {
+                            resolve(dot.kickDebris(icon, -KICK_VX, -KICK_VY, KICK_SPIN, true));
+                        });
+                    });
+                    await wait(260);
+                    // The icon may have been swept up or never been debris at
+                    // all; either way there is nothing left to kick.
+                    if (launched || !icon.isConnected) kickDone = true;
+                    else if (!interrupted()) kickTries += 1;
+                } catch {
+                    if (!interrupted()) kickTries += 1;
+                } finally {
+                    working = false;
+                    gait.stop();
+                    gait.putAway();
+                }
+            }
+        }
+
+        // Phase 9: back down to the floor, then sweep everything lying on it out
         // past the page edge. What is on the ground is exactly what the debris
         // system has resting, plus the knocked-off words.
-        if (wipeDone && !sweepDone && sweep && typeof sweep.sweepAll === 'function'
+        if (kickDone && !sweepDone && sweep && typeof sweep.sweepAll === 'function'
             && sweepTries < PHASE_TRIES) {
             working = true;
             try {
@@ -733,7 +790,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
             }
         }
 
-        // Phase 9: the last pass. Anything still on the page that should not be —
+        // Phase 10: the last pass. Anything still on the page that should not be —
         // spent weapons, strays, anything not on the ground — goes into the
         // vacuum, and then the vacuum itself is thrown off the edge.
         if (sweepDone && !vacuumDone && vacuum && typeof vacuum.suckAll === 'function'
@@ -768,7 +825,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
     // Every phase finished: the one condition that retires the sequence, the
     // watchdog and the cursor reflex's restart alike.
     const allDone = () => volleyDone && finaleDone && pryDone && sawDone
-        && perchDone && fishDone && wipeDone && sweepDone && vacuumDone;
+        && perchDone && fishDone && wipeDone && kickDone && sweepDone && vacuumDone;
 
     // The dot settling is the normal trigger to (re)start the sequence.
     const onSleepChange = (asleep) => {
