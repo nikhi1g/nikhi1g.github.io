@@ -25,40 +25,86 @@
     animation-delay: 0.35s;
 }
 
-/* --- Knee/elbow pivots: figure.css sets hip (#leg-*) and shoulder (#arm-*)
-   origins; these are the nested shin/forearm joints added for bending gaits. --- */
+/* --- Knee/elbow/ankle pivots: figure.css sets hip (#leg-*) and shoulder
+   (#arm-*) origins; these are the nested shin/forearm/foot joints added for
+   bending gaits. --- */
 #shin-l { transform-origin: 11.5px 54px; }
 #shin-r { transform-origin: 18.5px 54px; }
 #fore-l { transform-origin: 10px 33px; }
 #fore-r { transform-origin: 20px 33px; }
+#foot-l { transform-origin: 10.5px 65.4px; }
+#foot-r { transform-origin: 19.5px 65.4px; }
 
-/* --- Walk cycle: opposed legs, counter-swinging arms, a torso that rises twice
-   per stride. #leg-r/#arm-l are the same keyframes as their partner, started
-   half a cycle in via a negative delay, so nothing needs a mirrored keyframe.
-   Shins fold at the knee during mid-swing and straighten at contact; forearms
-   counter-swing gently at the elbow for a natural pendulum lag. --- */
+/* --- Walk cycle.
+
+   The keys below follow the normative sagittal joint angles of human walking
+   rather than a pendulum: hip, knee and ankle each get their real shape over
+   one stride, sampled at the classic phases (heel strike, loading response,
+   midstance, terminal stance, toe-off, swing).
+
+   Sources, both openly available:
+     - D. A. Winter, "Biomechanics and Motor Control of Human Movement" —
+       normative sagittal hip/knee/ankle angle curves over the gait cycle. The
+       accompanying normative gait data is distributed openly by the ISB.
+     - OpenSim (Apache-2.0, simtk.org/projects/opensim) gait2392 model and its
+       `subject01_walk` example motion, used as the cross-check for the ranges.
+
+   The two things that make it read as a walk rather than a swinging pendulum:
+   the knee flexes during SWING (peaking ~60deg as the foot is carried through)
+   and stays almost straight through stance — the previous version bent it
+   backwards at midstance — and the ankle rolls heel-strike to toe-off.
+
+   Sign conventions in this rig: for the hip, negative rotation swings the leg
+   forward; for the knee, positive flexes the shin back; for the ankle, positive
+   is plantarflexion (toes down).
+
+   #leg-r/#arm-l reuse their partner's keyframes half a cycle in via a negative
+   delay, so no mirrored keyframes are needed. --- */
 @keyframes gaitLegSwing {
-    0% { transform: rotate(-22deg); }
-    50% { transform: rotate(22deg); }
-    100% { transform: rotate(-22deg); }
+    0%   { transform: rotate(-28deg); }   /* heel strike: thigh forward */
+    15%  { transform: rotate(-20deg); }   /* loading response */
+    30%  { transform: rotate(-9deg); }    /* midstance, passing under the hip */
+    50%  { transform: rotate(9deg); }     /* terminal stance: hip extended */
+    62%  { transform: rotate(12deg); }    /* toe-off, the limit of extension */
+    78%  { transform: rotate(-14deg); }   /* swing, driving the knee through */
+    100% { transform: rotate(-28deg); }
 }
 @keyframes gaitShinSwing {
-    0%, 50%, 75%, 100% { transform: rotate(0deg); }
-    25% { transform: rotate(-38deg); }
+    0%   { transform: rotate(4deg); }     /* heel strike: knee nearly straight */
+    15%  { transform: rotate(17deg); }    /* stance flexion absorbs the load */
+    32%  { transform: rotate(7deg); }     /* extends again over midstance */
+    55%  { transform: rotate(14deg); }
+    68%  { transform: rotate(42deg); }    /* knee breaks for toe clearance */
+    78%  { transform: rotate(58deg); }    /* peak swing flexion */
+    92%  { transform: rotate(22deg); }    /* extending to reach the next step */
+    100% { transform: rotate(4deg); }
+}
+@keyframes gaitFootRoll {
+    0%   { transform: rotate(-6deg); }    /* toes up to present the heel */
+    12%  { transform: rotate(5deg); }     /* foot flat */
+    40%  { transform: rotate(-8deg); }    /* shank rolls forward over the foot */
+    60%  { transform: rotate(18deg); }    /* push-off */
+    75%  { transform: rotate(2deg); }     /* foot relaxes in swing */
+    100% { transform: rotate(-6deg); }
 }
 @keyframes gaitArmSwing {
-    0% { transform: rotate(16deg); }
-    50% { transform: rotate(-16deg); }
-    100% { transform: rotate(16deg); }
+    0%   { transform: rotate(20deg); }
+    50%  { transform: rotate(-18deg); }
+    100% { transform: rotate(20deg); }
 }
 @keyframes gaitForeSwing {
-    0% { transform: rotate(-12deg); }
-    50% { transform: rotate(12deg); }
-    100% { transform: rotate(-12deg); }
+    0%   { transform: rotate(-6deg); }
+    35%  { transform: rotate(-20deg); }   /* elbow lags the shoulder */
+    70%  { transform: rotate(6deg); }
+    100% { transform: rotate(-6deg); }
 }
+/* The torso rises twice per stride and leans into the direction of travel. The
+   lean is what makes the walk directional: the rig is mirrored by `scale: -1 1`
+   when facing left, so a forward lean in rig space is a forward lean either
+   way. */
 @keyframes gaitTorsoWalkBob {
-    0%, 50%, 100% { transform: translateY(0); }
-    25%, 75% { transform: translateY(-0.5px); }
+    0%, 50%, 100% { transform: translateY(0) rotate(4deg); }
+    25%, 75% { transform: translateY(-0.55px) rotate(4deg); }
 }
 /* The cycle period is a variable so gait.js can match the stride to the ground
    speed: a fleeing creature walks faster, and a fixed period would read as
