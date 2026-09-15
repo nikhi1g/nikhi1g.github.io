@@ -185,7 +185,11 @@
    edges crop it — so it is placed here rather than aimed by JS, which would
    fight the rotation the cone is already carrying. */
 .dot.asleep.wary:not(.sprouted) > .eye > .pupil {
-    top: 3.19px;
+    /* Sat above the cone's axis rather than centred on it, so the cone's upper
+       edge shaves more off the top of the pupil than the lower edge takes from
+       the bottom. A symmetrically cropped pupil reads as a small eye; a heavier
+       lid on top is what reads as suspicion. */
+    top: 2.5px;
     left: 0.5px;
     transform: none;
 }

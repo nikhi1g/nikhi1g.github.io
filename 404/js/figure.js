@@ -135,8 +135,12 @@ export function initFigure(dot) {
         // corner as the eye closes instead of jumping there.
         if (squinting > 0 && sprouted) {
             const pinned = -irisReach;
+            // Drawn up off the cone's axis as it narrows, so the cone's upper
+            // edge crops the top of the iris harder than its lower edge crops
+            // the bottom — the same heavier-lid-on-top read as the ball.
+            const pinnedY = -0.9;
             irisEl.style.transform =
-                `translate(${shiftX + (pinned - shiftX) * squinting}px, ${shiftY * (1 - squinting)}px)`;
+                `translate(${shiftX + (pinned - shiftX) * squinting}px, ${shiftY + (pinnedY - shiftY) * squinting}px)`;
             return;
         }
 
