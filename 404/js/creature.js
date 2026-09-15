@@ -41,13 +41,21 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
     let started = false;
     let volleyDone = false;
     let finaleDone = false;
+    // Attempts per phase. Generous on purpose: an interruption must never be
+    // able to burn a phase, and only `attempt()` below increments these — an
+    // interrupted try does not count at all.
+    const PHASE_TRIES = 12;
     let finaleTries = 0;
-    let pryDone = false;
     let pryTries = 0;
-    let sawDone = false;
     let sawTries = 0;
-    let perchDone = false;
     let perchTries = 0;
+    let fishTries = 0;
+    let wipeTries = 0;
+    let sweepTries = 0;
+    let vacuumTries = 0;
+    let pryDone = false;
+    let sawDone = false;
+    let perchDone = false;
     let fishDone = false;
     let wipeDone = false;
     let sweepDone = false;
@@ -61,6 +69,11 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
     let lastKick = 0;
     let mouseX = null;
     let mouseY = null;
+
+    // An attempt was interrupted rather than failed: the user startled it or
+    // picked it up. Interruptions must never count against a phase's attempts
+    // and must never mark it done — the creature settles and picks it up again.
+    const interrupted = () => scared || dot.isDragging();
     let fleeing = false;
     const isCurrent = (id) => id === runId && !reduceMotion.matches;
 
@@ -190,7 +203,10 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
 
         const cycleMs = 620;
         gait.setFacing(goalX < shaftX ? -1 : 1);
-        for (let guard = 0; guard < 60 && !stairs.isComplete(); guard += 1) {
+        // Every stroke builds something: one raises the rails, the next lays the
+        // rung, and only a laid rung is climbed. The guard is doubled because a
+        // rung now costs two strokes.
+        for (let guard = 0; guard < 130 && !stairs.isComplete(); guard += 1) {
             if (scared) {
                 gait.stopClimb();
                 gait.stop();
@@ -203,7 +219,9 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                 gait.stop();
                 return false;
             }
-            if (!stairs.buildNext()) break;
+            const built = stairs.nextStroke();
+            if (!built) break;
+            if (built !== 'rung') continue;
             const rung = typeof stairs.lastBuilt === 'function' ? stairs.lastBuilt() : null;
             if (!rung) continue;
             const centre = (rung.left + rung.right) / 2;
@@ -438,20 +456,21 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                 }
                 await beat();
             }
-            // DOM truth, not run freshness: no standing letters means done.
+            // DOM truth, not run freshness: the volley is done when no letter is
+            // left standing. Anything else — an interruption, a fumbled shot —
+            // leaves it pending so the next run finishes the job.
             if (splitHeading().length === 0) volleyDone = true;
-            else if (isCurrent(id)) volleyDone = true;
             else return;
         }
 
         // Phase 2: one spinning axe at the theme icon. Same deterministic
         // shape as the arrows: the throw resolves on impact, then the icon
         // drops as debris and the fracture stays behind.
-        if (volleyDone && !finaleDone && arrow && typeof arrow.fireAxe === 'function' && finaleTries < 3) {
-            finaleTries += 1;
+        if (volleyDone && !finaleDone && arrow && typeof arrow.fireAxe === 'function' && finaleTries < PHASE_TRIES) {
             const icon = document.getElementById('theme-toggle');
             markTarget(icon);
             if (!icon || !icon.isConnected) {
+                // The target is genuinely gone: that is done, not a failure.
                 finaleDone = true;
             } else {
                 const rect = icon.getBoundingClientRect();
@@ -463,7 +482,9 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                     try {
                         impact = await arrow.fireAxe(rect);
                     } catch {
-                        if (finaleTries >= 3) finaleDone = true;
+                        // Interrupted throws cost nothing; a real failure costs
+                        // one attempt. Either way the phase stays pending.
+                        if (!interrupted()) finaleTries += 1;
                         return;
                     }
                     try {
@@ -480,13 +501,12 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         // plants the axe handle under the rule and leans on it, so the rule
         // levers up at one end, tears free, and falls. It was a walkable
         // surface, so the page loses a floor for good.
-        if (finaleDone && !pryDone && pryTries < 3) {
-            pryTries += 1;
+        if (finaleDone && !pryDone && pryTries < PHASE_TRIES) {
             await beat();
             try {
                 await pryRule();
             } catch {
-                if (pryTries >= 3) pryDone = true;
+                if (!interrupted()) pryTries += 1;
                 return;
             }
             pryDone = true;
@@ -496,8 +516,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         // ladder up, climb it rung by rung, then saw the text in half. `working`
         // parks the flee reflex for the duration — otherwise the cursor would
         // drag the creature off its own ladder mid-climb.
-        if (pryDone && !sawDone && saw && typeof saw.sawThrough === 'function' && sawTries < 3) {
-            sawTries += 1;
+        if (pryDone && !sawDone && saw && typeof saw.sawThrough === 'function' && sawTries < PHASE_TRIES) {
             const paragraph = document.querySelector('.message p');
             if (!paragraph || !paragraph.isConnected) {
                 sawDone = true;
@@ -512,7 +531,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                     // to be: if the approach failed, walking away is wrong.
                     const arrived = await travelTo(rect.left + rect.width / 2, rect.bottom + 24);
                     if (!arrived) {
-                        if (sawTries >= 3) sawDone = true;
+                        if (!interrupted()) sawTries += 1;
                         return;
                     }
                     // The ladder left a hammer in hand; stow it before the cut
@@ -522,7 +541,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                     await saw.sawThrough(paragraph);
                     sawDone = true;
                 } catch {
-                    if (sawTries >= 3) sawDone = true;
+                    if (!interrupted()) sawTries += 1;
                 } finally {
                     working = false;
                     gait.stop();
@@ -533,8 +552,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         // Phase 5: climb on top of the heading. The ladder is cleared away the
         // moment it is up, and the heading itself becomes the ledge it fishes
         // from — scaffolding is only ever temporary.
-        if (sawDone && !perchDone && perchTries < 3) {
-            perchTries += 1;
+        if (sawDone && !perchDone && perchTries < PHASE_TRIES) {
             const heading = document.querySelector('.message h2');
             if (!heading || !heading.isConnected) {
                 perchDone = true;
@@ -555,8 +573,8 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                     // the hop is the last move rather than a formality.
                     const up = await travelTo(middle, rect.top + 30);
                     if (!up) {
-                        if (perchTries >= 3) perchDone = true;
-                        else return;
+                        if (!interrupted()) perchTries += 1;
+                        return;
                     }
                     // Aim the jump from the actual ballistics rather than a
                     // fixed impulse: a hard-clamped horizontal velocity cannot
@@ -564,6 +582,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                     // and fishing from the floor. Solve for the arc instead.
                     const GRAVITY_PX = 981;
                     for (let attempt = 0; attempt < 4; attempt += 1) {
+                        if (interrupted()) return;
                         const standing = dot.pos();
                         const gap = middle - standing.x;
                         const inside = standing.x > rect.left && standing.x < rect.right
@@ -581,16 +600,17 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                     const onLedge = landed.x > rect.left && landed.x < rect.right
                         && Math.abs(landed.y - (rect.top - dot.radius)) < 20;
                     if (!onLedge) {
-                        // Do not fish from the floor: if the jump will not land,
-                        // come back for it rather than pretending it worked.
-                        if (perchTries < 3) return;
+                        // Do not fish from the floor: come back for it rather
+                        // than pretending it worked.
+                        if (!interrupted()) perchTries += 1;
+                        return;
                     }
                     await wait(200);
                     await wreckLadder();
                     keepStairs = false;
                     perchDone = true;
                 } catch {
-                    if (perchTries >= 3) perchDone = true;
+                    if (!interrupted()) perchTries += 1;
                 } finally {
                     working = false;
                     gait.stop();
@@ -601,7 +621,8 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         // Phase 6: fish the footer sentence out, letter by letter. Each catch is
         // hoisted off the page and flung back down to lie broken on the floor.
         // The show ends when the sentence is gone.
-        if (perchDone && !fishDone && fishing && typeof fishing.fishOnce === 'function') {
+        if (perchDone && !fishDone && fishing && typeof fishing.fishOnce === 'function'
+            && fishTries < PHASE_TRIES) {
             working = true;
             // The last ladder rung left the hammer in hand; the rod is what
             // this phase holds.
@@ -609,17 +630,21 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
             try {
                 const words = splitSentence();
                 for (const word of words) {
-                    if (scared) break;
+                    if (interrupted()) break;
                     if (!word.isConnected) continue;
                     markTarget(word);
                     await fishing.fishOnce(word);
                     await wait(320);
                 }
                 fishing.hideRod();
-                fishDone = true;
+                // Done only when the sentence is actually gone. An interruption
+                // partway through leaves the rest standing, and the phase runs
+                // again from wherever it left off.
+                if (splitSentence().length === 0) fishDone = true;
+                else if (!interrupted()) fishTries += 1;
             } catch {
                 if (fishing && typeof fishing.hideRod === 'function') fishing.hideRod();
-                fishDone = true;
+                if (!interrupted()) fishTries += 1;
             } finally {
                 working = false;
                 gait.stopClimb();
@@ -632,7 +657,8 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         // header is the one mess the creature made on purpose to leave behind, so
         // it climbs back up to it and wipes it away — the cracks lift one stroke
         // at a time until the glass is gone.
-        if (fishDone && !wipeDone && wipe && typeof wipe.wipeAway === 'function') {
+        if (fishDone && !wipeDone && wipe && typeof wipe.wipeAway === 'function'
+            && wipeTries < PHASE_TRIES) {
             const socket = document.querySelector('.glass-hole');
             if (!socket || !socket.isConnected) {
                 wipeDone = true;
@@ -644,14 +670,15 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                     markTarget(socket);
                     const there = await travelTo(rect.left + rect.width / 2, rect.top, socket);
                     if (!there) {
-                        wipeDone = true;
+                        // The climb was cut short — come back for the glass.
+                        if (!interrupted()) wipeTries += 1;
                         return;
                     }
                     await beat();
                     await wipe.wipeAway(socket);
                     wipeDone = true;
                 } catch {
-                    wipeDone = true;
+                    if (!interrupted()) wipeTries += 1;
                 } finally {
                     working = false;
                     gait.stop();
@@ -663,7 +690,8 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         // Phase 8: back down to the floor, then sweep everything lying on it out
         // past the page edge. What is on the ground is exactly what the debris
         // system has resting, plus the knocked-off words.
-        if (wipeDone && !sweepDone && sweep && typeof sweep.sweepAll === 'function') {
+        if (wipeDone && !sweepDone && sweep && typeof sweep.sweepAll === 'function'
+            && sweepTries < PHASE_TRIES) {
             working = true;
             try {
                 await beat();
@@ -691,9 +719,12 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                         return r.bottom >= world.ground - 24;
                     });
                 await sweep.sweepAll(onFloor);
-                sweepDone = true;
+                // Done when the floor is actually clear; an interrupted sweep
+                // leaves pieces behind and runs again.
+                if (onFloor.every((el) => !el.isConnected)) sweepDone = true;
+                else if (!interrupted()) sweepTries += 1;
             } catch {
-                sweepDone = true;
+                if (!interrupted()) sweepTries += 1;
             } finally {
                 working = false;
                 gait.stopClimb();
@@ -705,7 +736,8 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         // Phase 9: the last pass. Anything still on the page that should not be —
         // spent weapons, strays, anything not on the ground — goes into the
         // vacuum, and then the vacuum itself is thrown off the edge.
-        if (sweepDone && !vacuumDone && vacuum && typeof vacuum.suckAll === 'function') {
+        if (sweepDone && !vacuumDone && vacuum && typeof vacuum.suckAll === 'function'
+            && vacuumTries < PHASE_TRIES) {
             working = true;
             try {
                 await beat();
@@ -720,9 +752,10 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                 markPoint(dot.pos().x, dot.world().ground);
                 await vacuum.suckAll(strays);
                 await vacuum.throwAway();
-                vacuumDone = true;
+                if (strays.every((el) => !el.isConnected)) vacuumDone = true;
+                else if (!interrupted()) vacuumTries += 1;
             } catch {
-                vacuumDone = true;
+                if (!interrupted()) vacuumTries += 1;
             } finally {
                 working = false;
                 gait.stopClimb();
