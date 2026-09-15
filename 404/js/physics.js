@@ -509,6 +509,7 @@ export function createDot() {
         stepTo,
         clearStep,
         spawnDebris,
+        kickDebris,
         clearDebris
     };
 }
