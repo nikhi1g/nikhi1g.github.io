@@ -15,6 +15,8 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
     // Pointer thresholds, all measured as a gap in CSS px from the rig's own
     // box (see pointerGap) rather than from the ball's centre.
     const FLEE_GAP = 140;        // walk away while the cursor is this close
+    const FLEE_PACE_MIN = 0.35;  // an unhurried shuffle at the edge of that box
+    const FLEE_PACE_MAX = 2.1;   // a full bolt with the cursor on top of it
     const SCARE_GAP = 4;         // hovering the body itself startles it
     const SCARE_RELEASE = 90;    // and it will not settle until the cursor is this far
     const SCARE_MS = 5000;       // how long the wary ball holds
@@ -790,7 +792,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         scared = true;
         scareSettled = false;
         const away = awayFromPointer();
-        setFleeing(false);
+        setFleeing(0);
         gait.stopClimb();
         gait.putAway();
         gait.setFacing(away);
@@ -811,12 +813,14 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
     };
 
     // Backing away and narrowing the eye are the same state, so they are set
-    // together — the squint can never be left on after it stops retreating.
-    const setFleeing = (on) => {
-        fleeing = on;
-        if (!on) gait.stop();
-        if (figure && typeof figure.setSquint === 'function') figure.setSquint(on);
+    // together from one alarm level (0 = calm, 1 = cursor on top of it) and the
+    // squint can never be left on after it stops retreating.
+    const setFleeing = (alarm) => {
+        fleeing = alarm > 0;
+        if (!fleeing) gait.stop();
+        if (figure && typeof figure.setSquint === 'function') figure.setSquint(alarm);
     };
+
     const updateFlee = () => {
         const gap = pointerGap();
         if (scared) {
@@ -845,14 +849,24 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         // Mere proximity only walks it away, and only when it is not working —
         // otherwise a cursor drifting past drags it off its own ladder.
         if (working || !dot.el.classList.contains('sprouted')) {
-            if (fleeing) setFleeing(false);
+            if (fleeing) setFleeing(0);
             return;
         }
         if (gap < FLEE_GAP) {
-            gait.walk(awayFromPointer());
-            setFleeing(true);
+            // Alarm rises continuously across the flee box: 0 at its edge, 1
+            // when the cursor is right on the figure. Both how fast it retreats
+            // and how far its eye narrows are read off this one value, so the
+            // two always agree — it is most suspicious exactly when it is most
+            // hurried. Outside the box alarm is 0 and it is left alone.
+            const alarm = Math.min(1, Math.max(0,
+                (FLEE_GAP - gap) / (FLEE_GAP - SCARE_GAP)));
+            // Eased so the near half of the box carries most of the change:
+            // a cursor at the far edge barely stirs it.
+            const urgency = alarm * alarm;
+            gait.walk(awayFromPointer(), FLEE_PACE_MIN + (FLEE_PACE_MAX - FLEE_PACE_MIN) * urgency);
+            setFleeing(alarm);
         } else if (fleeing) {
-            setFleeing(false);
+            setFleeing(0);
         }
     };
 

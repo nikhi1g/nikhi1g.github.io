@@ -9,9 +9,12 @@ export function initFigure(dot) {
     const eyeballEl = statusDot.querySelector('#eyeball');
     const viewBoxWidth = figureEl.viewBox.baseVal.width;
     const pupilReach = 1.5;             // CSS px the ball-state pupil can travel
-    const irisReach = 3.2;              // viewBox units; leaves the iris edge inside the sclera
-    const scleraOffsetX = 0.6;          // viewBox units from the skull centre
-    const scleraOffsetY = -0.4;
+    // Sclera r5.7, iris r2.8 (see 404.html), so 2.4 keeps the iris edge inside
+    // the white with room to spare: 2.4 + 2.8 < 5.7.
+    const irisReach = 2.4;              // viewBox units
+    // The eyeball is concentric with the skull now, so there is no offset.
+    const scleraOffsetX = 0.2;          // viewBox units from the skull centre
+    const scleraOffsetY = -0.1;
     let mouseX = null;
     let mouseY = null;
     let sprouted = false;
@@ -19,9 +22,10 @@ export function initFigure(dot) {
     // re-sprout until the creature calls sproutFigure. A user drop clears it,
     // so the figure still unfolds on its own after being thrown.
     let manualBall = false;
-    // Set by the creature while it is backing away from the cursor. The rig's
-    // eye is a cone in this state, so aimEye pins the iris instead of aiming it.
-    let squinting = false;
+    // Set by the creature while it is backing away from the cursor: a 0..1 alarm
+    // level, not a flag. The rig's eye narrows toward a cone as it rises, so
+    // aimEye blends the iris from aimed to pinned by the same value.
+    let squinting = 0;
     // When the pointer has been still for a while the creature stops watching it
     // and looks at whatever it is about to do instead. The creature sets this.
     let lookTarget = null;
@@ -92,13 +96,6 @@ export function initFigure(dot) {
         //
         // Ball: CSS pins the pupil, nothing to do here.
         if (manualBall && !sprouted) return;
-        // Rig: the cone is the rotated #eyeball, so the iris is offset in the
-        // eyeball's OWN rotating frame — a fixed step back along its local axis
-        // puts it at the wide end whichever way the cone is pointing.
-        if (squinting && sprouted) {
-            irisEl.style.transform = `translate(${-irisReach}px, 0px)`;
-            return;
-        }
 
         if (!distance) {
             target.style.transform = 'translate(0px, 0px)';
@@ -110,6 +107,19 @@ export function initFigure(dot) {
         // displacement back to the rig's coordinate system.
         const shiftX = (dx / distance) * reachCss / outputScale * horizontalDirection;
         const shiftY = (dy / distance) * reachCss / outputScale;
+
+        // Rig, narrowing: the cone is the rotated #eyeball, so the iris belongs
+        // at the cone's wide end — a fixed step back along the eyeball's OWN
+        // rotating local axis, whichever way the cone points. It is blended in
+        // by the alarm level rather than switched, so the iris slides into the
+        // corner as the eye closes instead of jumping there.
+        if (squinting > 0 && sprouted) {
+            const pinned = -irisReach;
+            irisEl.style.transform =
+                `translate(${shiftX + (pinned - shiftX) * squinting}px, ${shiftY * (1 - squinting)}px)`;
+            return;
+        }
+
         target.style.transform = `translate(${shiftX}px, ${shiftY}px)`;
     };
     window.addEventListener('mousemove', (event) => {
@@ -157,7 +167,7 @@ export function initFigure(dot) {
         irisEl.style.removeProperty('transform');
         statusDot.classList.remove('sprouted');
         // The rig's cone belongs to the rig; the ball wears its own.
-        squinting = false;
+        squinting = 0;
         statusDot.classList.remove('squinting');
     };
     // Ordered ball: the creature wants the ball held, eye narrowed and locked
@@ -180,14 +190,20 @@ export function initFigure(dot) {
     };
 
     // The rig narrows its eye while it is backing away from the cursor — the
-    // same cone the wary ball wears, keyed off `.squinting` and aimed by --gaze.
-    const setSquint = (on) => {
-        const next = Boolean(on);
-        if (next === squinting) return;
+    // same cone the wary ball wears, keyed off `.squinting` and aimed by
+    // --gaze-rig. `level` is a 0..1 alarm, not a flag: the cone opens and closes
+    // continuously with how near the cursor is, so the creature looks more
+    // suspicious the more hurried it is.
+    const setSquint = (level) => {
+        const next = Number.isFinite(level) ? Math.min(1, Math.max(0, level)) : 0;
+        const wasOn = squinting > 0;
         squinting = next;
-        statusDot.classList.toggle('squinting', squinting);
-        // Leaving the cone: drop the pinned offset so the next aim starts clean.
-        if (!squinting) irisEl.style.removeProperty('transform');
+        statusDot.style.setProperty('--squint', String(next));
+        // Kept off entirely below a threshold, so a cursor loitering at the very
+        // edge of the flee box does not leave a permanent hairline squint.
+        const on = next > 0.02;
+        statusDot.classList.toggle('squinting', on);
+        if (!on && wasOn) irisEl.style.removeProperty('transform');
         aimEye();
     };
     dot.onSleepChange((asleep) => {

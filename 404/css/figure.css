@@ -86,13 +86,24 @@
    The iris is pinned to the cone's wide end by figure.js, for the same reason
    the ball's pupil is: the cone already carries the aim.
 
+   Narrowness is a GRADIENT, not a state. `--squint` runs 0..1 and the clip is a
+   four-point polygon built from it, so at 0 it is a rectangle that circumscribes
+   the eye — the round eye, untouched — and at 1 it has collapsed to the cone.
+   Equal point counts are what let one interpolate into the other. The value is
+   written every frame by figure.js, so no transition is needed for it.
+
    The blink rule below is deliberately listed after this one, so a blink still
    wins over a squint. */
 .dot.sprouted.squinting #eyeball {
     transform-box: fill-box;
     transform-origin: center;
     transform: rotate(calc(var(--gaze-rig, 0deg) + 90deg));
-    clip-path: polygon(100% 50%, 0% 20%, 0% 80%);
+    clip-path: polygon(
+        100% calc(50% * var(--squint, 1)),
+        100% calc(100% - 50% * var(--squint, 1)),
+        0% calc(100% - 20% * var(--squint, 1)),
+        0% calc(20% * var(--squint, 1))
+    );
     transition: transform 0.12s linear;
 }
 .dot.sprouted.blinking #eyeball {
@@ -149,21 +160,25 @@
    which is bearing 90deg — is turned to point the opposite way: +90 rather
    than -90.
 
-   Narrowing is a single clip-path, so intermediate stages are just wider
-   triangles — the shape can be animated open or shut without touching JS. */
+   Narrowness uses the same four-point gradient clip as the rig, so the two
+   states share one shape. The startle is peak suspicion, so `--squint` is
+   driven to 1 here: the cone is then narrower than the pupil is tall at the
+   pupil's position along the axis, and its edges shave the top and bottom off
+   the black. That crop is what reads as suspicion rather than a small eye. */
 .dot.asleep.wary:not(.sprouted) > .eye {
+    --squint: 1;
     transform: scale(1) rotate(calc(var(--gaze, 0deg) + 90deg));
-    /* 22/78 rather than 12/88: at the pupil's position along the axis the cone
-       is then narrower than the pupil is tall, so its edges shave the top and
-       bottom off the black — which is what makes the eye read as suspicious
-       rather than merely small. */
-    clip-path: polygon(100% 50%, 0% 22%, 0% 78%);
+    clip-path: polygon(
+        100% calc(50% * var(--squint)),
+        100% calc(100% - 50% * var(--squint)),
+        0% calc(100% - 22% * var(--squint)),
+        0% calc(22% * var(--squint))
+    );
     /* The base transition is a spring (overshoot 1.56) tuned for the pop-in
        scale. On a rotation that spring overshoots the cursor and wobbles back,
        and a large change swings past the target — so while tracking, the
-       rotation gets its own short linear ease. The narrowing itself keeps an
-       ease so the cone still closes rather than snapping. */
-    transition: transform 0.12s linear, clip-path 0.2s ease-out;
+       rotation gets its own short linear ease. */
+    transition: transform 0.12s linear;
 }
 
 /* In the cone the pupil sits at the wide end, on the axis, and the cone's own
