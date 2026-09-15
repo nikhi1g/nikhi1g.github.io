@@ -171,9 +171,15 @@ measuring `.dot` senses only the head.
   clear (`SCARE_RELEASE`), or a still cursor re-triggers the hop forever. The
   ladder it was on is knocked down with it.
 - **Mere proximity** only walks it away, and only while it is not `working` —
-  otherwise a passing cursor drags the creature off its own ladder. It narrows
-  its eye while retreating (`.squinting`), set together with `fleeing` so the
-  squint can never be left on after it stops backing away.
+  otherwise a passing cursor drags the creature off its own ladder. Proximity is
+  a **gradient**, not a switch: `alarm` runs 0 at the edge of the flee box to 1
+  with the cursor on the figure, and both the retreat pace and the eye's
+  narrowness are read off that one value, so it is most suspicious exactly when
+  it is most hurried. The pace is eased (`alarm²`) so the near half of the box
+  carries most of the change and a cursor resting at the far edge barely stirs
+  it; `gait.walk(dir, pace)` scales the leg-cycle period with the ground speed,
+  or a fast walk reads as skating. Outside the box alarm is 0 and it is left
+  alone entirely.
 
 ### The narrowed eye
 
@@ -198,10 +204,23 @@ Two states, because the ball and the rig have different eyes:
   bearing points it at the cursor's mirror image whenever it faces left. The
   blink rule is listed after it so a blink still wins over a squint.
 
-The cone is cut narrow enough (`22%`/`78%` on the ball) that its edges shave the
-top and bottom off the pupil. That crop is the point: a cone merely smaller than
-the pupil reads as a small eye, whereas one that clips the black reads as
-suspicion.
+Both states share one shape, built from `--squint` (0..1). The clip is a
+**four-point** polygon: at 0 it is a rectangle circumscribing the eye, so the
+round eye shows untouched, and at 1 it has collapsed to the cone. Equal point
+counts are what let one interpolate into the other — a `circle()` would not
+interpolate into a `polygon()`. `figure.js` writes the value every frame, so the
+narrowing follows the cursor continuously and needs no transition of its own.
+
+At full narrowness the cone is cut tighter than the pupil is tall at the pupil's
+position along the axis, so its edges shave the top and bottom off the black.
+That crop is the point: a cone merely smaller than the pupil reads as a small
+eye, whereas one that clips the black reads as suspicion. The rig's iris is
+blended from aimed to pinned by the same value, so it slides into the corner as
+the eye closes rather than jumping there.
+
+The eyeball is concentric with the skull and kept well inside it. It used to be
+`r6.6` offset to `(15.6, 10.6)`, which left a thick crescent of head on one side
+and — once the squint rotated it — pushed the sclera past the rim on the other.
 
 Never narrow the eye with `scaleY` on `.eye`: it scales the pupil along with the
 sclera, and the eye reads as a thin crescent with a smeared pupil.
