@@ -460,9 +460,32 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         }
     };
 
+    // A phase that has genuinely failed PHASE_TRIES times is retired so the rest
+    // of the sequence still runs. Interruptions never reach here — they do not
+    // count as attempts — but a phase that truly cannot succeed (a target that
+    // has come to rest somewhere unreachable, say) must not deadlock the
+    // cleanup behind it, which is exactly what stalled the run before.
+    const retireExhausted = () => {
+        const gaveUp = (name, tries, done) => {
+            if (done || tries < PHASE_TRIES) return done;
+            phase(name, `gave up after ${tries} attempts`);
+            return true;
+        };
+        finaleDone = gaveUp('finale', finaleTries, finaleDone);
+        pryDone = gaveUp('pry', pryTries, pryDone);
+        sawDone = gaveUp('saw', sawTries, sawDone);
+        perchDone = gaveUp('perch', perchTries, perchDone);
+        fishDone = gaveUp('fishing', fishTries, fishDone);
+        wipeDone = gaveUp('wipe', wipeTries, wipeDone);
+        kickDone = gaveUp('kick', kickTries, kickDone);
+        sweepDone = gaveUp('sweep', sweepTries, sweepDone);
+        vacuumDone = gaveUp('vacuum', vacuumTries, vacuumDone);
+    };
+
     const runSequence = async (id) => {
         const ready = await waitForSprouted(id);
         if (!ready || !isCurrent(id)) return;
+        retireExhausted();
 
         // Phase 1: three arrows into the heading. A wake aborts the loop, but
         // the next sleep resumes on whatever letters are still standing.
@@ -773,6 +796,18 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                     // of bouncing off the card wall.
                     const launched = await new Promise((resolve) => {
                         void gait.kick(-1, () => {
+                            // The icon has been resting in the debris list since
+                            // the axe dropped it, so a kick normally just
+                            // re-launches that entry. If it is not there — swept
+                            // up, or never made debris — spawn it as escaping
+                            // debris from where it sits, so the boot always
+                            // lands and the phase cannot stall on a false.
+                            if (dot.kickDebris(icon, -KICK_VX, -KICK_VY, KICK_SPIN, true)) {
+                                resolve(true);
+                                return;
+                            }
+                            const now = icon.getBoundingClientRect();
+                            dot.spawnDebris(icon, now.left, now.top, -KICK_VX, -KICK_VY, KICK_SPIN);
                             resolve(dot.kickDebris(icon, -KICK_VX, -KICK_VY, KICK_SPIN, true));
                         });
                     });
