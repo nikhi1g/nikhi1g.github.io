@@ -1,10 +1,6 @@
 const STEP_RISE = 14;
-const STEP_RUN = 22;
 const STEP_WIDTH = 30;
-const MIN_OVERLAP = 6;
 const WORK_REACH = 30;
-const FADE_MS = 200;
-const REDUCE_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
 
 const finiteOr = (value, fallback) => (
     Number.isFinite(Number(value)) ? Number(value) : fallback
@@ -22,54 +18,17 @@ const removeElement = (element) => {
 export function createStairs(dot) {
     let plan = [];
     // Each planTo call adds one LEG. A leg carries its own start/end indices into
-    // `plan` and its own classification, because a continued route (options.keep)
-    // never clears the previous legs — classifying the whole accumulated plan as
-    // one route is what made a later leg build rungs with the previous leg's
-    // rails, or steps with no rails at all.
+    // `plan`, because a continued route (options.keep) never clears the previous
+    // legs — and each leg grows its own rails, so the uprights always line up
+    // with the rungs they were raised with.
     let legs = [];
     const built = [];
     const elements = new Set();
-    const pendingRemovals = new Map();
     // The uprights of the ladder currently being raised, if any. Rails span
     // only the rungs built so far and grow with each new rung.
     let railState = null;
 
-    const prefersReducedMotion = () => (
-        typeof window !== 'undefined' &&
-        typeof window.matchMedia === 'function' &&
-        window.matchMedia(REDUCE_MOTION_QUERY).matches
-    );
-
-    const cancelRemoval = (element) => {
-        const timer = pendingRemovals.get(element);
-        if (timer !== undefined) {
-            clearTimeout(timer);
-            pendingRemovals.delete(element);
-        }
-    };
-
-    const discardElement = (element) => {
-        cancelRemoval(element);
-        elements.delete(element);
-        removeElement(element);
-    };
-
-    const scheduleRemoval = (element) => {
-        if (prefersReducedMotion()) {
-            discardElement(element);
-            return;
-        }
-        const timer = setTimeout(() => {
-            pendingRemovals.delete(element);
-            elements.delete(element);
-            removeElement(element);
-        }, FADE_MS);
-        pendingRemovals.set(element, timer);
-    };
     const clear = () => {
-        for (const timer of pendingRemovals.values()) clearTimeout(timer);
-        pendingRemovals.clear();
-
         for (const record of built) dot.removePlatform(record.id);
         for (const element of elements) removeElement(element);
 
@@ -80,10 +39,10 @@ export function createStairs(dot) {
         railState = null;
     };
 
-    // `keep` continues an existing staircase instead of replacing it: the new
-    // treads append above the ones already built, rooted at whatever the
-    // creature is standing on. That lets it travel in legs without ever losing
-    // the tread under its feet, which would drop it out of its climb pose.
+    // `keep` continues an existing ladder instead of replacing it: the new rungs
+    // append above the ones already built, rooted at whatever the creature is
+    // standing on. That lets it travel in legs without ever losing the rung
+    // under its feet, which would drop it out of its climb pose.
     const planTo = (targetX, targetY, options = {}) => {
         // Capture the current support before clearing an older route. This keeps a
         // replanned route rooted at the surface the creature is actually standing on.
@@ -111,9 +70,9 @@ export function createStairs(dot) {
             (worldLeft + worldRight) / 2
         );
         const startX = Math.max(xMin, Math.min(xMax, rawStartX));
-        const rawTargetX = finiteOr(targetX, startX);
-        const destinationX = Math.max(xMin, Math.min(xMax, rawTargetX));
-        const direction = destinationX < startX ? -1 : 1;
+        // The shaft rises where the creature stands. Horizontal travel happens
+        // on foot before the ladder is planned, never on it.
+        const left = clampLeft(startX - width / 2);
 
         const radius = Math.max(0, finiteOr(dot.radius, 0));
         const fallbackContactY = finiteOr(
@@ -129,33 +88,13 @@ export function createStairs(dot) {
         const neededRise = Math.max(0, baseTop - desiredTop);
         const availableRise = Math.max(0, baseTop - worldTop);
         const totalRise = Math.min(neededRise, availableRise);
-        const verticalSteps = totalRise > 0
-            ? Math.ceil(totalRise / STEP_RISE)
-            : 0;
+        const stepCount = totalRise > 0
+            ? Math.max(1, Math.ceil(totalRise / STEP_RISE))
+            : 1;
 
-        // Put one edge of the first tread at the creature's feet. The remaining
-        // treads advance by at most the fixed pitch, while their 30px span leaves
-        // at least 8px of overlap (or more when clamping at a card edge).
-        const firstLeft = clampLeft(
-            direction > 0 ? startX : startX - width
-        );
-        const firstRight = firstLeft + width;
-        const horizontalDistance = direction > 0
-            ? Math.max(0, destinationX - firstRight)
-            : Math.max(0, firstLeft - destinationX);
-        const horizontalSteps = 1 + Math.ceil(horizontalDistance / STEP_RUN);
-
-        const stepCount = Math.max(1, verticalSteps, horizontalSteps);
         const legStart = plan.length;
         let previous = null;
         for (let index = 0; index < stepCount; index += 1) {
-            const horizontalIndex = Math.min(index, horizontalSteps - 1);
-            const horizontalAdvance = Math.min(
-                horizontalDistance,
-                horizontalIndex * STEP_RUN
-            );
-            const rawLeft = firstLeft + direction * horizontalAdvance;
-            const left = clampLeft(rawLeft);
             const rise = Math.min(totalRise, (index + 1) * STEP_RISE);
             const step = {
                 left,
@@ -165,19 +104,15 @@ export function createStairs(dot) {
 
             if (previous) {
                 const riseBetween = previous.y - step.y;
-                const overlap = Math.min(previous.right, step.right)
-                    - Math.max(previous.left, step.left);
-                if (riseBetween < -0.001
-                    || riseBetween > STEP_RISE + 0.001
-                    || overlap < MIN_OVERLAP - 0.001) {
-                    throw new Error('Untraversable stair plan');
+                if (riseBetween < -0.001 || riseBetween > STEP_RISE + 0.001) {
+                    throw new Error('Untraversable ladder plan');
                 }
             }
             plan.push(step);
             previous = step;
         }
 
-        legs.push({start: legStart, end: plan.length, mode: classify(legStart, plan.length)});
+        legs.push({start: legStart, end: plan.length});
         return plan.length;
     };
     const buildNext = () => {
@@ -185,10 +120,11 @@ export function createStairs(dot) {
 
         const rect = plan[built.length];
         const leg = legFor(built.length);
-        const ladder = leg ? leg.mode === 'ladder' : false;
         const element = document.createElement('div');
-        // In ladder mode the same geometry is a rung strung between two rails.
-        element.className = ladder ? 'stair rung' : 'stair';
+        // Every build is a ladder rung strung between two rails. There is no
+        // staircase anymore: the creature walks to the shaft's x first, then
+        // climbs straight up.
+        element.className = 'stair rung';
         // Positioned inline as well as in CSS: `body` is a flex container, so a
         // tread that ever lacked `position: fixed` (a stylesheet that failed to
         // load, a slow first paint) would become a flex item and steal width
@@ -199,12 +135,11 @@ export function createStairs(dot) {
         element.style.width = `${Math.max(0, rect.right - rect.left)}px`;
         document.body.appendChild(element);
 
-        // A ladder grows its rails one rung at a time: the two uprights span
-        // only the rungs built so far and extend upward with each new rung,
-        // so the rails are never taller than the ladder itself.
-        if (ladder && leg) {
-            // A ladder's rungs all share one x, so the rails sit on that x —
-            // not on the leg's overall sweep, which for a staircase spans the run.
+        // The rails grow one rung at a time: the two uprights span only the
+        // rungs built so far and extend upward with each new rung, so they are
+        // never taller than the ladder itself.
+        if (leg) {
+            // A ladder's rungs all share one x, so the rails sit on that x.
             if (!railState || railState.leg !== leg) {
                 const rails = [];
                 for (const x of [rect.left + 1, rect.right - 4]) {
@@ -227,23 +162,6 @@ export function createStairs(dot) {
             }
         }
 
-        // A step is not a step without its riser: the vertical face connecting
-        // this tread back down to the one below it.
-        if (!ladder && built.length > leg.start) {
-            const previous = plan[built.length - 1];
-            const midX = (Math.max(previous.left, rect.left) + Math.min(previous.right, rect.right)) / 2;
-            const height = Math.abs(previous.y - rect.y);
-            if (height > 0.5) {
-                const riser = document.createElement('div');
-                riser.className = 'stair-riser';
-                riser.style.position = 'fixed';
-                riser.style.left = `${midX}px`;
-                riser.style.top = `${Math.min(previous.y, rect.y)}px`;
-                riser.style.height = `${height}px`;
-                document.body.appendChild(riser);
-                elements.add(riser);
-            }
-        }
 
         // Reading layout before adding the final state makes the CSS transition run
         // for each individual hammer/build action instead of being skipped.
@@ -258,42 +176,53 @@ export function createStairs(dot) {
 
     const isComplete = () => built.length === plan.length;
 
-    const teardownNext = () => {
-        if (!built.length) return false;
+    // Break the ladder apart instead of fading it out: every rung and rail
+    // stops being a platform, leaves this module's bookkeeping, and is handed
+    // to the debris system to fall and clutter the floor. The pieces stay in
+    // the DOM as `.stair` / `.ladder-rail`, which is exactly what the sweep and
+    // vacuum passes collect.
+    const demolish = () => {
+        if (!built.length && !elements.size) return 0;
 
-        const record = built.pop();
-        dot.removePlatform(record.id);
-        record.element.classList.add('going');
-        scheduleRemoval(record.element);
-        return true;
+        for (const record of built) dot.removePlatform(record.id);
+
+        let thrown = 0;
+        for (const element of elements) {
+            const box = element.getBoundingClientRect();
+            if (!box || (box.width < 1 && box.height < 1)) {
+                removeElement(element);
+                continue;
+            }
+            // Knocked off its footing: a shove outward from where it stood,
+            // a little lift, and a tumble on the way down.
+            element.classList.remove('built');
+            dot.spawnDebris(
+                element,
+                box.left,
+                box.top,
+                (Math.random() - 0.5) * 220,
+                -60 - Math.random() * 120,
+                (Math.random() - 0.5) * 700
+            );
+            thrown += 1;
+        }
+
+        built.length = 0;
+        elements.clear();
+        plan = [];
+        legs = [];
+        railState = null;
+        return thrown;
     };
 
     const hasAny = () => built.length > 0;
-
-    // Classification is per leg, over that leg's own steps only.
-    //
-    // A ladder is rungs stacked on one another — no horizontal advance at all.
-    // Anything that also travels sideways is a staircase and gets risers, which
-    // is the whole difference. Measuring a mean advance instead classified a
-    // staircase as a ladder whenever it was steep, and then drew two uprights
-    // spanning the entire diagonal with 30px rungs floating between them.
-    const classify = (from = 0, to = plan.length) => {
-        const slice = plan.slice(from, to);
-        if (slice.length < 2) return 'stairs';
-        for (let index = 1; index < slice.length; index += 1) {
-            if (Math.abs(slice[index].left - slice[index - 1].left) >= 2) return 'stairs';
-        }
-        return 'ladder';
-    };
 
     const legFor = (index) => legs.find((leg) => index >= leg.start && index < leg.end)
         || legs[legs.length - 1]
         || null;
 
-    const mode = () => (legs.length ? legs[legs.length - 1].mode : 'stairs');
-
-    // The tread just built, as an absolute surface span. The climb steps onto
-    // each tread as it is hammered in, so it needs this — not the whole route.
+    // The rung just built, as an absolute surface span. The climb steps onto
+    // each rung as it is hammered in, so it needs this — not the whole route.
     const lastBuilt = () => {
         if (!built.length) return null;
         const step = plan[built.length - 1];
@@ -304,16 +233,8 @@ export function createStairs(dot) {
         buildNext,
         lastBuilt,
         isComplete,
-        teardownNext,
+        demolish,
         hasAny,
-        clear,
-        mode,
-        activeMode: () => mode(),
-        // The treads actually built, in climb order, as absolute surface spans.
-        // The climb walks this list one rung at a time.
-        route: () => built
-            .map((record, index) => plan[index])
-            .filter(Boolean)
-            .map((step) => ({left: step.left, right: step.right, y: step.y}))
+        clear
     };
 }

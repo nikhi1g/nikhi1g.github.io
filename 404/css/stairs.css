@@ -29,7 +29,7 @@
     opacity: 0.85;
 }
 
-/* The uprights of a ladder, spanning the whole route. */
+/* The uprights of a ladder, grown rung by rung with the shaft they hold. */
 .ladder-rail {
     position: fixed;
     width: 3px;
@@ -39,14 +39,6 @@
     pointer-events: none;
 }
 
-/* The vertical face that makes a step a step rather than a floating shelf. */
-.stair-riser {
-    position: fixed;
-    width: 1px;
-    background: var(--sub);
-    opacity: 0.75;
-    pointer-events: none;
-}
 
 .stair.going {
     opacity: 0.2;
