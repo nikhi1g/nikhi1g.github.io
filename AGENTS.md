@@ -194,6 +194,12 @@ Two states, because the ball and the rig have different eyes:
 Never narrow the eye with `scaleY` on `.eye`: it scales the pupil along with the
 sclera, and the eye reads as a thin crescent with a smeared pupil.
 
+Nor let `.eye`'s base transition drive the rotation. That transition is a spring
+(overshoot `1.56`) tuned for the pop-in scale; on a rotation it overshoots the
+cursor and wobbles back, and a large change swings past the target. The wary
+rule overrides it with a short linear ease, which tracks within 1deg of the
+cursor bearing in about 0.2s.
+
 Only a user grab or drop curls the figure back into a ball. A fall or a scripted
 hop does not: `dot.consumeDrop()` latches the release so the creature's own
 motion is never mistaken for the user letting go.
