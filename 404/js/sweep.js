@@ -5,6 +5,7 @@
 
 const PUSH_MS = 420;        // one accelerating shove per item
 const GAP_MS = 70;          // breath between sweeps
+const BATCH = 10;           // pieces shoved at once
 const LINGER_MS = 1400;     // how long a swept piece is allowed to fall first
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -124,6 +125,7 @@ export function createSweep(dot) {
 
         creature.classList.add('sweeping');
         let swept = 0;
+        const pending = [];
         try {
             const world = dot.world();
             for (const element of list) {
@@ -139,9 +141,20 @@ export function createSweep(dot) {
                     swept += 1;
                     continue;
                 }
-                const done = await sweepOne(element, world);
-                if (done) swept += 1;
-                await wait(GAP_MS);
+                // Swept in small overlapping groups. Strictly one at a time is
+                // fine for a handful of pieces but the shattered rule alone
+                // leaves over a hundred shards, and working through those
+                // serially takes minutes.
+                pending.push(sweepOne(element, world).then((ok) => (ok ? 1 : 0)));
+                if (pending.length >= BATCH) {
+                    swept += (await Promise.all(pending)).reduce((a, b) => a + b, 0);
+                    pending.length = 0;
+                    await wait(GAP_MS);
+                }
+            }
+            if (pending.length) {
+                swept += (await Promise.all(pending)).reduce((a, b) => a + b, 0);
+                pending.length = 0;
             }
         } catch (error) {
             void error;

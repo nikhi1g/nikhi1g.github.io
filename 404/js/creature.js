@@ -533,12 +533,32 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                         if (perchTries >= 3) perchDone = true;
                         else return;
                     }
-                    const standing = dot.pos();
-                    const gap = middle - standing.x;
-                    if (Math.abs(gap) > 10) {
-                        // A real impulse, aimed to cross the gap and land on top.
-                        dot.hop(300, Math.max(-190, Math.min(190, gap / 0.62)));
-                        for (let guard = 0; guard < 60 && !dot.isGrounded(); guard += 1) await wait(60);
+                    // Aim the jump from the actual ballistics rather than a
+                    // fixed impulse: a hard-clamped horizontal velocity cannot
+                    // cross a wide gap, which is what left it short of the ledge
+                    // and fishing from the floor. Solve for the arc instead.
+                    const GRAVITY_PX = 981;
+                    for (let attempt = 0; attempt < 4; attempt += 1) {
+                        const standing = dot.pos();
+                        const gap = middle - standing.x;
+                        const inside = standing.x > rect.left && standing.x < rect.right
+                            && Math.abs(standing.y - (rect.top - dot.radius)) < 18;
+                        if (inside) break;
+                        // Rise needed to clear the ledge's top edge, plus margin.
+                        const rise = Math.max(30, standing.y - (rect.top - dot.radius) + 14);
+                        const vy = Math.sqrt(2 * GRAVITY_PX * rise);
+                        const flight = (2 * vy) / GRAVITY_PX;
+                        dot.hop(vy, gap / flight);
+                        for (let guard = 0; guard < 70 && !dot.isGrounded(); guard += 1) await wait(50);
+                        await wait(160);
+                    }
+                    const landed = dot.pos();
+                    const onLedge = landed.x > rect.left && landed.x < rect.right
+                        && Math.abs(landed.y - (rect.top - dot.radius)) < 20;
+                    if (!onLedge) {
+                        // Do not fish from the floor: if the jump will not land,
+                        // come back for it rather than pretending it worked.
+                        if (perchTries < 3) return;
                     }
                     await wait(200);
                     await clearStairs();
