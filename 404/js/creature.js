@@ -309,9 +309,12 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         if (!raised) return false;
         keepStairs = true;
         if (standOn) {
+            // Anchor the ledge, but DO NOT wreck the ladder yet. Knocking it
+            // apart here destroyed the thing it had just built before it had
+            // used it: the wipe still had to happen from up there, and with the
+            // ladder gone the creature had nothing under it but the socket it
+            // was about to erase. The caller wrecks it when the work is done.
             dot.anchorPlatform(standOn);
-            await wreckLadder();
-            keepStairs = false;
         }
         return true;
     };
@@ -745,7 +748,15 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                     }
                     await beat();
                     await wipe.wipeAway(socket);
+                    // The glass is gone, so the ledge it was standing on has
+                    // gone with it. Knock the ladder down NOW — after the work,
+                    // not before it — and drop back to the floor under gravity,
+                    // so the next phase starts from a settled creature instead
+                    // of one stranded at the top of a ladder it no longer has.
                     wipeDone = true;
+                    await wreckLadder();
+                    keepStairs = false;
+                    for (let guard = 0; guard < 60 && !dot.isGrounded(); guard += 1) await wait(80);
                 } catch {
                     if (!interrupted()) wipeTries += 1;
                 } finally {
@@ -1100,17 +1111,24 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         dot.onStep(updateFlee);
         dot.onStep(updateGaze);
         dot.onSleepChange(onSleepChange);
-        // Watchdog: sleep events are the normal trigger, but a wake at the
-        // wrong instant can strand a finished phase with no future event to
-        // resume on. Re-kick while settled and incomplete.
+        // Watchdog: sleep events are the normal trigger, but a wake at the wrong
+        // instant can strand a phase with no future event to resume on — and if
+        // the creature is already settled there is no next sleep transition to
+        // wait for. This is the only thing that guarantees the sequence carries
+        // on by itself.
+        //
+        // It deliberately does NOT require `sprouted`, and accepts grounded as
+        // well as asleep. Requiring both meant that a creature left unsettled —
+        // say the ledge it stood on was erased by its own wipe — was never
+        // re-kicked at all, and the run only continued once the user poked it.
         const kickTimer = setInterval(() => {
             if (allDone()) {
                 clearInterval(kickTimer);
                 return;
             }
             if (reduceMotion.matches) return;
-            if (scared) return;
-            if (!dot.isAsleep() || !dot.el.classList.contains('sprouted')) return;
+            if (scared || dot.isDragging()) return;
+            if (!dot.isAsleep() && !dot.isGrounded()) return;
             if (performance.now() - lastKick < 3000) return;
             lastKick = performance.now();
             runId += 1;
