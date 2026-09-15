@@ -26,9 +26,10 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
     const SCARE_HOP_VY = 380;    // up
     const SCARE_HOP_VX = 160;    // and away
     // The saw stands back by the blade's reach and closer to the text than the
-    // old arm's-length 24, so the spinning blade actually touches the line.
-    const SAW_REACH = 13;
-    const SAW_STANDOFF = 10;
+    // old arm's-length 24, so the spinning blade actually sits on the letters
+    // rather than just under the line.
+    const SAW_REACH = 20;
+    const SAW_STANDOFF = 4;
 
     // Everything the creature can knock loose, as one selector. It lives in one
     // place because the sweep and the vacuum have to agree on what counts as a
@@ -651,13 +652,14 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                         if (!interrupted()) perchTries += 1;
                         return;
                     }
-                    // Only NOW does the heading become a real surface: the
-                    // creature is at the top of its ladder and lays the ledge
-                    // from there, and the line draws itself out from the middle.
-                    // Anchoring it before the climb made the line appear while
-                    // it was still on the floor, out of nowhere.
-                    dot.anchorPlatform(heading);
-                    await wait(560);
+                    // Only NOW does it get a surface, and it BUILDS one: a
+                    // plank hammered across the heading's top edge from the top
+                    // of the ladder. It used to stand on an invisible anchor on
+                    // the heading itself, so it was perched on nothing and had
+                    // built nothing to perch on.
+                    await gait.swing('hammer');
+                    stairs.buildPlank(rect.left, rect.right, rect.top);
+                    await wait(240);
                     // Aim the jump from the actual ballistics rather than a
                     // fixed impulse: a hard-clamped horizontal velocity cannot
                     // cross a wide gap, which is what left it short of the ledge
@@ -863,6 +865,9 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                 gait.hopDown(dot.pos().x < dot.world().left + 40 ? 1 : -1);
                 for (let guard = 0; guard < 60 && !dot.isGrounded(); guard += 1) await wait(80);
                 await wait(260);
+                // Down off its own scaffolding, so the plank it laid to fish
+                // from comes apart too and joins the pieces to be swept.
+                if (stairs && typeof stairs.dropPlanks === 'function') stairs.dropPlanks();
                 // Walk along the floor to the nearest loose piece, so the leg
                 // cycle plays instead of the creature sliding into position.
                 const nearest = [...document.querySelectorAll(LOOSE_SELECTOR)]
@@ -927,6 +932,15 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
                 gait.putAway();
             }
         }
+
+        // The very end: everything is broken and swept away, so the page itself
+        // gives up and the bottom-right corner curls off like a peeling sticker.
+        // Lazily imported, so peel.js costs nothing until the sequence finishes,
+        // and idempotent, so a re-kicked run cannot start a second flap.
+        if (allDone()) {
+            phase('peel');
+            void import('./peel.js').then((m) => m.createPeel().start()).catch(() => {});
+        }
     };
 
     // Every phase finished: the one condition that retires the sequence, the
@@ -989,7 +1003,8 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         scared = true;
         scareSettled = false;
         const away = awayFromPointer();
-        setFleeing(0);
+        stopFleeing();
+        setSquint(0);
         gait.stopClimb();
         gait.putAway();
         gait.setFacing(away);
@@ -1009,13 +1024,19 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         void run(runId);
     };
 
-    // Backing away and narrowing the eye are the same state, so they are set
-    // together from one alarm level (0 = calm, 1 = cursor on top of it) and the
-    // squint can never be left on after it stops retreating.
-    const setFleeing = (alarm) => {
-        fleeing = alarm > 0;
-        if (!fleeing) gait.stop();
+    // The narrowing and the retreat used to be one state, which meant the eye
+    // only ever narrowed when the creature was free to walk — on the ground,
+    // between phases. They are separated here: it eyes the cursor from wherever
+    // it is, halfway up a ladder or perched on the heading, and only the
+    // RETREAT needs free feet.
+    const setSquint = (alarm) => {
         if (figure && typeof figure.setSquint === 'function') figure.setSquint(alarm);
+    };
+
+    const stopFleeing = () => {
+        if (!fleeing) return;
+        fleeing = false;
+        gait.stop();
     };
 
     const updateFlee = () => {
@@ -1036,38 +1057,35 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
             if (gap >= SCARE_RELEASE && performance.now() >= scareUntil) endScare();
             return;
         }
+        const sprouted = dot.el.classList.contains('sprouted');
         // A direct poke always startles, even mid-phase: it is the one cursor
         // interaction the creature never ignores.
-        if (gap <= SCARE_GAP && !reduceMotion.matches
-            && dot.el.classList.contains('sprouted')) {
+        if (gap <= SCARE_GAP && !reduceMotion.matches && sprouted) {
             startScare();
             return;
         }
-        // Mere proximity only walks it away, and only when it is not working —
-        // otherwise a cursor drifting past drags it off its own ladder.
-        if (working || !dot.el.classList.contains('sprouted')) {
-            if (fleeing) setFleeing(0);
+
+        // Alarm rises continuously across the flee box: 0 at its edge, 1 when
+        // the cursor is right on the figure.
+        const alarm = gap < FLEE_GAP
+            ? Math.min(1, Math.max(0, (FLEE_GAP - gap) / (FLEE_GAP - SCARE_GAP)))
+            : 0;
+        // The eye narrows wherever the creature is, working or not. Square
+        // rooted, so it is visibly suspicious while the cursor is still some
+        // way off and reaches full narrowness before it arrives.
+        setSquint(sprouted ? Math.sqrt(alarm) : 0);
+
+        // Retreating is the part that needs free feet: mid-phase, or off the
+        // ground, a walk would drag the creature off its own ladder.
+        if (alarm <= 0 || working || !sprouted || !dot.isGrounded()) {
+            stopFleeing();
             return;
         }
-        if (gap < FLEE_GAP) {
-            // Alarm rises continuously across the flee box: 0 at its edge, 1
-            // when the cursor is right on the figure. Both how fast it retreats
-            // and how far its eye narrows are read off this one value, so the
-            // two always agree — it is most suspicious exactly when it is most
-            // hurried. Outside the box alarm is 0 and it is left alone.
-            const alarm = Math.min(1, Math.max(0,
-                (FLEE_GAP - gap) / (FLEE_GAP - SCARE_GAP)));
-            // Pace builds gently at first and hard near the end, but off a
-            // brisk floor so it is always plainly running away.
-            const urgency = alarm * alarm;
-            gait.walk(awayFromPointer(), FLEE_PACE_MIN + (FLEE_PACE_MAX - FLEE_PACE_MIN) * urgency);
-            // The eye narrows FASTER than the pace builds — square-rooted, so it
-            // is already visibly suspicious while the cursor is still some way
-            // off and reaches full narrowness before the cursor arrives.
-            setFleeing(Math.sqrt(alarm));
-        } else if (fleeing) {
-            setFleeing(0);
-        }
+        // Pace builds gently at first and hard near the end, but off a brisk
+        // floor so it is always plainly running away.
+        const urgency = alarm * alarm;
+        gait.walk(awayFromPointer(), FLEE_PACE_MIN + (FLEE_PACE_MAX - FLEE_PACE_MIN) * urgency);
+        fleeing = true;
     };
 
     // The creature watches the pointer while the pointer is being used, and
