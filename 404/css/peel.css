@@ -1,0 +1,119 @@
+/* Bottom-right corner peel: the card's corner lifts off the page and flaps in
+   the wind, like paper or a sticker peeling. All motion is driven from JS
+   (see ../js/peel.js) through the --peel-lift / --peel-skew / --peel-shade
+   custom properties, so the flap can gust irregularly instead of ticking like
+   a metronome. This file only describes the geometry and the shading.
+
+   How the curl is built (no third-party code, plain CSS 3D):
+   - .peel-bed is the corner triangle left behind: the page showing through
+     where the card lifted, darkened toward the fold by the flap's cast
+     shadow. Same base colour as the page, so there is no seam.
+   - .peel-hinge is an invisible square over the corner, rotated -45 degrees
+     so its local horizontal axis lies exactly along the fold diagonal (from
+     the bottom edge to the right edge). Its lower half is the corner side.
+   - .peel-flap fills that lower half and rotates about its own top edge —
+     which IS the fold line — in perspective, lifting the corner up and away.
+     Its face is the card colour with a curvature gradient and a crease shadow
+     along the fold, plus a drop-shadow that tracks the lifted shape. That is
+     what keeps it reading as paper rather than a flat rotate/skew glitch:
+     the shading moves with the geometry instead of sliding across it.
+   - The flap keeps the card's 12px corner radius on its free corner, so it
+     hugs the rounded border instead of cutting a hard straight edge. */
+
+main.peel-ready {
+    position: relative;
+}
+
+.peel-curl,
+.peel-bed {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 88px;
+    height: 88px;
+    pointer-events: none;
+}
+
+/* Revealed page beneath the lifted corner. Darkest at the fold (the
+   hypotenuse, i.e. the top-left edge of this triangle), fading to nothing at
+   the corner so the gradient melts into the page with no visible edge. */
+.peel-bed {
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+    background: linear-gradient(to bottom right, rgba(0, 0, 0, 0.34), rgba(0, 0, 0, 0) 72%);
+    opacity: var(--peel-shade, 0);
+    border-bottom-right-radius: 12px;
+}
+
+/* Hinge square: rotated so local-x runs along the fold diagonal. Perspective
+   here gives the child flap its 3D depth. Overflow stays visible — the lifted
+   flap legitimately overlaps the card interior, and clipping it would cut the
+   curl off mid-flap. */
+.peel-curl {
+    z-index: 5;
+}
+
+.peel-hinge {
+    position: absolute;
+    inset: 0;
+    transform: rotate(-45deg);
+    transform-origin: 50% 50%;
+    perspective: 420px;
+    perspective-origin: 50% 0%;
+}
+/* The peeling corner itself: the lower half of the hinge square, hinged about
+   its top edge (the fold line). Shaped by a clip-path into the exact corner
+   triangle — the hinge-local pre-image of the world-space corner, i.e. wider
+   than the box with a slightly chamfered free apex — so that at lift 0 the
+   flap coincides with the card corner instead of sticking out as a ribbon.
+   Front face matches the card so that at lift 0 it is pixel-invisible
+   against it: the curl grows out of the card rather than popping in. */
+.peel-flap {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    bottom: 0;
+    transform-origin: 50% 0%;
+    transform: rotateX(var(--peel-lift, 0deg)) rotateZ(var(--peel-skew, 0deg));
+    clip-path: polygon(-21% 0%, 121% 0%, 57% 134%, 43% 134%);
+    background:
+        /* specular roll near the free edge: the paper catching the light */
+        radial-gradient(120% 90% at 50% 100%, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 46%),
+        /* curvature shading: belly of the curl falls away darker */
+        linear-gradient(to bottom, rgba(0, 0, 0, 0.22) 0%, rgba(0, 0, 0, 0.07) 26%, rgba(0, 0, 0, 0) 60%),
+        var(--bg);
+    /* drop-shadow follows the clipped triangle and tracks the lifted shape;
+       the crease occlusion along the fold keeps the hypotenuse from reading
+       as a hard line. */
+    filter: drop-shadow(-5px 7px 7px rgba(0, 0, 0, 0.28));
+    backface-visibility: hidden;
+}
+/* Static, subtle curl for prefers-reduced-motion: present but never moving.
+   Muted shading to match the shallow lift — the full-lift gradients would
+   fake a drama the geometry does not have. */
+main.peel-still .peel-flap {
+    transform: rotateX(12deg);
+    background:
+        linear-gradient(to bottom, rgba(0, 0, 0, 0.12) 0%, rgba(0, 0, 0, 0) 40%),
+        var(--bg);
+    filter: drop-shadow(-2px 3px 3px rgba(0, 0, 0, 0.18));
+}
+main.peel-still .peel-bed {
+    opacity: 0.25;
+}
+
+@media (max-width: 600px) {
+    .peel-curl,
+    .peel-bed {
+        width: 64px;
+        height: 64px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .peel-flap,
+    .peel-bed {
+        animation: none;
+        transition: none;
+    }
+}
