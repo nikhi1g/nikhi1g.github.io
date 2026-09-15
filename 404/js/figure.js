@@ -145,12 +145,19 @@ export function initFigure(dot) {
             if (times > 1) setTimeout(() => blink(times - 1), 140);
         }, 90);
     };
-    const scheduleBlink = () => {
+    // `firstDelay` brings the next blink forward. The default idle cadence is
+    // 2.6-6.4s, which is longer than the startle stare lasts — and the hop
+    // cancels whatever was pending — so a curled, staring creature would
+    // usually never blink at all before unfolding.
+    const scheduleBlink = (firstDelay) => {
         clearTimeout(blinkTimer);
+        const delay = Number.isFinite(firstDelay)
+            ? firstDelay
+            : 2600 + Math.random() * 3800;
         blinkTimer = setTimeout(() => {
             blink(Math.random() < 0.25 ? 2 : 1);   // occasional double blink
             scheduleBlink();
-        }, 2600 + Math.random() * 3800);
+        }, delay);
     };
     // The eye tracks its gaze target for as long as there is an eye to aim:
     // while settled, and throughout an ordered ball, which spans the startle
@@ -208,7 +215,9 @@ export function initFigure(dot) {
     };
     dot.onSleepChange((asleep) => {
         if (asleep) {
-            scheduleBlink();
+            // A held ball is mid-startle and only has a few seconds of stare, so
+            // it blinks soon after landing rather than on the idle cadence.
+            scheduleBlink(manualBall ? 500 + Math.random() * 700 : undefined);
             requestAnimationFrame(aimWhileWatching);
             // Settled: give it a beat, then unfold the rig — unless the ball
             // was ordered and is still being held.
