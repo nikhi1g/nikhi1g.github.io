@@ -235,20 +235,6 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         return Math.abs(dot.pos().x - goalX) <= tolerance * 2;
     };
 
-    // Close any remaining gap to the goal the way a person would: hop. Used when
-    // the route ends a little short of where the work has to happen.
-    const nudgeTo = async (goalX) => {
-        const reach = 24;
-        for (let attempt = 0; attempt < 6; attempt += 1) {
-            if (scared) return false;
-            const p = dot.pos();
-            gait.hopDown(goalX < p.x ? -1 : 1);
-            for (let guard = 0; guard < 40 && !dot.isGrounded(); guard += 1) await wait(60);
-            await wait(140);
-        }
-        return Math.abs(dot.pos().x - goalX) <= reach * 2;
-    };
-
     // The ladder is temporary, and it does not politely fade: once the creature
     // is standing on something real, the whole thing is knocked apart and the
     // rungs and rails fall to clutter the floor, where the sweep and vacuum
@@ -263,11 +249,16 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
     // the ledge — anchored, so the surface lives and dies with the thing the
     // user can see — and once it is real the ladder is wrecked behind the
     // creature. Without it the top rung stays, because it is standing on it.
+    //
+    // Arrival is the top rung, full stop. There is deliberately no hop here:
+    // `buildAndClimb` already walked to the target x before raising the shaft,
+    // so the creature is under its goal when it tops out, and hopping at the
+    // top only threw it off the ladder it had just built. Hops belong AFTER the
+    // work — the perch jump onto the heading, and the drop back to the floor.
     const travelTo = async (goalX, standY, standOn = null) => {
         const raised = await buildAndClimb(goalX, standY, keepStairs);
         if (!raised) return false;
         keepStairs = true;
-        await nudgeTo(goalX);
         if (standOn) {
             dot.anchorPlatform(standOn);
             await wreckLadder();
