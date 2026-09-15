@@ -211,7 +211,76 @@ export function createGait(dot) {
         startNextSwing();
     });
 
+    // --- Motion-driven pose ---------------------------------------------------
+    // The explicit walk()/climb() calls say what the creature INTENDS. This says
+    // what it is actually doing: any real horizontal travel plays the walk, and
+    // real upward travel plays the ladder climb. Without it the figure slid
+    // silently whenever something other than walk() moved it — a hop's
+    // horizontal carry, the launch roll, a nudge, the scripted climb steps.
+    //
+    // It only ever fills the gaps: an explicit walk or climb owns the pose while
+    // it is active, and swings/hops keep their own.
+    const AUTO_MIN_SPEED = 8;        // px/s of travel before a pose is worth playing
+    const AUTO_STRIDE_SPEED = 40;    // the speed the base cycle period is authored for
+    let lastAutoX = null;
+    let lastAutoY = null;
+    let autoPose = null;
+
+    const clearAutoPose = () => {
+        if (!autoPose) return;
+        element.classList.remove(autoPose === 'ladder' ? 'laddering' : 'walking');
+        autoPose = null;
+    };
+
+    const setAutoPose = (pose, cycleSeconds) => {
+        const cls = pose === 'ladder' ? 'laddering' : 'walking';
+        if (pose === 'ladder') {
+            element.style.setProperty('--ladder-cycle', `${cycleSeconds.toFixed(3)}s`);
+            element.style.setProperty('--ladder-count', 'infinite');
+        } else {
+            element.style.setProperty('--walk-cycle', `${cycleSeconds.toFixed(3)}s`);
+        }
+        if (autoPose === pose) return;
+        clearAutoPose();
+        element.classList.remove('idle-bob');
+        element.classList.add(cls);
+        autoPose = pose;
+    };
+
+    const updateAutoPose = (seconds) => {
+        const position = dot.pos();
+        const dx = lastAutoX === null ? 0 : position.x - lastAutoX;
+        const dy = lastAutoY === null ? 0 : position.y - lastAutoY;
+        lastAutoX = position.x;
+        lastAutoY = position.y;
+        // An explicit pose, a swing or a hop owns the rig; so does a ball.
+        if (walking || climbing || hopping || swingActive
+            || !element.classList.contains('sprouted')) {
+            clearAutoPose();
+            return;
+        }
+        if (!seconds) return;
+        const speedX = Math.abs(dx) / seconds;
+        const speedY = -dy / seconds;          // positive means travelling upward
+        // Rising faster than it is advancing: that is a climb, not a walk.
+        if (speedY > AUTO_MIN_SPEED && speedY >= speedX) {
+            setAutoPose('ladder', Math.min(1.4, Math.max(0.34, 0.62 * (26 / speedY))));
+            return;
+        }
+        if (speedX > AUTO_MIN_SPEED && dot.isGrounded()) {
+            setFacing(dx < 0 ? -1 : 1);
+            setAutoPose('walk', Math.min(1.3, Math.max(0.3, 0.7 * (AUTO_STRIDE_SPEED / speedX))));
+            return;
+        }
+        clearAutoPose();
+    };
+
     dot.onStep((frameSeconds = 0) => {
+        const seconds = Number.isFinite(frameSeconds) ? Math.max(0, frameSeconds) : 0;
+        // What the creature is ACTUALLY doing drives the pose, so any movement
+        // is animated even when nothing called walk() or climb().
+        updateAutoPose(seconds);
+
         if (walking || climbing) {
             const world = dot.world();
             const surface = dot.surface();
@@ -226,7 +295,6 @@ export function createGait(dot) {
                     : (surface === 'line' ? world.lineLeft : world.left));
             const position = dot.pos();
             const velocity = dot.velocity();
-            const seconds = Number.isFinite(frameSeconds) ? Math.max(0, frameSeconds) : 0;
             const nextX = position.x + velocity.vx * seconds;
             const passedEdge = currentFacing > 0 ? nextX >= edge : nextX <= edge;
             let hasNextClimbSurface = false;
