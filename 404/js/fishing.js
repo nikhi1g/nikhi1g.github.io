@@ -2,10 +2,10 @@
 // and flings it down to lie broken on the floor.
 //
 // Two coordinate systems are at work. The rod lives inside the rig's SVG (it is
-// a child of #arm-r, so the arm carries it), but the line and hook have to
+// a child of #arm-l, so the arm carries it), but the line and hook have to
 // reach elements anywhere on the page, which the rig's 30x74 viewBox cannot
 // express. So the line and hook are drawn in a separate full-screen overlay in
-// viewport pixels, anchored to the fist via getScreenCTM.
+// viewport pixels, anchored to the rod's TIP via getScreenCTM.
 
 const CAST_MS = 1150;     // hand -> target: the hook has to travel, it should read as a throw
 const DRAW_MS = 700;      // a real beat with the hook on before it takes the weight
@@ -49,15 +49,16 @@ export function createFishing(dot) {
     let lineEl = null;
     let hookEl = null;
 
-    // The fist, in viewport pixels, so the line starts where the hand is.
+    // The fist, in viewport pixels, so the caught piece is reeled up to
+    // where the hand actually is.
     const handPoint = () => {
         const figure = creature.querySelector('.figure');
         try {
-            const fore = creature.querySelector('#fore-r');
+            const fore = creature.querySelector('#fore-l');
             if (fore && figure && typeof DOMPoint !== 'undefined') {
                 const ctm = fore.getScreenCTM();
                 if (ctm) {
-                    const p = new DOMPoint(22.5, 38.5).matrixTransform(ctm);
+                    const p = new DOMPoint(7.5, 38.5).matrixTransform(ctm);
                     if (Number.isFinite(p.x) && Number.isFinite(p.y)) return {x: p.x, y: p.y};
                 }
             }
@@ -70,13 +71,39 @@ export function createFishing(dot) {
         return {x: position.x, y: position.y - rise};
     };
 
-    // Runtime-built rod inside #arm-r, mirroring the axe/saw nested transforms
-    // so the arm's own rotation carries it (see tools.css).
+    // The rod's business end, in viewport pixels, so the line hangs from the
+    // tip rather than the grip. `.rod-tip` is a path drawn from the blank's
+    // end (21,3) out to (23,1) in the rod's own icon space; that far corner
+    // is where the line and hook attach.
+    const rodTipPoint = () => {
+        try {
+            const tip = rod && rod.querySelector('.rod-tip');
+            if (tip && typeof DOMPoint !== 'undefined') {
+                const ctm = tip.getScreenCTM();
+                if (ctm) {
+                    const p = new DOMPoint(23, 1).matrixTransform(ctm);
+                    if (Number.isFinite(p.x) && Number.isFinite(p.y)) return {x: p.x, y: p.y};
+                }
+            }
+        } catch {
+            // Fall through to the fist approximation.
+        }
+        return handPoint();
+    };
+
+    // Runtime-built rod inside #arm-l, mirroring the axe/saw nested transforms
+    // so the arm's own rotation carries it (see tools.css). The inner
+    // transform is the right-hand axe/hammer construction reflected across
+    // the rig's shoulder line (x=15): scale(-0.7 0.7) mirrors the icon before
+    // rotate/translate place its grip corner (3,21) exactly on the outer
+    // anchor, and the outer rotation is negated to match — reflecting a
+    // rotation flips its sign. That anchor (7.5, 38.5) is the left fist,
+    // the mirror image of the right fist's (22.5, 38.5).
     const ensureRod = () => {
         if (rod && rod.isConnected) return rod;
-        const armR = creature.querySelector('#arm-r');
-        if (!armR) return null;
-        const existing = armR.querySelector('#rod');
+        const armL = creature.querySelector('#arm-l');
+        if (!armL) return null;
+        const existing = armL.querySelector('#rod');
         if (existing) {
             rod = existing;
             return rod;
@@ -84,10 +111,10 @@ export function createFishing(dot) {
 
         const outer = document.createElementNS(SVG_NS, 'g');
         outer.setAttribute('id', 'rod');
-        outer.setAttribute('transform', 'rotate(38 22.5 38.5)');
+        outer.setAttribute('transform', 'rotate(-38 7.5 38.5)');
 
         const inner = document.createElementNS(SVG_NS, 'g');
-        inner.setAttribute('transform', 'translate(11.271042 28.783493) rotate(-41) scale(0.70)');
+        inner.setAttribute('transform', 'translate(18.728958 28.783493) rotate(41) scale(-0.70 0.70)');
 
         const blank = document.createElementNS(SVG_NS, 'path');
         blank.setAttribute('class', 'rod-blank');
@@ -112,7 +139,7 @@ export function createFishing(dot) {
         inner.appendChild(reel);
         inner.appendChild(grip);
         outer.appendChild(inner);
-        armR.appendChild(outer);
+        armL.appendChild(outer);
         rod = outer;
         return rod;
     };
@@ -216,17 +243,18 @@ export function createFishing(dot) {
             return true;
         }
 
-        // Cast: the hook arcs out to just above the target.
+        // Cast: the hook arcs out to just above the target, trailing from
+        // the rod tip rather than the fist.
         await tween(CAST_MS, (t) => {
             const eased = t * t * (3 - 2 * t);
-            const from = handPoint();
+            const from = rodTipPoint();
             const here = catchPoint();
             drawLine(from, {
                 x: from.x + (here.x - from.x) * eased,
                 y: from.y + (here.y - from.y) * eased - Math.sin(eased * Math.PI) * 26
             });
         });
-        drawLine(handPoint(), goal);
+        drawLine(rodTipPoint(), goal);
         await wait(DRAW_MS);
 
         // Hoist: the catch leaves the page flow and is reeled up to the fist.
@@ -234,21 +262,21 @@ export function createFishing(dot) {
         const lifted = {left: rect.left, top: rect.top};
         await tween(HOIST_MS, (t) => {
             const eased = t * t * (3 - 2 * t);
-            const from = handPoint();
-            lifted.left = rect.left + (from.x - rect.width / 2 - rect.left) * eased;
-            lifted.top = rect.top + (from.y - rect.height / 2 - rect.top) * eased;
+            const hand = handPoint();
+            lifted.left = rect.left + (hand.x - rect.width / 2 - rect.left) * eased;
+            lifted.top = rect.top + (hand.y - rect.height / 2 - rect.top) * eased;
             target.style.left = `${lifted.left}px`;
             target.style.top = `${lifted.top}px`;
-            drawLine(from, {x: lifted.left + rect.width / 2, y: lifted.top + rect.height / 2});
+            drawLine(rodTipPoint(), {x: lifted.left + rect.width / 2, y: lifted.top + rect.height / 2});
         });
 
         // Fling: released at the top of the swing so it falls and settles.
-        const tip = handPoint();
+        const release = handPoint();
         hideRod();
         dot.spawnDebris(
             target,
-            tip.x - rect.width / 2,
-            tip.y - rect.height / 2,
+            release.x - rect.width / 2,
+            release.y - rect.height / 2,
             (Math.random() - 0.5) * 70,
             -60
         );
