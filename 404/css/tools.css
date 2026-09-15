@@ -18,6 +18,15 @@
     opacity: 1;
 }
 
+/* Exactly one tool is ever in hand. The saw is its own runtime-built group
+   (see saw.css) and the hammer from the ladder-building phase would otherwise
+   still be held during the cut, drawing both on top of each other. Enforced
+   here rather than relying on every caller to stow the previous tool. */
+.dot.sawing #axe,
+.dot.sawing #hammer {
+    opacity: 0;
+}
+
 /* Lucide paths are authored at 24×24. The nested icon scale went from 0.46
    to 0.70 (see 404.html comment for the translate arithmetic) to make the
    tools read at a larger, legible size. To keep the same on-screen line
