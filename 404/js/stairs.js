@@ -30,6 +30,9 @@ export function createStairs(dot) {
     const built = [];
     const elements = new Set();
     const pendingRemovals = new Map();
+    // The uprights of the ladder currently being raised, if any. Rails span
+    // only the rungs built so far and grow with each new rung.
+    let railState = null;
 
     const prefersReducedMotion = () => (
         typeof window !== 'undefined' &&
@@ -63,7 +66,6 @@ export function createStairs(dot) {
         }, FADE_MS);
         pendingRemovals.set(element, timer);
     };
-
     const clear = () => {
         for (const timer of pendingRemovals.values()) clearTimeout(timer);
         pendingRemovals.clear();
@@ -75,6 +77,7 @@ export function createStairs(dot) {
         elements.clear();
         plan = [];
         legs = [];
+        railState = null;
     };
 
     // `keep` continues an existing staircase instead of replacing it: the new
@@ -196,28 +199,31 @@ export function createStairs(dot) {
         element.style.width = `${Math.max(0, rect.right - rect.left)}px`;
         document.body.appendChild(element);
 
-        // A ladder needs its rails: two uprights spanning the whole route,
-        // raised with the first rung.
-        if (ladder && leg && built.length === leg.start) {
-            // Rails are built from THIS leg's own rungs, so they line up with the
-            // rungs that are about to appear between them.
-            const rungs = plan.slice(leg.start, leg.end);
-            // A ladder's rungs all share one x, so the rails sit on that x — not
-            // on the leg's overall sweep, which for a staircase spans the run.
-            const left = rungs[0].left;
-            const right = rungs[0].right;
-            const top = Math.min(...rungs.map((rung) => rung.y));
-            const bottom = Math.max(...rungs.map((rung) => rung.y));
-            const height = bottom - top + 6;
-            for (const x of [left + 1, right - 4]) {
-                const rail = document.createElement('div');
-                rail.className = 'ladder-rail';
-                rail.style.position = 'fixed';
-                rail.style.left = `${x}px`;
-                rail.style.top = `${top}px`;
-                rail.style.height = `${height}px`;
-                document.body.appendChild(rail);
-                elements.add(rail);
+        // A ladder grows its rails one rung at a time: the two uprights span
+        // only the rungs built so far and extend upward with each new rung,
+        // so the rails are never taller than the ladder itself.
+        if (ladder && leg) {
+            // A ladder's rungs all share one x, so the rails sit on that x —
+            // not on the leg's overall sweep, which for a staircase spans the run.
+            if (!railState || railState.leg !== leg) {
+                const rails = [];
+                for (const x of [rect.left + 1, rect.right - 4]) {
+                    const rail = document.createElement('div');
+                    rail.className = 'ladder-rail';
+                    rail.style.position = 'fixed';
+                    rail.style.left = `${x}px`;
+                    document.body.appendChild(rail);
+                    elements.add(rail);
+                    rails.push(rail);
+                }
+                railState = {leg, top: rect.y, bottom: rect.y, rails};
+            } else {
+                railState.top = Math.min(railState.top, rect.y);
+                railState.bottom = Math.max(railState.bottom, rect.y);
+            }
+            for (const rail of railState.rails) {
+                rail.style.top = `${railState.top}px`;
+                rail.style.height = `${railState.bottom - railState.top + 6}px`;
             }
         }
 
@@ -286,9 +292,17 @@ export function createStairs(dot) {
 
     const mode = () => (legs.length ? legs[legs.length - 1].mode : 'stairs');
 
+    // The tread just built, as an absolute surface span. The climb steps onto
+    // each tread as it is hammered in, so it needs this — not the whole route.
+    const lastBuilt = () => {
+        if (!built.length) return null;
+        const step = plan[built.length - 1];
+        return step ? {left: step.left, right: step.right, y: step.y} : null;
+    };
     return {
         planTo,
         buildNext,
+        lastBuilt,
         isComplete,
         teardownNext,
         hasAny,

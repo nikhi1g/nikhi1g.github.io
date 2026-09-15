@@ -139,18 +139,16 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         dot.spawnDebris(icon, rect.left, rect.top, vx, 80);
     };
 
-    // The staircase is how the creature travels the page: it hammers treads up
-    // to wherever it needs to stand, climbs them, and the scaffolding comes
-    // down once it has somewhere real to stand. `stairs` owns the geometry and
-    // registers every tread as a physics platform, so the climb is just the
-    // normal walk with step-up.
+    // The staircase is climbed as it is built: one hammer swing raises one
+    // tread, then the creature steps onto that tread before hammering the
+    // next. Stairs get treads plus risers, a ladder gets rungs plus rails
+    // that grow with them — `stairs` owns both — and each step plays one limb
+    // cycle over a scripted move onto the new tread.
     // Mirrors stairs.js WORK_REACH: the top tread lands one arm's reach below
     // the point the creature is aiming for.
     const STAND_OFFSET = 30;
 
-    // One hammer swing, one tread: the tread appears as the swing lands, so the
-    // staircase is literally hammered into place rather than fading in.
-    const buildStairs = async (goalX, standY, keep) => {
+    const buildAndClimb = async (goalX, standY, keep) => {
         if (!stairs || !gait) return false;
         let planned = 0;
         try {
@@ -160,49 +158,26 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         }
         if (!planned) return false;
 
+        const ladder = typeof stairs.activeMode === 'function' && stairs.activeMode() === 'ladder';
+        const mode = ladder ? 'ladder' : 'stairs';
+        const cycleMs = ladder ? 620 : 540;
         const from = dot.pos();
         gait.setFacing(goalX < from.x ? -1 : 1);
         for (let guard = 0; guard < 60 && !stairs.isComplete(); guard += 1) {
             markPoint(goalX, standY);
             await gait.swing('hammer');
             if (!stairs.buildNext()) break;
-            await wait(160);
-        }
-        return stairs.isComplete();
-    };
-
-    // Climb the route one rung at a time. Each rung is a single scripted step of
-    // fixed length with one limb cycle played over it, so the climb is a
-    // sequence of discrete steps rather than a continuous blur — the old
-    // drive-and-snap climb is what made it shake.
-    const climbStairs = async (goalX, standY) => {
-        if (!gait) return false;
-        const ladder = typeof stairs.activeMode === 'function' && stairs.activeMode() === 'ladder';
-        const mode = ladder ? 'ladder' : 'stairs';
-        // One limb cycle per rung, not a fresh animation per rung: restarting
-        // the climb keyframes every step reset the pose to its first frame, so
-        // the limbs looked frozen while the body jerked upward. The limbs cycle
-        // continuously here and only the MOVEMENT is discrete.
-        const cycleMs = ladder ? 620 : 540;
-        const route = typeof stairs.route === 'function' ? stairs.route() : [];
-        if (route.length === 0) return false;
-
-        let started = false;
-        for (const tread of route) {
+            const tread = typeof stairs.lastBuilt === 'function' ? stairs.lastBuilt() : null;
+            if (!tread) continue;
             const centre = (tread.left + tread.right) / 2;
-            const footY = tread.y - dot.radius;
             const p = dot.pos();
-            if (!started || tread === route[route.length - 1]) {
-                gait.climb(centre < p.x ? -1 : 1, mode);
-                started = true;
-            }
-            dot.stepTo(centre, footY, cycleMs);
+            gait.stepClimb(centre < p.x ? -1 : 1, mode);
+            dot.stepTo(centre, tread.y - dot.radius, cycleMs);
             await wait(cycleMs);
         }
-
         gait.stopClimb();
         gait.stop();
-        return true;
+        return stairs.isComplete();
     };
 
     // Walk to an x position with the leg cycle actually playing. `gait.walk`
@@ -250,10 +225,9 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
     // a real ledge first, so the staircase can be cleared behind the creature;
     // without it the top tread stays, because the creature is standing on it.
     const travelTo = async (goalX, standY, standOn = null) => {
-        const built = await buildStairs(goalX, standY, keepStairs);
-        if (!built) return false;
+        const raised = await buildAndClimb(goalX, standY, keepStairs);
+        if (!raised) return false;
         keepStairs = true;
-        await climbStairs(goalX, standY);
         await nudgeTo(goalX);
         if (standOn) {
             dot.addPlatform(standOn.left, standOn.right, standOn.top);
