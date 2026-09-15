@@ -93,9 +93,14 @@
                 </g>
             </g>
             <circle class="skull" cx="15" cy="11" r="11"></circle>
+            <!-- The eyeball is concentric with the skull and kept well inside
+                 it: the sclera was r6.6 offset to (15.6,10.6), which left a
+                 thick crescent of head on one side and almost touched the rim
+                 on the other. The iris is centred on the sclera so a gaze
+                 offset in either direction stays inside the white. -->
             <g id="eyeball">
-            <circle class="sclera" cx="15.6" cy="10.6" r="6.6"></circle>
-            <circle class="iris" id="iris" cx="16.4" cy="12.6" r="3.1"></circle>
+            <circle class="sclera" cx="15.2" cy="10.9" r="5.7"></circle>
+            <circle class="iris" id="iris" cx="15.2" cy="10.9" r="2.8"></circle>
             </g>
         </svg></span></span>
         <span id="version" style="font-size: 0.8rem; color: var(--sub); opacity: 0.6; font-family: monospace; cursor: pointer; padding: 4px;" title="Checking version..."></span>
