@@ -23,6 +23,10 @@ export function createDot() {
     const rollPush = rollVector * 2.4;                 // px/s^2 sustaining that first roll
     const rollCreep = 78;                              // px/s the launch roll decays toward
     const rollFriction = rollPush / rollCreep;         // drag ∝ the shove, so creep is fixed
+    // Deceleration used to ease the launch roll into its stop at the end of the
+    // rule. At the creep speed of 78px/s this brakes over roughly 43px, which
+    // is a visible slowdown rather than a stop you could miss or feel as a wall.
+    const rollBrake = 70;                              // px/s^2
     let dotSelfRoll = true;                            // cleared for good on first user touch
     let dotX = 0;
     let dotY = 0;
@@ -188,20 +192,33 @@ export function createDot() {
             dotVX *= -wallRestitution;
         }
         // The launch roll ends AT the end of the footer rule, one ball's radius
-        // in, and never runs off it. Before this the ball rolled past the rule's
-        // end, dropped to the card floor and bounced off the outer wall; it is
-        // supposed to come to rest on the line it was delivered onto, and only
-        // meet the floor later, once the creature pries that line away.
+        // in, and never runs off it: it is delivered onto that line and should
+        // come to rest on it, meeting the floor only later, once the creature
+        // pries the line away.
+        //
+        // It BRAKES to that stop rather than hitting it. Clamping the position
+        // and zeroing the velocity stopped it dead on the spot, which read as
+        // hitting a wall. Instead the speed is capped by how much room is left:
+        // v <= sqrt(2 * a * remaining) is exactly the speed from which a
+        // constant deceleration `a` comes to rest at the edge and no sooner, so
+        // the ball eases in and settles instead of slamming.
         if (dotSelfRoll && !lineGone) {
             const rollEnd = world.lineRight - dotRadius;
             const rollStart = world.lineLeft + dotRadius;
-            if (dotX > rollEnd) {
-                dotX = rollEnd;
-                dotVX = 0;
-            } else if (dotX < rollStart) {
-                dotX = rollStart;
-                dotVX = 0;
+            if (dotVX > 0) {
+                const room = Math.max(0, rollEnd - dotX);
+                const ceiling = Math.sqrt(2 * rollBrake * room);
+                if (dotVX > ceiling) dotVX = ceiling;
+            } else if (dotVX < 0) {
+                const room = Math.max(0, dotX - rollStart);
+                const ceiling = Math.sqrt(2 * rollBrake * room);
+                if (dotVX < -ceiling) dotVX = -ceiling;
             }
+            // Only a backstop now: with the brake above the ball arrives with
+            // almost no speed left, so this trims the last fraction of a pixel.
+            if (dotX > rollEnd) dotX = rollEnd;
+            else if (dotX < rollStart) dotX = rollStart;
+            if (Math.abs(dotVX) < sleepCreep && (dotX >= rollEnd || dotX <= rollStart)) dotVX = 0;
         }
         if (dotY < world.top) {
             dotY = world.top;
