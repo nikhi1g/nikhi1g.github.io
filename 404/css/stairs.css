@@ -43,7 +43,10 @@
    dot.anchorPlatform, drawn so it is visibly a floor. A heading or a fracture
    decal is not obviously standable, and without this line the creature looks
    like it is standing on nothing. Owned by the platform, so it disappears with
-   it — the same invariant that keeps every surface visible. */
+   it — the same invariant that keeps every surface visible.
+
+   It is DRAWN, not switched on: it grows from the middle out to both edges once
+   the creature is up there and lays it, rather than blinking into existence. */
 .ledge {
     position: fixed;
     height: 2px;
@@ -53,6 +56,20 @@
     opacity: 0.75;
     pointer-events: none;
     z-index: 1;
+    transform: scaleX(0);
+    transform-origin: 50% 50%;
+    transition: transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.ledge.drawn {
+    transform: scaleX(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ledge {
+        transition: none;
+        transform: scaleX(1);
+    }
 }
 
 
