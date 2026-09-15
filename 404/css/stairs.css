@@ -29,6 +29,16 @@
     opacity: 0.85;
 }
 
+/* A plank the creature hammers in to stand and work on — wider and heavier
+   than a rung, because it is a floor rather than a step. */
+.stair.plank {
+    height: 5px;
+    border-radius: 2px;
+    border-top: 1px solid var(--fg);
+    background: var(--sub);
+    opacity: 1;
+}
+
 /* The uprights of a ladder, grown rung by rung with the shaft they hold. */
 .ladder-rail {
     position: fixed;

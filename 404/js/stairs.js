@@ -31,6 +31,11 @@ export function createStairs(dot) {
     // first raises the rails to the height the next rung will sit at, the
     // second lays the rung between them. This is which half comes next.
     let railsReady = false;
+    // Planks are tracked apart from the ladder's own rungs: they are platforms
+    // the creature lays to stand and work on, not steps on a route, so they
+    // must not count toward isComplete() — which compares built rungs against
+    // the planned ones.
+    const planks = [];
 
     const clear = () => {
         for (const record of built) dot.removePlatform(record.id);
@@ -42,6 +47,52 @@ export function createStairs(dot) {
         legs = [];
         railState = null;
         railsReady = false;
+    };
+
+    // A laid plank: a visible platform hammered into place and then stood on.
+    // The creature used to stand on an invisible anchor on the heading itself,
+    // so it appeared to be perched on nothing and had built nothing to perch on.
+    const buildPlank = (left, right, y) => {
+        const element = document.createElement('div');
+        element.className = 'stair plank';
+        element.style.position = 'fixed';
+        element.style.left = `${left}px`;
+        element.style.top = `${y}px`;
+        element.style.width = `${Math.max(0, right - left)}px`;
+        document.body.appendChild(element);
+        // Layout read before the final state, so the build transition actually
+        // runs for the stroke that lays it.
+        void element.offsetWidth;
+        element.classList.add('built');
+        const id = dot.addPlatform(left, right, y);
+        planks.push({id, element});
+        return {left, right, y};
+    };
+
+    // Planks outlive the ladder that reached them, so they come down on their
+    // own: handed to the debris system like everything else the creature made.
+    const dropPlanks = () => {
+        let thrown = 0;
+        for (const record of planks) {
+            dot.removePlatform(record.id);
+            const box = record.element.getBoundingClientRect();
+            if (!box || (box.width < 1 && box.height < 1)) {
+                removeElement(record.element);
+                continue;
+            }
+            record.element.classList.remove('built');
+            dot.spawnDebris(
+                record.element,
+                box.left,
+                box.top,
+                (Math.random() - 0.5) * 200,
+                -50 - Math.random() * 110,
+                (Math.random() - 0.5) * 600
+            );
+            thrown += 1;
+        }
+        planks.length = 0;
+        return thrown;
     };
 
     // `keep` continues an existing ladder instead of replacing it: the new rungs
@@ -251,6 +302,8 @@ export function createStairs(dot) {
     return {
         planTo,
         nextStroke,
+        buildPlank,
+        dropPlanks,
         lastBuilt,
         isComplete,
         demolish,
