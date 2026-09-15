@@ -236,10 +236,10 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         if (!planned) return false;
 
         const cycleMs = 620;
-        gait.setFacing(goalX < shaftX ? -1 : 1);
-        // Every stroke builds something: one raises the rails, the next lays the
-        // rung, and only a laid rung is climbed. The guard is doubled because a
-        // rung now costs two strokes.
+        // Two strokes make one step of ladder and each one shows: the first
+        // lays the rung and carries the rails up with it, the second lays the
+        // tread on that rung. Only the tread is a surface, so only the tread is
+        // climbed onto.
         for (let guard = 0; guard < 130 && !stairs.isComplete(); guard += 1) {
             if (scared) {
                 gait.stopClimb();
@@ -255,13 +255,13 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
             }
             const built = stairs.nextStroke();
             if (!built) break;
-            if (built !== 'rung') continue;
-            const rung = typeof stairs.lastBuilt === 'function' ? stairs.lastBuilt() : null;
-            if (!rung) continue;
-            const centre = (rung.left + rung.right) / 2;
+            if (built !== 'tread') continue;
+            const step = typeof stairs.lastBuilt === 'function' ? stairs.lastBuilt() : null;
+            if (!step) continue;
+            const centre = (step.left + step.right) / 2;
             const p = dot.pos();
             gait.stepClimb(centre < p.x ? -1 : 1, 'ladder');
-            dot.stepTo(centre, rung.y - dot.radius, cycleMs);
+            dot.stepTo(centre, step.y - dot.radius, cycleMs);
             await wait(cycleMs);
         }
         gait.stopClimb();

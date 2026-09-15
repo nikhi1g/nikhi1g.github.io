@@ -30,7 +30,8 @@ export function createStairs(dot) {
     // A rung takes TWO hammer strokes, so every swing produces something: the
     // first raises the rails to the height the next rung will sit at, the
     // second lays the rung between them. This is which half comes next.
-    let railsReady = false;
+    // Which half of the pair comes next: a rung, then the tread laid on it.
+    let treadReady = false;
     // Planks are tracked apart from the ladder's own rungs: they are platforms
     // the creature lays to stand and work on, not steps on a route, so they
     // must not count toward isComplete() — which compares built rungs against
@@ -46,7 +47,7 @@ export function createStairs(dot) {
         plan = [];
         legs = [];
         railState = null;
-        railsReady = false;
+        treadReady = false;
     };
 
     // A laid plank: a visible platform hammered into place and then stood on.
@@ -171,14 +172,37 @@ export function createStairs(dot) {
         legs.push({start: legStart, end: plan.length});
         return plan.length;
     };
-    // Stroke one: carry the uprights up to the next rung's height. The rails
-    // span only what has been built, so they are never taller than the ladder.
-    const raiseRails = () => {
+    // TWO strokes build one step of ladder, and each one has to put something
+    // on the page or it reads as a wasted swing:
+    //
+    //   stroke 1 -> the RUNG: the bar across the rails, carrying the uprights
+    //               up with it. Growing the rails is not a stroke of its own —
+    //               it only nudged them a few pixels, so that swing looked like
+    //               it built nothing and the pair read as three.
+    //   stroke 2 -> the TREAD: the wider board laid on that rung, and the only
+    //               thing registered as a surface. This is what gets stood on,
+    //               so the climb waits for it.
+    const layRung = () => {
         const rect = plan[built.length];
         const leg = legFor(built.length);
         if (!rect || !leg) return false;
 
-        // A ladder's rungs all share one x, so the rails sit on that x.
+        const element = document.createElement('div');
+        element.className = 'stair rung';
+        // Positioned inline as well as in CSS: `body` is a flex container, so a
+        // rung that ever lacked `position: fixed` (a stylesheet that failed to
+        // load, a slow first paint) would become a flex item and steal width
+        // from the card — which moves the physics bounds with it.
+        element.style.position = 'fixed';
+        element.style.left = `${rect.left}px`;
+        element.style.top = `${rect.y}px`;
+        element.style.width = `${Math.max(0, rect.right - rect.left)}px`;
+        document.body.appendChild(element);
+        void element.offsetWidth;
+        element.classList.add('built');
+        elements.add(element);
+
+        // The uprights come up with the rung they carry, on the same stroke.
         if (!railState || railState.leg !== leg) {
             const rails = [];
             for (const x of [rect.left + 1, rect.right - 4]) {
@@ -202,30 +226,30 @@ export function createStairs(dot) {
         return true;
     };
 
-    // Stroke two: the rung itself, which is also the platform to stand on.
-    const layRung = () => {
+    // The tread overhangs the rung a little on each side, so it reads as a
+    // board laid across it rather than a second bar of the same width.
+    const TREAD_OVERHANG = 4;
+
+    const layTread = () => {
         const rect = plan[built.length];
         if (!rect) return false;
 
+        const left = rect.left - TREAD_OVERHANG;
+        const right = rect.right + TREAD_OVERHANG;
         const element = document.createElement('div');
-        element.className = 'stair rung';
-        // Positioned inline as well as in CSS: `body` is a flex container, so a
-        // rung that ever lacked `position: fixed` (a stylesheet that failed to
-        // load, a slow first paint) would become a flex item and steal width
-        // from the card — which moves the physics bounds with it.
+        element.className = 'stair tread';
         element.style.position = 'fixed';
-        element.style.left = `${rect.left}px`;
+        element.style.left = `${left}px`;
         element.style.top = `${rect.y}px`;
-        element.style.width = `${Math.max(0, rect.right - rect.left)}px`;
+        element.style.width = `${Math.max(0, right - left)}px`;
         document.body.appendChild(element);
-
-        // Reading layout before adding the final state makes the CSS transition
-        // run for each individual hammer stroke instead of being skipped.
+        // Layout read before the final state, so the build transition runs for
+        // this stroke rather than being skipped.
         void element.offsetWidth;
         element.classList.add('built');
 
-        const id = dot.addPlatform(rect.left, rect.right, rect.y);
-        built.push({id, element});
+        const id = dot.addPlatform(left, right, rect.y);
+        built.push({id, element, left, right, y: rect.y});
         elements.add(element);
         return true;
     };
@@ -234,14 +258,14 @@ export function createStairs(dot) {
     // so the caller can swing until there is nothing left to make.
     const nextStroke = () => {
         if (built.length >= plan.length) return null;
-        if (!railsReady) {
-            if (!raiseRails()) return null;
-            railsReady = true;
-            return 'rails';
+        if (!treadReady) {
+            if (!layRung()) return null;
+            treadReady = true;
+            return 'rung';
         }
-        if (!layRung()) return null;
-        railsReady = false;
-        return 'rung';
+        if (!layTread()) return null;
+        treadReady = false;
+        return 'tread';
     };
 
     const isComplete = () => built.length === plan.length;
@@ -282,7 +306,7 @@ export function createStairs(dot) {
         plan = [];
         legs = [];
         railState = null;
-        railsReady = false;
+        treadReady = false;
         return thrown;
     };
 
@@ -296,7 +320,9 @@ export function createStairs(dot) {
     // each rung as it is hammered in, so it needs this — not the whole route.
     const lastBuilt = () => {
         if (!built.length) return null;
-        const step = plan[built.length - 1];
+        // The TREAD, not the planned rung: the tread overhangs it and is the
+        // registered surface, so this is the span the climb steps onto.
+        const step = built[built.length - 1];
         return step ? {left: step.left, right: step.right, y: step.y} : null;
     };
     return {

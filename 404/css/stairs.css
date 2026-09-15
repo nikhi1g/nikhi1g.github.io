@@ -29,6 +29,17 @@
     opacity: 0.85;
 }
 
+/* The tread laid on a rung by the second stroke: wider than the rung it sits
+   on and heavier, because this is the surface actually stood on. The pair is
+   what makes both strokes visible — a rung, then a board across it. */
+.stair.tread {
+    height: 4px;
+    border-radius: 2px;
+    border-top: 1px solid var(--fg);
+    background: var(--sub);
+    opacity: 1;
+}
+
 /* A plank the creature hammers in to stand and work on — wider and heavier
    than a rung, because it is a floor rather than a step. */
 .stair.plank {
