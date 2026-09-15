@@ -19,6 +19,9 @@ export function initFigure(dot) {
     // re-sprout until the creature calls sproutFigure. A user drop clears it,
     // so the figure still unfolds on its own after being thrown.
     let manualBall = false;
+    // Set by the creature while it is backing away from the cursor. The rig's
+    // eye is a cone in this state, so aimEye pins the iris instead of aiming it.
+    let squinting = false;
     // When the pointer has been still for a while the creature stops watching it
     // and looks at whatever it is about to do instead. The creature sets this.
     let lookTarget = null;
@@ -71,19 +74,31 @@ export function initFigure(dot) {
         const target = sprouted ? irisEl : pupilEl;
 
         // The gaze bearing, clockwise from twelve o'clock, in SCREEN space —
-        // the mirrored rig must not flip it. The narrowed ball eye is a cone
-        // rotated by this, so it is published before the early return below.
+        // the narrowed eyes are cones rotated by this, so it is published before
+        // the early returns below.
         if (distance) {
-            statusDot.style.setProperty(
-                '--gaze',
-                `${Math.round(Math.atan2(dx, -dy) * 180 / Math.PI)}deg`
-            );
+            const bearing = Math.round(Math.atan2(dx, -dy) * 180 / Math.PI);
+            statusDot.style.setProperty('--gaze', `${bearing}deg`);
+            // The rig gets its own copy. `.face-left` mirrors the whole rig with
+            // `scale: -1 1`, and a reflection is not a rotation: it negates the
+            // bearing. Rotating the eyeball by the raw screen bearing would aim
+            // the cone at the cursor's mirror image whenever it faces left.
+            statusDot.style.setProperty('--gaze-rig', `${bearing * horizontalDirection}deg`);
         }
 
         // While narrowed the cone carries the aim: it is rotated to the bearing
-        // and the pupil is pinned to its wide end by CSS. Translating the pupil
-        // as well would double up on that rotation and slide it off the axis.
+        // and the eye is pinned to its wide end. Translating by the gaze as well
+        // would double up on that rotation and slide it off the axis.
+        //
+        // Ball: CSS pins the pupil, nothing to do here.
         if (manualBall && !sprouted) return;
+        // Rig: the cone is the rotated #eyeball, so the iris is offset in the
+        // eyeball's OWN rotating frame — a fixed step back along its local axis
+        // puts it at the wide end whichever way the cone is pointing.
+        if (squinting && sprouted) {
+            irisEl.style.transform = `translate(${-irisReach}px, 0px)`;
+            return;
+        }
 
         if (!distance) {
             target.style.transform = 'translate(0px, 0px)';
@@ -141,7 +156,8 @@ export function initFigure(dot) {
         pupilEl.style.removeProperty('transform');
         irisEl.style.removeProperty('transform');
         statusDot.classList.remove('sprouted');
-        // The rig's squint belongs to the rig; the ball has its own wedge.
+        // The rig's cone belongs to the rig; the ball wears its own.
+        squinting = false;
         statusDot.classList.remove('squinting');
     };
     // Ordered ball: the creature wants the ball held, eye narrowed and locked
@@ -163,11 +179,16 @@ export function initFigure(dot) {
         statusDot.classList.add('sprouted');
     };
 
-    // The rig narrows its eye while it is backing away from the cursor. This is
-    // the sprouted counterpart of the wary ball's Pac-Man wedge: the rig's eye
-    // is an SVG eyeball, so it squints by closing vertically instead.
+    // The rig narrows its eye while it is backing away from the cursor — the
+    // same cone the wary ball wears, keyed off `.squinting` and aimed by --gaze.
     const setSquint = (on) => {
-        statusDot.classList.toggle('squinting', Boolean(on));
+        const next = Boolean(on);
+        if (next === squinting) return;
+        squinting = next;
+        statusDot.classList.toggle('squinting', squinting);
+        // Leaving the cone: drop the pinned offset so the next aim starts clean.
+        if (!squinting) irisEl.style.removeProperty('transform');
+        aimEye();
     };
     dot.onSleepChange((asleep) => {
         if (asleep) {

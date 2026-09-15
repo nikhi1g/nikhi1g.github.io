@@ -77,11 +77,23 @@
     transform-origin: 15.6px 10.6px;
     transition: transform 0.07s ease-in;
 }
-/* Backing away from the cursor: the rig narrows its eye. The blink rule below
-   is deliberately listed after this one, so a blink still wins over a squint. */
+/* Backing away from the cursor: the rig narrows to the SAME cone the wary ball
+   uses, so the suspicious look is one shape in both states instead of a squash
+   in one and a cone in the other. `transform-box: fill-box` makes the
+   percentages and the rotation origin resolve against the eyeball's own bounding
+   box rather than the whole SVG viewport.
+
+   The iris is pinned to the cone's wide end by figure.js, for the same reason
+   the ball's pupil is: the cone already carries the aim.
+
+   The blink rule below is deliberately listed after this one, so a blink still
+   wins over a squint. */
 .dot.sprouted.squinting #eyeball {
-    transform: scaleY(0.5);
-    transition: transform 0.16s ease-out;
+    transform-box: fill-box;
+    transform-origin: center;
+    transform: rotate(calc(var(--gaze-rig, 0deg) + 90deg));
+    clip-path: polygon(100% 50%, 0% 20%, 0% 80%);
+    transition: transform 0.12s linear;
 }
 .dot.sprouted.blinking #eyeball {
     transform: scaleY(0.08);
@@ -141,7 +153,11 @@
    triangles — the shape can be animated open or shut without touching JS. */
 .dot.asleep.wary:not(.sprouted) > .eye {
     transform: scale(1) rotate(calc(var(--gaze, 0deg) + 90deg));
-    clip-path: polygon(100% 50%, 0% 12%, 0% 88%);
+    /* 22/78 rather than 12/88: at the pupil's position along the axis the cone
+       is then narrower than the pupil is tall, so its edges shave the top and
+       bottom off the black — which is what makes the eye read as suspicious
+       rather than merely small. */
+    clip-path: polygon(100% 50%, 0% 22%, 0% 78%);
     /* The base transition is a spring (overshoot 1.56) tuned for the pop-in
        scale. On a rotation that spring overshoots the cursor and wobbles back,
        and a large change swings past the target — so while tracking, the
