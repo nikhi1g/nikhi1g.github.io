@@ -39,6 +39,22 @@
     pointer-events: none;
 }
 
+/* A ledge the creature has claimed: an element promoted to a real surface by
+   dot.anchorPlatform, drawn so it is visibly a floor. A heading or a fracture
+   decal is not obviously standable, and without this line the creature looks
+   like it is standing on nothing. Owned by the platform, so it disappears with
+   it — the same invariant that keeps every surface visible. */
+.ledge {
+    position: fixed;
+    height: 2px;
+    margin-top: -1px;
+    border-radius: 1px;
+    background: var(--sub);
+    opacity: 0.75;
+    pointer-events: none;
+    z-index: 1;
+}
+
 
 .stair.going {
     opacity: 0.2;
