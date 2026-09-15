@@ -104,7 +104,10 @@
         0% calc(100% - 20% * var(--squint, 1)),
         0% calc(20% * var(--squint, 1))
     );
-    transition: transform 0.12s linear;
+    /* No transition on the rotation: figure.js already smooths the published
+       angle, and a CSS ease chasing a value that is itself being eased is what
+       made the narrowed eye wobble as the cursor moved. */
+    transition: none;
 }
 .dot.sprouted.blinking #eyeball {
     transform: scaleY(0.08);
@@ -175,10 +178,11 @@
         0% calc(22% * var(--squint))
     );
     /* The base transition is a spring (overshoot 1.56) tuned for the pop-in
-       scale. On a rotation that spring overshoots the cursor and wobbles back,
-       and a large change swings past the target — so while tracking, the
-       rotation gets its own short linear ease. */
-    transition: transform 0.12s linear;
+       scale, which on a rotation overshoots the cursor and wobbles back. It is
+       dropped entirely rather than retuned: figure.js smooths the published
+       angle already, and a CSS ease chasing an eased value is what made the
+       narrowed eye jitter while the cursor moved. */
+    transition: none;
 }
 
 /* In the cone the pupil sits at the wide end, on the axis, and the cone's own

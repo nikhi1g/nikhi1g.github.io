@@ -31,6 +31,22 @@ export function initFigure(dot) {
     // whole revolution. null until the first aim.
     let gazeAngle = null;
     let gazeRigAngle = null;
+    // What was last written out: the smoothed value, and the last string, so a
+    // frame that would change nothing does not touch the style at all.
+    let gazeShown = null;
+    let gazeRigShown = null;
+    const written = new Map();
+    const GAZE_SMOOTH = 0.28;      // per-frame approach toward the true bearing
+    const GAZE_DEADBAND = 0.4;     // degrees; below this nothing is rewritten
+
+    const publishAngle = (name, degrees) => {
+        const rounded = Math.round(degrees * 10) / 10;
+        const previous = written.get(name);
+        if (previous !== undefined && Math.abs(previous - rounded) < GAZE_DEADBAND) return;
+        written.set(name, rounded);
+        statusDot.style.setProperty(name, `${rounded}deg`);
+    };
+
     // Carry `raw` to whichever revolution is nearest `prev`: the result differs
     // from prev by at most 180 degrees, so the eye always turns the short way.
     const unwrapAngle = (prev, raw) => {
@@ -99,7 +115,16 @@ export function initFigure(dot) {
             // the shortest delta keeps the published angle continuous, so the
             // eye always turns the short way and never unwinds.
             gazeAngle = unwrapAngle(gazeAngle, bearing);
-            statusDot.style.setProperty('--gaze', `${gazeAngle.toFixed(1)}deg`);
+            // Then SMOOTHED, and only written when it actually moves. The raw
+            // bearing is recomputed every frame from boxes that shift by
+            // fractions of a pixel, and writing that straight out — with a CSS
+            // transition also chasing it — is what made the narrowed eye jitter
+            // and twitch while the cursor moved. A low-pass on the angle plus a
+            // deadband is enough to settle it without adding lag worth seeing.
+            gazeShown = gazeShown === null
+                ? gazeAngle
+                : gazeShown + (gazeAngle - gazeShown) * GAZE_SMOOTH;
+            publishAngle('--gaze', gazeShown);
             // The rig gets its own copy. `.face-left` mirrors the whole rig with
             // `scale: -1 1`, and a reflection is not a rotation: it negates the
             // bearing. Rotating the eyeball by the raw screen bearing would aim
@@ -107,7 +132,10 @@ export function initFigure(dot) {
             // Unwrapped separately, because flipping facing negates the target
             // and would otherwise be its own long way round.
             gazeRigAngle = unwrapAngle(gazeRigAngle, bearing * horizontalDirection);
-            statusDot.style.setProperty('--gaze-rig', `${gazeRigAngle.toFixed(1)}deg`);
+            gazeRigShown = gazeRigShown === null
+                ? gazeRigAngle
+                : gazeRigShown + (gazeRigAngle - gazeRigShown) * GAZE_SMOOTH;
+            publishAngle('--gaze-rig', gazeRigShown);
         }
 
         // While narrowed the cone carries the aim: it is rotated to the bearing
@@ -226,8 +254,13 @@ export function initFigure(dot) {
     // continuously with how near the cursor is, so the creature looks more
     // suspicious the more hurried it is.
     const setSquint = (level) => {
-        const next = Number.isFinite(level) ? Math.min(1, Math.max(0, level)) : 0;
+        const raw = Number.isFinite(level) ? Math.min(1, Math.max(0, level)) : 0;
+        // Quantised to 2%, because the clip-path is rebuilt from this value on
+        // every write and a continuously jittering fraction shimmers the eye's
+        // edges for no visible gain.
+        const next = Math.round(raw * 50) / 50;
         const wasOn = squinting > 0;
+        if (next === squinting) return;
         squinting = next;
         statusDot.style.setProperty('--squint', String(next));
         // Kept off entirely below a threshold, so a cursor loitering at the very
