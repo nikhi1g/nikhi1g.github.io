@@ -164,13 +164,35 @@ ball is 20px and the sprouted figure is a ~30×74 SVG that overflows it, so
 measuring `.dot` senses only the head.
 
 - **A direct poke always wins**, even mid-phase: the creature hops up and away,
-  curls into a ball, and watches the cursor suspiciously for `SCARE_MS` with its
-  eye narrowed (`.wary`) and its pupil tracking the pointer. The stare is timed
-  from the **landing**, because that is when the ball's eye appears. Release
-  needs the cursor well clear (`SCARE_RELEASE`), or a still cursor re-triggers
-  the hop forever. The ladder it was on is knocked down with it.
+  curls into a ball, and watches the cursor suspiciously for `SCARE_MS`. The
+  stare is timed from the **landing**, because that is when the ball's eye
+  appears — a bouncing ball shows no eye at all, which is also why any probe
+  must wait for `.asleep` before photographing it. Release needs the cursor well
+  clear (`SCARE_RELEASE`), or a still cursor re-triggers the hop forever. The
+  ladder it was on is knocked down with it.
 - **Mere proximity** only walks it away, and only while it is not `working` —
-  otherwise a passing cursor drags the creature off its own ladder.
+  otherwise a passing cursor drags the creature off its own ladder. It narrows
+  its eye while retreating (`.squinting`), set together with `fleeing` so the
+  squint can never be left on after it stops backing away.
+
+### The narrowed eye
+
+Two states, because the ball and the rig have different eyes:
+
+- **Ball (`.wary`)** — the white disc is clipped to a **cone**: apex forward,
+  wide end at the back, with the pupil pinned to the wide end. The whole eye is
+  rotated to `--gaze` (published by `figure.js` as a bearing clockwise from
+  twelve o'clock, in screen space) so the apex aims at the cursor. Because the
+  cone carries the aim, `aimEye` deliberately does **not** also translate the
+  pupil in this state — doing both doubles the rotation and slides the pupil off
+  the axis. Narrowing is one `clip-path`, so intermediate stages are just wider
+  triangles.
+- **Rig (`.squinting`)** — an SVG eyeball cannot take a `clip-path` wedge as
+  cleanly, so it closes vertically instead. The blink rule is listed after it so
+  a blink still wins over a squint.
+
+Never narrow the eye with `scaleY` on `.eye`: it scales the pupil along with the
+sclera, and the eye reads as a thin crescent with a smeared pupil.
 
 Only a user grab or drop curls the figure back into a ball. A fall or a scripted
 hop does not: `dot.consumeDrop()` latches the release so the creature's own
