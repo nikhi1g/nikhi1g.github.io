@@ -96,9 +96,22 @@ export function createDot() {
         const existing = platforms.find((platform) => platform.el === element);
         if (existing) return existing.id;
         const id = ++platformSeq;
-        platforms.push({id, el: element, left: 0, right: 0, y: 0, kind: 'platform'});
+        // An anchored ledge gets a drawn line along its top edge. A heading or a
+        // decal is not visibly a floor, so without this the creature appears to
+        // stand on nothing; the rule it started on was a real line, and this
+        // keeps every surface it uses just as legible.
+        const mark = document.createElement('span');
+        mark.className = 'ledge';
+        mark.setAttribute('aria-hidden', 'true');
+        mark.style.position = 'fixed';
+        document.body.appendChild(mark);
+        platforms.push({id, el: element, mark, left: 0, right: 0, y: 0, kind: 'platform'});
         refreshAnchors();
         return id;
+    };
+    const dropPlatform = (index) => {
+        const [gone] = platforms.splice(index, 1);
+        if (gone && gone.mark) gone.mark.remove();
     };
     // Resolved once per animation frame rather than per surface query: the
     // integrator runs at a fixed 240Hz substep and asks for surfaces several
@@ -109,22 +122,27 @@ export function createDot() {
             const platform = platforms[i];
             if (!platform.el) continue;
             if (!platform.el.isConnected) {
-                platforms.splice(i, 1);
+                dropPlatform(i);
                 continue;
             }
             const box = platform.el.getBoundingClientRect();
             if (box.width < 1 || box.height < 1) {
-                platforms.splice(i, 1);
+                dropPlatform(i);
                 continue;
             }
             platform.left = box.left;
             platform.right = box.right;
             platform.y = box.top - dotRadius;
+            if (platform.mark) {
+                platform.mark.style.left = `${box.left}px`;
+                platform.mark.style.top = `${box.top}px`;
+                platform.mark.style.width = `${box.width}px`;
+            }
         }
     };
     const removePlatform = (id) => {
         const i = platforms.findIndex((p) => p.id === id);
-        if (i >= 0) platforms.splice(i, 1);
+        if (i >= 0) dropPlatform(i);
     };
     const surfacesAt = (x) => {
         const world = dotWorld();
@@ -369,13 +387,28 @@ export function createDot() {
             height
         });
     };
+    // Boot a piece that has already settled: it stops resting, takes the given
+    // velocity, and with `escape` it ignores the walls and floors entirely so it
+    // can leave the page instead of bouncing around inside the card. It is
+    // dropped from the simulation once it is clear of the viewport.
+    const kickDebris = (el, vx, vy, spin = null, escape = false) => {
+        const bit = debris.find((entry) => entry.el === el);
+        if (!bit) return false;
+        bit.resting = false;
+        bit.vx = vx;
+        bit.vy = vy;
+        if (Number.isFinite(spin)) bit.spin = spin;
+        bit.escape = escape;
+        return true;
+    };
     const clearDebris = () => {
         debris.length = 0;
     };
     const stepDebris = (dt) => {
         if (!debris.length) return;
         const world = dotWorld();
-        for (const bit of debris) {
+        for (let i = debris.length - 1; i >= 0; i -= 1) {
+            const bit = debris[i];
             if (bit.resting) continue;
             bit.vy += gravity * dt;
             bit.vx -= bit.vx * airDrag * dt;
@@ -385,6 +418,22 @@ export function createDot() {
             bit.rot += bit.spin * dt;
             const w = Number.isFinite(bit.width) ? bit.width : 0;
             const h = Number.isFinite(bit.height) ? bit.height : 0;
+
+            // Kicked clear of the page: no walls, no floors. Once it is fully
+            // outside the viewport it is gone for good.
+            if (bit.escape) {
+                if (bit.x + w < -40 || bit.x > window.innerWidth + 40
+                    || bit.y + h < -40 || bit.y > window.innerHeight + 40) {
+                    bit.el.remove();
+                    debris.splice(i, 1);
+                    continue;
+                }
+                bit.el.style.left = `${bit.x}px`;
+                bit.el.style.top = `${bit.y}px`;
+                bit.el.style.transform = `rotate(${bit.rot}deg)`;
+                continue;
+            }
+
             const minX = Math.min(world.left, world.right - w);
             const maxX = Math.max(world.left, world.right - w);
             if (bit.x < minX || bit.x > maxX) {
