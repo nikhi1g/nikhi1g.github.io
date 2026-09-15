@@ -799,8 +799,7 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         scared = true;
         scareSettled = false;
         const away = awayFromPointer();
-        fleeing = false;
-        gait.stop();
+        setFleeing(false);
         gait.stopClimb();
         gait.putAway();
         gait.setFacing(away);
@@ -818,6 +817,14 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         lastKick = performance.now();
         runId += 1;
         void run(runId);
+    };
+
+    // Backing away and narrowing the eye are the same state, so they are set
+    // together — the squint can never be left on after it stops retreating.
+    const setFleeing = (on) => {
+        fleeing = on;
+        if (!on) gait.stop();
+        if (figure && typeof figure.setSquint === 'function') figure.setSquint(on);
     };
     const updateFlee = () => {
         const gap = pointerGap();
@@ -847,18 +854,14 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         // Mere proximity only walks it away, and only when it is not working —
         // otherwise a cursor drifting past drags it off its own ladder.
         if (working || !dot.el.classList.contains('sprouted')) {
-            if (fleeing) {
-                fleeing = false;
-                gait.stop();
-            }
+            if (fleeing) setFleeing(false);
             return;
         }
         if (gap < FLEE_GAP) {
             gait.walk(awayFromPointer());
-            fleeing = true;
+            setFleeing(true);
         } else if (fleeing) {
-            fleeing = false;
-            gait.stop();
+            setFleeing(false);
         }
     };
 
