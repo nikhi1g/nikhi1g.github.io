@@ -98,6 +98,7 @@ export function createPeel(root) {
         document.body.appendChild(curl);
         place();
         window.addEventListener('resize', place);
+        window.addEventListener('scroll', place, {passive: true});
         return true;
     }
 
@@ -171,6 +172,7 @@ export function createPeel(root) {
     function reset() {
         stop();
         window.removeEventListener('resize', place);
+        window.removeEventListener('scroll', place);
         if (curl && curl.isConnected) curl.remove();
         curl = null;
         bedEl = null;
