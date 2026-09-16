@@ -4,10 +4,8 @@ export function initVersionWatcher() {
         const el = document.getElementById('version');
         const dot = document.querySelector('.dot');
         const inquiryCommit = document.getElementById('inquiry-commit');
-        const inquiryEmail = document.getElementById('inquiry-email');
         const setInquiryCommit = (commit) => {
             inquiryCommit.textContent = commit;
-            inquiryEmail.href = 'mailto:2nikhilg@gmail.com?subject=' + encodeURIComponent('[' + commit + ']');
         };
         let localCommit = null;
 
