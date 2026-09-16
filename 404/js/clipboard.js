@@ -35,6 +35,16 @@ export function initClipboard() {
         event.preventDefault();
         copyText(inquiryCommitEl.textContent.trim(), event, inquiryCommitEl, 'down');
     });
+    // The copy targets and the version label are spans acting as buttons, so
+    // they take Enter and Space like one.
+    for (const el of [inquiryEmail, inquiryCommitEl, version]) {
+        el.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            event.stopPropagation();
+            el.click();
+        });
+    }
     version.addEventListener('click', (event) => {
         event.preventDefault();
         const commit = version.dataset.commit || version.textContent.split('→').pop().replace('↻', '').trim();
