@@ -207,7 +207,7 @@ async function main() {
             rule: document.querySelectorAll('.pried-rule').length,
             ruleGone: !!document.querySelector('footer.rule-gone'),
             ruleShards: document.querySelectorAll('.rule-shard').length,
-            stairs: document.querySelectorAll('.stair').length,
+            stairs: document.querySelectorAll('.stair:not(.wrecked)').length,
             sawHalves: document.querySelectorAll('.saw-half').length,
             catches: document.querySelectorAll('.fish-catch').length,
             rod: document.querySelectorAll('#rod').length,
