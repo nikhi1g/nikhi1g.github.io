@@ -249,7 +249,114 @@ export function createDot() {
             if (below) dotY = Math.min(dotY + gravity * dt * dt, below.y);
         }
     };
+    // Everything the simulation owns lives in viewport pixels, but the card it
+    // plays on does not stay put: a resize, a zoom, a scroll or a rotated phone
+    // moves it, and a narrower window rewraps the text and changes its height.
+    // Left alone, the dot, the debris and every built platform would stay where
+    // the card USED to be, and the creature would drop out of a card that had
+    // slid out from under it.
+    //
+    // So once per frame the card's box is compared with the last one, and any
+    // change is applied to the whole world at once as a mapping from the old box
+    // to the new one. Positions are carried proportionally rather than just
+    // translated: a ladder standing on the floor has to stay on the floor when
+    // the card gets shorter, and something by the heading has to stay by the
+    // heading. Sizes are kept, so a piece is moved, never stretched.
+    const shiftListeners = [];
+    const onShift = (fn) => {
+        shiftListeners.push(fn);
+    };
+    // Fixed layers that position themselves (or cover the viewport) and so must
+    // not be moved a second time here.
+    const SELF_PLACED = '.copy-toast, .peel-curl, .fishing-line-layer';
+    let cardBox = null;
+    const followCard = () => {
+        const card = mainEl.getBoundingClientRect();
+        const next = {left: card.left, top: card.top, width: card.width, height: card.height};
+        const prev = cardBox;
+        cardBox = next;
+        if (!prev || prev.width < 1 || prev.height < 1 || next.width < 1 || next.height < 1) return;
+        const same = Math.abs(prev.left - next.left) < 0.01 && Math.abs(prev.top - next.top) < 0.01
+            && Math.abs(prev.width - next.width) < 0.01 && Math.abs(prev.height - next.height) < 0.01;
+        if (same) return;
+        const mapX = (x) => next.left + (x - prev.left) * (next.width / prev.width);
+        const mapY = (y) => next.top + (y - prev.top) * (next.height / prev.height);
+        // A span keeps its width and moves by where its centre lands.
+        const mapSpan = (left, right) => {
+            const offset = mapX((left + right) / 2) - (left + right) / 2;
+            return [left + offset, right + offset];
+        };
+
+        const wasOnGround = surfaceNow === 'ground';
+        dotX = mapX(dotX);
+        dotY = mapY(dotY + dotRadius) - dotRadius;
+        if (stepFrom) {
+            stepFrom = {x: mapX(stepFrom.x), y: mapY(stepFrom.y + dotRadius) - dotRadius};
+            stepGoal = {x: mapX(stepGoal.x), y: mapY(stepGoal.y + dotRadius) - dotRadius};
+        }
+        for (const platform of platforms) {
+            if (platform.el) continue;
+            [platform.left, platform.right] = mapSpan(platform.left, platform.right);
+            platform.y = mapY(platform.y + dotRadius) - dotRadius;
+        }
+        const tracked = new Set();
+        for (const bit of debris) {
+            tracked.add(bit.el);
+            [bit.x] = mapSpan(bit.x, bit.x + (bit.width || 0));
+            bit.y = mapY(bit.y + (bit.height || 0)) - (bit.height || 0);
+            // Let every piece resettle onto whatever floor is under it now.
+            if (!bit.escape) bit.resting = false;
+            bit.el.style.left = `${bit.x}px`;
+            bit.el.style.top = `${bit.y}px`;
+        }
+        for (const element of document.body.children) {
+            if (element === statusDot || tracked.has(element)) continue;
+            if (element.matches(SELF_PLACED)) continue;
+            if (getComputedStyle(element).position !== 'fixed') continue;
+            const left = parseFloat(element.style.left);
+            const top = parseFloat(element.style.top);
+            const box = element.getBoundingClientRect();
+            if (Number.isFinite(left)) {
+                element.style.left = `${mapSpan(left, left + box.width)[0]}px`;
+            }
+            if (!Number.isFinite(top)) continue;
+            const height = parseFloat(element.style.height);
+            if (element.classList.contains('ladder-rail') && Number.isFinite(height)) {
+                // A rail spans rungs, so both of its ends follow them.
+                const newTop = mapY(top);
+                element.style.top = `${newTop}px`;
+                element.style.height = `${Math.max(0, mapY(top + height) - newTop)}px`;
+            } else {
+                element.style.top = `${mapY(top + box.height) - box.height}px`;
+            }
+        }
+        if (wasOnGround) dotY = dotWorld().ground;
+        for (const listener of shiftListeners) {
+            try {
+                listener(mapSpan, mapY);
+            } catch (e) {
+                void e;
+            }
+        }
+    };
+    // Backstop for the mapping above: whatever else moves the dot, it must never
+    // be left outside the card's walls or under its floor, where no surface
+    // would ever catch it again.
+    const settleIntoWorld = () => {
+        if (dotDragging) return;
+        const world = dotWorld();
+        if (dotX < world.left || dotX > world.right) {
+            dotX = Math.max(world.left, Math.min(world.right, dotX));
+            if (!stepGoal) dotVX = 0;
+        }
+        if (dotY > world.ground) {
+            dotY = world.ground;
+            if (dotVY > 0) dotVY = 0;
+        }
+    };
     const animateDot = (time) => {
+        followCard();
+        settleIntoWorld();
         // Anchored platforms track their elements once per frame, before the
         // substeps read them.
         refreshAnchors();
@@ -300,6 +407,7 @@ export function createDot() {
         statusDot.remove();
         document.body.appendChild(statusDot);
         placeDot();
+        cardBox = null;
         requestAnimationFrame(animateDot);
     };
     statusDot.addEventListener('pointerdown', (event) => {
@@ -498,6 +606,7 @@ export function createDot() {
         start,
         onSleepChange,
         onStep,
+        onShift,
         isAsleep: () => dotAsleep,
         isDragging: () => dotDragging,
         isGrounded: () => contactNow,

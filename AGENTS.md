@@ -157,6 +157,19 @@ thing is **demolished**: rungs and rails stop being platforms and are handed to
 the debris system to fall and clutter the floor, where the sweep and vacuum
 passes collect them like anything else.
 
+### When the card moves
+
+Everything is positioned in viewport pixels, but the card is not fixed: a
+resize, zoom, scroll or phone rotation moves it and can change its height.
+`physics.js` compares the card's box every frame and, on any change, maps the
+whole world from the old box to the new one — the dot, debris, unanchored
+platforms, and every `position: fixed` element parked on `body`. Positions map
+proportionally so floor pieces stay on the floor; sizes are kept. A module that
+caches coordinates of its own must follow along through `dot.onShift((mapSpan,
+mapY) => …)`, as `stairs.js` does for its planned route, or its next piece is
+laid where the card used to be. Fixed layers that place themselves are listed in
+`SELF_PLACED` and skipped.
+
 ### The cursor
 
 Sensing is measured as a gap to the **rig's** box (`.figure`), not `.dot` — the

@@ -38,6 +38,22 @@ export function createStairs(dot) {
     // the planned ones.
     const planks = [];
 
+    // The card moved or changed size (resize, zoom, scroll): the physics has
+    // already carried the elements and platforms with it, so only the cached
+    // route has to follow, or the next rung would be laid where it used to be.
+    if (typeof dot.onShift === 'function') {
+        dot.onShift((mapSpan, mapY) => {
+            for (const step of [...plan, ...built]) {
+                [step.left, step.right] = mapSpan(step.left, step.right);
+                step.y = mapY(step.y);
+            }
+            if (railState) {
+                railState.top = mapY(railState.top);
+                railState.bottom = mapY(railState.bottom);
+            }
+        });
+    }
+
     const clear = () => {
         for (const record of built) dot.removePlatform(record.id);
         for (const element of elements) removeElement(element);
