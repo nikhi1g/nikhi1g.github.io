@@ -3,6 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+<script>
+// Resolve the theme before anything paints: a saved choice, else the system
+// preference. Set here, in the head, so a dark page never paints light first.
+(function () {
+    var saved = null;
+    try { saved = localStorage.getItem('theme'); } catch (e) {}
+    var dark = saved === 'dark' || (saved !== 'light'
+        && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+})();
+</script>
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Page not found - Nikhil Gupta">
 <title>Page not found · Nikhil Gupta</title>
@@ -113,11 +125,11 @@
             <circle class="iris" id="iris" cx="15.2" cy="10.9" r="2.8"></circle>
             </g>
         </svg></span></span>
-        <span id="version" style="font-size: 0.8rem; color: var(--sub); opacity: 0.6; font-family: monospace; cursor: pointer; padding: 4px;" title="Checking version..."></span>
+        <span id="version" role="button" tabindex="0" style="font-size: 0.8rem; color: var(--sub); opacity: 0.6; font-family: monospace; cursor: pointer; padding: 4px;" title="Checking version..."></span>
         <button id="theme-toggle" aria-label="Toggle theme" style="margin-left: auto; background: none; border: none; cursor: pointer; color: var(--sub); padding: 8px; display: flex;">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path class="sun" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l.707-.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
-                <path class="moon" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" style="display: none;"></path>
+                <path class="moon" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"></path>
             </svg>
         </button>
     </header>
@@ -129,7 +141,7 @@
     </section>
 
     <footer>
-        <span>For any inquiries, please email <a id="inquiry-email" href="mailto:2nikhilg@gmail.com">2nikhilg@gmail.com</a> with [<span id="inquiry-commit">...</span>] in the subject line.</span>
+        <span>For any inquiries, please email <a id="inquiry-email" role="button" tabindex="0" title="Copy email">2nikhilg@gmail.com</a> with [<span id="inquiry-commit" role="button" tabindex="0" title="Copy commit">...</span>] in the subject line.</span>
     </footer>
 </main>
 
