@@ -181,6 +181,17 @@ export function initFigure(dot) {
         // the air, so the aim is not gated on being settled.
         if (dot.isAsleep() || manualBall) aimEye();
     });
+    // Forget the pointer once it leaves the window or the window loses
+    // focus: a stale position would keep it retreating and squinting at a
+    // cursor that is no longer there.
+    const forgetPointer = () => {
+        mouseX = null;
+        mouseY = null;
+    };
+    document.addEventListener('mouseout', (event) => {
+        if (!event.relatedTarget) forgetPointer();
+    });
+    window.addEventListener('blur', forgetPointer);
     // Idle blinks: a lid-drop every few seconds, sometimes twice in quick succession.
     let blinkTimer;
     let sproutTimer;

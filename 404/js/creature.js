@@ -1138,6 +1138,17 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
             mouseY = event.clientY;
             lastMouseMove = performance.now();
         });
+        // Forget the pointer once it leaves the window or the window loses
+        // focus: a stale position would keep it retreating and squinting at a
+        // cursor that is no longer there.
+        const forgetPointer = () => {
+            mouseX = null;
+            mouseY = null;
+        };
+        document.addEventListener('mouseout', (event) => {
+            if (!event.relatedTarget) forgetPointer();
+        });
+        window.addEventListener('blur', forgetPointer);
         dot.onStep(updateFlee);
         dot.onStep(updateGaze);
         dot.onSleepChange(onSleepChange);
