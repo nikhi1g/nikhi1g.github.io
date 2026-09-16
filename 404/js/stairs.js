@@ -274,7 +274,8 @@ export function createStairs(dot) {
     // stops being a platform, leaves this module's bookkeeping, and is handed
     // to the debris system to fall and clutter the floor. The pieces stay in
     // the DOM as `.stair` / `.ladder-rail`, which is exactly what the sweep and
-    // vacuum passes collect.
+    // vacuum passes collect, and are marked `.wrecked` so wreckage is never
+    // mistaken for a standing ladder.
     const demolish = () => {
         if (!built.length && !elements.size) return 0;
 
@@ -290,6 +291,7 @@ export function createStairs(dot) {
             // Knocked off its footing: a shove outward from where it stood,
             // a little lift, and a tumble on the way down.
             element.classList.remove('built');
+            element.classList.add('wrecked');
             dot.spawnDebris(
                 element,
                 box.left,
