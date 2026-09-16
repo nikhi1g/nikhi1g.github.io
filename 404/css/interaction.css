@@ -50,12 +50,22 @@
 .copy-toast.show.down {
     animation-name: copy-sink;
 }
+#inquiry-email {
+    cursor: pointer;
+}
 #inquiry-commit {
     cursor: pointer;
     font-family: monospace;
 }
 #inquiry-commit:hover {
     color: var(--acc);
+}
+#inquiry-email:focus-visible,
+#inquiry-commit:focus-visible,
+#version:focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: 2px;
+    border-radius: 3px;
 }
 @media (prefers-reduced-motion: reduce) {
     .copy-toast.show {
