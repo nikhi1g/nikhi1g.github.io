@@ -5,6 +5,17 @@
     --acc: #0969da;
     --sub: #57606a;
 }
+html[data-theme="light"] {
+    color-scheme: light;
+}
+html[data-theme="dark"] {
+    color-scheme: dark;
+}
+/* The toggle shows the theme it switches TO. */
+html[data-theme="dark"] #theme-toggle .moon,
+html:not([data-theme="dark"]) #theme-toggle .sun {
+    display: none;
+}
 html[data-theme="dark"] {
     /* GitHub Dark Dimmed */
     --bg: #22272e;
@@ -22,6 +33,8 @@ body {
     justify-content: center;
     align-items: center;
     min-height: 100vh;
+    /* The visible height on mobile, where 100vh includes the browser bars. */
+    min-height: 100dvh;
     -webkit-font-smoothing: antialiased;
     transition: background-color 0.4s ease, color 0.4s ease;
     font-size: 18px;
@@ -42,6 +55,7 @@ main {
         width: calc(100% - 2rem);
         max-width: 100%;
         min-height: calc(100vh - 2rem);
+        min-height: calc(100dvh - 2rem);
         margin: 1rem;
         padding: 1.5rem;
         display: flex;
