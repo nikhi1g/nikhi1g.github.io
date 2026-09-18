@@ -207,6 +207,51 @@ async function main() {
             rule: document.querySelectorAll('.pried-rule').length,
             ruleGone: !!document.querySelector('footer.rule-gone'),
             ruleShards: document.querySelectorAll('.rule-shard').length,
+            // Anything left hanging in mid-air. The rule is where the spent
+            // arrows and the knocked-off glyphs come to rest, so once it has
+            // shattered there is no surface left at that height at all: a loose
+            // piece sitting there has lost its support. Three polls in the same
+            // spot decides it — a piece in flight moves every frame, and one
+            // that has just started to fall has moved by the next poll, so only
+            // a genuinely stranded piece holds still for two intervals running.
+            stranded: (function () {
+                const state = window.__stranded
+                    || (window.__stranded = {prev: new WeakMap(), shattered: false});
+                state.shattered = state.shattered
+                    || document.querySelectorAll('.rule-shard').length > 0;
+                const main = document.querySelector('main');
+                if (!main) return 0;
+                const floor = main.getBoundingClientRect().bottom - 24;
+                // What counts as loose: the pieces the rule can be holding up —
+                // the glyphs shot off the heading, the spent weapons that came to
+                // rest on it — and anything broken off after it, which falls to
+                // the floor like everything else. The ladder's rungs and rails
+                // are pointedly NOT here: they are built after the rule is gone,
+                // so they can never be left on it, and a standing one is
+                // scaffolding the creature is using rather than a piece hanging
+                // in the air. (Thrown stair pieces are still caught by the sweep
+                // and vacuum milestones.)
+                const loose = 'body > .letter, body > .word, body > .fish-catch,'
+                    + ' body > .bone-arrow, body > .bone-axe-thrown, body > .rule-shard,'
+                    + ' body > .damage-fragment, body > .saw-half';
+                let count = 0;
+                for (const el of document.querySelectorAll(loose)) {
+                    const box = el.getBoundingClientRect();
+                    const was = state.prev.get(el);
+                    const frozen = !!was
+                        && Math.abs(was.left - box.left) < 2
+                        && Math.abs(was.top - box.top) < 2;
+                    state.prev.set(el, {
+                        left: box.left,
+                        top: box.top,
+                        still: frozen ? (was.still || 0) + 1 : 0
+                    });
+                    if (state.shattered && frozen && (was.still || 0) >= 1 && box.bottom < floor) {
+                        count += 1;
+                    }
+                }
+                return count;
+            })(),
             stairs: document.querySelectorAll('.stair:not(.wrecked)').length,
             sawHalves: document.querySelectorAll('.saw-half').length,
             catches: document.querySelectorAll('.fish-catch').length,
@@ -256,6 +301,10 @@ async function main() {
             const pryOk = !EXPECT_PRY || (milestones.ruleGone === true && (peak.ruleShards || 0) > 0);
             const sawOk = !EXPECT_SAW || ((peak.sawHalves || 0) >= 2 && (peak.stairs || 0) > 0);
             const catchOk = (peak.catches || 0) >= EXPECT_CATCHES;
+            // Nothing may be left hanging: a piece still parked in mid-air where
+            // the shattered rule used to be is a failure at any poll, so this
+            // count is asserted on its peak rather than on the final snapshot.
+            const strandedOk = (peak.stranded || 0) === 0;
             // Opt-in: the cleanup pass only starts once the fishing loop has
             // finished the whole sentence, which runs for minutes.
             const cleanOk = !EXPECT_CLEANUP || (milestones.wiped === true && (milestones.remains || 0) === 0);
@@ -263,7 +312,7 @@ async function main() {
             // only be judged on the peak: he must at some point have stood on
             // the heading rather than fishing from the floor.
             const perchOk = !EXPECT_CLEANUP || peak.perched === true;
-            if (debrisOk && holeOk && axeOk && pryOk && sawOk && catchOk && cleanOk && perchOk) {
+            if (debrisOk && holeOk && axeOk && pryOk && sawOk && catchOk && cleanOk && perchOk && strandedOk) {
                 milestonePass = true;
                 break;
             }
@@ -282,6 +331,9 @@ async function main() {
         }
         if (EXPECT_PRY && !(milestones.ruleGone === true && (peak.ruleShards || 0) > 0)) {
             milestoneFailures.push({kind: 'milestone', text: 'footer rule was never cracked and shattered'});
+        }
+        if ((peak.stranded || 0) > 0) {
+            milestoneFailures.push({kind: 'milestone', text: `${peak.stranded} loose piece(s) left hanging where the broken rule was`});
         }
         if (EXPECT_SAW && !((peak.sawHalves || 0) >= 2)) {
             milestoneFailures.push({kind: 'milestone', text: `saw halves ${peak.sawHalves || 0} < 2`});

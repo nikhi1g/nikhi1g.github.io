@@ -60,9 +60,19 @@ export function createDot() {
     };
     // The footer rule is a real floor until the creature pries it off; after
     // that the card bottom is the only fixed surface left.
+    //
+    // Everything that was lying on it goes down with it. Once the rule is
+    // broken there is no surface there at all, so a piece left resting on it
+    // would hang in the air where its support used to be — and the rule is
+    // exactly where the spent arrows and the glyphs shot off the heading settle.
     let lineGone = false;
     const dropLine = () => {
         lineGone = true;
+        for (const bit of debris) {
+            if (!bit.resting || !bit.onLine) continue;
+            bit.resting = false;
+            bit.onLine = false;
+        }
     };
     const dotWorld = () => {
         const card = mainEl.getBoundingClientRect();
@@ -509,6 +519,8 @@ export function createDot() {
             rot: 0,
             spin: Number.isFinite(spin) ? spin : (Math.random() - 0.5) * 600,
             resting: false,
+            // Whether the surface it went to sleep on was the footer rule.
+            onLine: false,
             width,
             height
         });
@@ -571,10 +583,10 @@ export function createDot() {
             // the rule's span and its bottom edge was above the rule last step,
             // so wide glyphs can't slip through at their edges.
             const prevBottom = prevY + h;
-            const overlapsLine = !world.lineGone && bit.x + w > world.lineLeft && bit.x < world.lineRight;
-            const surface = overlapsLine && prevBottom <= world.lineY + dotRadius + 0.5
-                ? world.lineY
-                : world.ground;
+            const onLine = !world.lineGone
+                && bit.x + w > world.lineLeft && bit.x < world.lineRight
+                && prevBottom <= world.lineY + dotRadius + 0.5;
+            const surface = onLine ? world.lineY : world.ground;
             // Rest the bottom edge exactly on the surface instead of floating
             // one dot-radius above it.
             const floor = Math.max(world.top, surface + dotRadius - h);
@@ -588,6 +600,10 @@ export function createDot() {
                     if (Math.abs(bit.vx) < sleepCreep) {
                         bit.vx = 0;
                         bit.resting = true;
+                        // What it settled ON, not just where: the rule is the one
+                        // surface that can be broken out from under it later, and
+                        // the piece has to know it is the one it is lying on.
+                        bit.onLine = onLine;
                     }
                 }
             }

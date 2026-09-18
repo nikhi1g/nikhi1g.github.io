@@ -34,6 +34,7 @@ clean run. The harness therefore also asserts the observable end state:
 | `hole > 0` | the fracture decal took the theme icon's socket |
 | `iconHome === false` | the icon actually left the header |
 | `ruleGone` + `rule > 0` | the footer rule was pried off and handed to physics |
+| `stranded === 0` | nothing was left hanging in mid-air where the broken rule was |
 | `sawHalves >= 2` + `stairs > 0` | the paragraph was sawed in half from a hammered ladder |
 | `catches >= 1` + `rod > 0` | the rod appeared and a word was fished off the page |
 | `wiped` and `remains === 0` | the cleanup pass removed the socket and every loose piece |
@@ -48,6 +49,15 @@ cleans up must be asserted on `peak`.
 word by word at roughly 2.8s each, so a full sweep runs for minutes. Raise it
 with `--expect-catches <n>` when testing the whole finale, and add
 `--expect-cleanup` to require phases 7-9 to finish.
+
+`stranded` runs the other way round from every other milestone: it is a count
+that has to stay at `0`, so its peak is a failure rather than a pass. The footer
+rule is where the spent arrows and the knocked-off glyphs settle — it is the one
+surface they rest on above the floor — so when it shatters, physics has to drop
+them with it. The probe calls a piece stranded only when three polls in a row
+find it in exactly the same spot while it sits above the floor: a piece in
+flight moves every frame, and one that has just started to fall has still moved
+by the next poll, so nothing else can hold still for two full intervals.
 
 If you add a phase, add its milestone. An assertion that can't fail is worse
 than no assertion.
@@ -121,7 +131,9 @@ and written so a wake mid-flight resumes rather than restarts:
 1. **volley** — three arrows knock the `404` glyphs off.
 2. **finale** — a thrown axe takes the theme icon; a fracture decal holds the socket.
 3. **pry** — the axe handle levers the footer rule off, permanently removing
-   that walkable surface.
+   that walkable surface. Two blows: the first cracks it, the second shatters
+   it, and every piece that was resting on it — the spent arrows and the
+   knocked-off glyphs — goes down to the floor with it.
 4. **saw** — a ladder is hammered up to the paragraph and it is sawed in half.
 5. **perch** — a ladder up to the heading's top edge, which becomes a real ledge;
    the scaffolding is wrecked behind it.
