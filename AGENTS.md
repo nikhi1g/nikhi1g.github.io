@@ -297,3 +297,29 @@ cursor bearing in about 0.2s.
 Only a user grab or drop curls the figure back into a ball. A fall or a scripted
 hop does not: `dot.consumeDrop()` latches the release so the creature's own
 motion is never mistaken for the user letting go.
+
+## `/why/`
+
+`why/index.html` is a page of its own: self-contained (inline styles, its own
+theme toggle) and copied verbatim by `build-site.mjs`. Its prose is **Justin
+Skycak's**, word for word, in three sections taken from three different pieces:
+
+| section | source |
+|---|---|
+| the untitled opening, on grunt work and repetition | “You cannot be creative at a high level unless you are robotic at a low level” |
+| “Recall Is the Real Workout” | “Spaced repetition… might as well be called ‘wait’ training” |
+| “Be a Cognitive Weightlifter” | “How To Do Cognitive Weightlifting” |
+
+Each section carries a credit for the piece it came from, and the closing
+Bukowski quotation carries one for its author. A credit is a person's name in
+italics, an arrow, and a link — to the person's biography or their own site, not
+to an article about them — with no other words on the line.
+
+One thing inside section 2 is not Skycak's: the quoted term “desirable
+difficulties” is Robert A. Bjork's coinage, and that paragraph carries his name
+as well. Generic terms of art — spaced repetition, working memory, chunks — are
+nobody's, and get nothing.
+
+The credits are a map, not decoration: re-wording a section, or moving a credit,
+moves an attribution with it. The section headings and the page title are the
+owner's own and appear in no source.
