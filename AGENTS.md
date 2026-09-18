@@ -169,6 +169,32 @@ thing is **demolished**: rungs and rails stop being platforms and are handed to
 the debris system to fall and clutter the floor, where the sweep and vacuum
 passes collect them like anything else.
 
+### Debris
+
+A loose piece is a box with a velocity, and it rests when its box touches a
+surface. That is only honest if the box is what the reader sees, so two rules
+keep it so.
+
+- **A settled piece lies flat.** The landing maths rests a piece's *unrotated*
+  box on the surface, so a piece that stops mid-tumble is balancing on a corner:
+  an arrow asleep at 40° pokes its tip through the line it is lying on. So the
+  last thing a settling piece does is ease to the nearest flat pose, chosen by
+  `spawnDebris`'s last argument — `upright` (a multiple of 360°, the default:
+  text, tools, icons, anything with a right way up) or `flat` (a multiple of
+  180°, either face down: arrows, the thrown axe, ladder pieces).
+- **A glyph's box is trimmed to its ink.** A letter's box is its *line* box: it
+  carries the font's ascent and descent plus the line's leading, so its bottom
+  edge sits most of a line below the letter. `knockOffLetter` measures the
+  baseline (a zero-height inline block dropped onto it) and the ink's descent,
+  and hands physics a box whose lowest edge is the glyph's — without it a
+  knocked-off `404` comes to rest hanging in the air above the rule while the
+  arrows, whose box *is* their ink, sit on it.
+
+The thrown axe's sprite is the Lucide axe rotated 45° onto its side and sized to
+the rotated ink (`27.25×19`), because the icon is drawn along its viewBox
+diagonal: upright it is a square that is nearly all empty space, and the flat
+rule above would mean nothing.
+
 ### When the card moves
 
 Everything is positioned in viewport pixels, but the card is not fixed: a

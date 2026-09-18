@@ -184,8 +184,10 @@
 .bone-axe-thrown {
     position: fixed;
     z-index: 1;
-    width: 30px;
-    height: 30px;
+    /* The sprite is the axe's own ink box: see makeAxe — the icon is rotated 45deg
+       onto its side, and this is that rotated ink's bounds at 1.25 scale. */
+    width: 27.25px;
+    height: 19px;
     pointer-events: none;
     transform-origin: 50% 50%;
     will-change: left, top, transform;
@@ -193,8 +195,8 @@
 
 .bone-axe-thrown svg {
     display: block;
-    width: 30px;
-    height: 30px;
+    width: 27.25px;
+    height: 19px;
     overflow: visible;
 }
 

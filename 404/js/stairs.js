@@ -104,7 +104,10 @@ export function createStairs(dot) {
                 box.top,
                 (Math.random() - 0.5) * 200,
                 -50 - Math.random() * 110,
-                (Math.random() - 0.5) * 600
+                (Math.random() - 0.5) * 600,
+                // A board lies flat once it has fallen: a rail stopped at 90deg
+                // reads as a ladder still standing on the floor.
+                'flat'
             );
             thrown += 1;
         }
@@ -314,7 +317,8 @@ export function createStairs(dot) {
                 box.top,
                 (Math.random() - 0.5) * 220,
                 -60 - Math.random() * 120,
-                (Math.random() - 0.5) * 700
+                (Math.random() - 0.5) * 700,
+                'flat'
             );
             thrown += 1;
         }

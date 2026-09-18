@@ -136,6 +136,53 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         return isCurrent(id) && dot.el.classList.contains('sprouted');
     };
 
+    // A glyph's box is its LINE box, not the ink it paints: it carries the
+    // font's ascent and descent plus the line's leading, so its bottom edge sits
+    // well below the letter — for the heading, most of a line's worth. Physics
+    // rests a piece on its bottom edge, which is why a knocked-off glyph came to
+    // rest hanging in the air above the rule while the arrows, whose box IS
+    // their ink, sat on it.
+    //
+    // So the box is trimmed up to the ink before the piece is handed over. The
+    // glyph renders exactly where it was and only the invisible slack below it
+    // is given up, leaving physics a piece whose lowest edge is the letter's.
+    let measureCanvas = null;
+    const inkDescent = (letter) => {
+        measureCanvas = measureCanvas || document.createElement('canvas');
+        const ctx = typeof measureCanvas.getContext === 'function'
+            ? measureCanvas.getContext('2d')
+            : null;
+        if (!ctx) return 0;
+        const style = window.getComputedStyle(letter);
+        // Built from the longhands: the `font` shorthand carries the line height
+        // too, and a font string the canvas cannot parse would leave it measuring
+        // in the font it had before — the default 10px sans-serif.
+        ctx.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+        const metrics = ctx.measureText(letter.textContent || '');
+        const descent = metrics.actualBoundingBoxDescent;
+        return Number.isFinite(descent) ? descent : 0;
+    };
+    const inkBottom = (letter) => {
+        const box = letter.getBoundingClientRect();
+        // Measured rather than assumed: a zero-height inline block drops its
+        // bottom edge onto the baseline of the line it joins, so this reads back
+        // the baseline the letter is drawn on without trusting a font metric.
+        const probe = document.createElement('span');
+        probe.setAttribute('aria-hidden', 'true');
+        probe.style.cssText = 'display:inline-block;width:0;height:0;vertical-align:baseline;';
+        letter.appendChild(probe);
+        const baseline = probe.getBoundingClientRect().bottom - box.top;
+        probe.remove();
+        // Nonsense measurement (or an ink that already fills the box): leave the
+        // box as it was rather than hand physics a piece with no height.
+        if (!Number.isFinite(baseline) || baseline <= 0 || baseline >= box.height) {
+            return box.height;
+        }
+        // Plus whatever the ink hangs below the baseline — a descender's tail,
+        // and nothing at all for the digits the heading is made of.
+        return Math.min(box.height, baseline + inkDescent(letter));
+    };
+
     const knockOffLetter = (letter, impact) => {
         const rect = letter.getBoundingClientRect();
         if (!rect || rect.width < 1 || rect.height < 1) return;
@@ -163,6 +210,9 @@ export function createCreature({dot, gait, stairs, saw, fishing, wipe, sweep, va
         }
 
         document.body.appendChild(letter);
+        // Now that the letter is laid out where it will fall, give physics the
+        // box its ink actually fills.
+        letter.style.height = `${inkBottom(letter)}px`;
         const vx = impact && Number.isFinite(impact.vx)
             ? impact.vx * 0.18 + (Math.random() - 0.5) * 60
             : (Math.random() - 0.5) * 80;

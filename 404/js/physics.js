@@ -501,7 +501,15 @@ export function createDot() {
         stepGoal = null;
     };
     // Chopped-off page bits fall with the same constants and the same floors.
-    const spawnDebris = (el, x, y, vx, vy, spin = null) => {
+    //
+    // `settle` is the pose a piece comes to rest in, and it is not a detail:
+    // the landing maths rests the piece's UNROTATED box on the surface, so a
+    // piece that stops mid-tumble is resting on a corner — an arrow asleep at
+    // 40deg pokes its tip through the line it is supposedly lying on. `upright`
+    // (the default) is for anything with a right way up, text and tools alike,
+    // and comes back to 0deg; `flat` is for a piece whose two faces are the
+    // same, where the shortest turn to lie down is the right one.
+    const spawnDebris = (el, x, y, vx, vy, spin = null, settle = 'upright') => {
         el.style.position = 'fixed';
         el.style.left = `${x}px`;
         el.style.top = `${y}px`;
@@ -521,6 +529,10 @@ export function createDot() {
             resting: false,
             // Whether the surface it went to sleep on was the footer rule.
             onLine: false,
+            settle: settle === 'flat' ? 'flat' : 'upright',
+            settleFrom: 0,
+            settleTo: null,
+            settleT: 0,
             width,
             height
         });
@@ -542,12 +554,37 @@ export function createDot() {
     const clearDebris = () => {
         debris.length = 0;
     };
+    // The last movement a piece makes: the flop to flat. Where a piece lies once
+    // it stops is the nearest flat pose for what it is — a card has two faces, so
+    // either way round will do and the shorter turn wins; anything with a right
+    // way up comes back to it. A piece that stopped already flat has nowhere to
+    // go and is left alone.
+    const flatTarget = (bit) => {
+        const step = bit.settle === 'flat' ? 180 : 360;
+        const target = Math.round(bit.rot / step) * step;
+        return Math.abs(target - bit.rot) < 0.5 ? null : target;
+    };
+    // Eased rather than snapped: a piece that stopped at 100deg has to fall over,
+    // and it should read as falling over rather than as a jump cut.
+    const SETTLE_MS = 260;
+    const stepSettle = (bit, dt) => {
+        if (bit.settleTo === null) return;
+        bit.settleT += dt * 1000;
+        const t = Math.min(1, bit.settleT / SETTLE_MS);
+        const eased = 1 - (1 - t) * (1 - t) * (1 - t);
+        bit.rot = bit.settleFrom + (bit.settleTo - bit.settleFrom) * eased;
+        bit.el.style.transform = `rotate(${bit.rot}deg)`;
+        if (t >= 1) bit.settleTo = null;
+    };
     const stepDebris = (dt) => {
         if (!debris.length) return;
         const world = dotWorld();
         for (let i = debris.length - 1; i >= 0; i -= 1) {
             const bit = debris[i];
-            if (bit.resting) continue;
+            if (bit.resting) {
+                stepSettle(bit, dt);
+                continue;
+            }
             bit.vy += gravity * dt;
             bit.vx -= bit.vx * airDrag * dt;
             const prevY = bit.y;
@@ -604,6 +641,10 @@ export function createDot() {
                         // surface that can be broken out from under it later, and
                         // the piece has to know it is the one it is lying on.
                         bit.onLine = onLine;
+                        // And the pose it settles INTO, chosen as it stops.
+                        bit.settleFrom = bit.rot;
+                        bit.settleTo = flatTarget(bit);
+                        bit.settleT = 0;
                     }
                 }
             }

@@ -9,8 +9,8 @@ const ARROW_HEIGHT = 8;
 const ARROW_DRAW_DURATION = 170;
 const ARROW_FLIGHT_TIME = 0.4375;
 
-const AXE_WIDTH = 30;
-const AXE_HEIGHT = 30;
+const AXE_WIDTH = 27.25;
+const AXE_HEIGHT = 19;
 const AXE_DRAW_DURATION = 220;
 const AXE_FLIGHT_TIME = 0.6;
 
@@ -114,15 +114,24 @@ export function createArrow(dot) {
     };
 
     // Thrown axe: Lucide axe paths (same set as the held tool in 404.html,
-    // ISC License) at a readable 30px. Debris spin turns it into a spin.
+    // ISC License), laid on their side. The icon is drawn along the viewBox
+    // diagonal, so an upright sprite is a 30x30 square that is nearly all empty
+    // space — and since physics rests a piece's BOX on the surface, the thrown
+    // axe would either stand on its corner or hang in the air above the line it
+    // landed on. Rotating the paths 45deg about the viewBox centre lays the
+    // handle along the sprite and the sprite is sized to the rotated ink (21.8 x
+    // 15.2 of the 24-unit icon, at the same 1.25 scale as before), so a thrown
+    // axe comes to rest lying flat on the line like the arrows do.
     const makeAxe = () => {
         const axe = document.createElement('div');
         axe.className = 'bone-axe-thrown';
         axe.setAttribute('aria-hidden', 'true');
         axe.innerHTML = `
-            <svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true" focusable="false">
-                <path class="bone-axe__handle" d="m14 12-8.381 8.38a1 1 0 0 1-3.001-3L11 9" />
-                <path class="bone-axe__head" d="M15 15.5a.5.5 0 0 0 .5.5A6.5 6.5 0 0 0 22 9.5a.5.5 0 0 0-.5-.5h-1.672a2 2 0 0 1-1.414-.586l-5.062-5.062a1.205 1.205 0 0 0-1.704 0L9.352 5.648a1.205 1.205 0 0 0 0 1.704l5.062 5.062A2 2 0 0 1 15 13.828z" />
+            <svg viewBox="0.05 4.85 21.8 15.2" width="27.25" height="19" aria-hidden="true" focusable="false">
+                <g transform="rotate(45 12 12)">
+                    <path class="bone-axe__handle" d="m14 12-8.381 8.38a1 1 0 0 1-3.001-3L11 9" />
+                    <path class="bone-axe__head" d="M15 15.5a.5.5 0 0 0 .5.5A6.5 6.5 0 0 0 22 9.5a.5.5 0 0 0-.5-.5h-1.672a2 2 0 0 1-1.414-.586l-5.062-5.062a1.205 1.205 0 0 0-1.704 0L9.352 5.648a1.205 1.205 0 0 0 0 1.704l5.062 5.062A2 2 0 0 1 15 13.828z" />
+                </g>
             </svg>`;
         return axe;
     };
@@ -180,7 +189,14 @@ export function createArrow(dot) {
             origin.x - width / 2,
             origin.y - height / 2,
             vx,
-            vy
+            vy,
+            // Tumbling in flight is the point; coming to rest at whatever angle
+            // the tumble happened to stop at is not — an arrow or a thrown axe
+            // lies FLAT on a line, which is also the only pose its box can rest
+            // on: the landing maths rests the unrotated box on the surface, so a
+            // piece asleep at an angle pokes through the line it lies on.
+            null,
+            'flat'
         );
 
         await wait(flightTime * 1000);
