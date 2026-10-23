@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#22272e">
+  <meta name="description" content="whisper_hotkey privacy policy: no data is collected, transmitted, or stored off your Mac.">
+  <title>whisper_hotkey privacy policy</title>
+  <link rel="icon" href="./assets/icon.png">
+  <link rel="stylesheet" href="./styles.css?v=simple-1">
+  <style>
+    .policy { max-width: 720px; margin: 0 auto; padding: 48px 16px 72px; line-height: 1.55; }
+    .policy h1 { font-size: 34px; margin: 0 0 8px; }
+    .policy h2 { margin: 32px 0 8px; }
+    .policy p, .policy li { font-size: 17px; }
+    .policy .updated { color: #768390; margin-bottom: 28px; }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" aria-label="Primary navigation">
+    <a class="brand" href="./" aria-label="whisper_hotkey home">
+      <img src="./assets/icon.png" alt="" width="34" height="34">
+      <span>whisper_hotkey</span>
+    </a>
+    <nav>
+      <a href="./">Home</a>
+    </nav>
+  </header>
+
+  <main class="page-shell policy" id="main">
+    <h1>Privacy policy</h1>
+    <p class="updated">Effective October 23, 2026</p>
+
+    <p>whisper_hotkey is a dictation utility for macOS. It collects no data. Nothing you say, type, or configure is transmitted to the developer or to anyone else.</p>
+
+    <h2>What the app processes, and where</h2>
+    <ul>
+      <li><strong>Audio</strong> is captured only while you hold or toggle the dictation key, is written to a private temporary location on your Mac, is transcribed on your Mac by a speech model bundled inside the app, and is deleted when the dictation ends.</li>
+      <li><strong>Transcripts</strong> are inserted into the text field you chose and are not kept, except that the most recent dictation can be held in memory for the Copy Last Dictation menu action if you enable it.</li>
+      <li><strong>On-screen text</strong> may be read through macOS Accessibility, with your permission, to place the dictation badge beside the insertion point and to recognise words already visible in the active window. Individual words seen on screen that the recogniser is likely to mishear may be saved in the app's container on your Mac to improve recognition; you can turn this off in Settings. No screen text, transcript, or audio is stored, and nothing is transmitted.</li>
+      <li><strong>Settings</strong>, including your dictionary, are stored in the app's sandbox container on your Mac.</li>
+    </ul>
+
+    <h2>Network</h2>
+    <p>The App Store build of whisper_hotkey has no network entitlement. The operating system prevents it from opening any network connection, so no audio, transcript, setting, usage statistic, or crash report can leave your Mac through the app.</p>
+
+    <h2>Permissions</h2>
+    <p>The app asks macOS for Microphone, Accessibility, and Input Monitoring access. Each is used solely for dictation: capturing speech, locating the insertion point and inserting text, and detecting the dictation key together with Return and Escape during a dictation. If you choose the optional "Text and OCR" screen-vocabulary mode, the app also asks for Screen Recording, used only to read words in the active window on your Mac. You can revoke any of them at any time in System Settings.</p>
+
+    <h2>Third parties</h2>
+    <p>There are none. No analytics, advertising, or crash-reporting services are included.</p>
+
+    <h2>Children</h2>
+    <p>The app does not collect personal information from anyone, including children.</p>
+
+    <h2>Changes</h2>
+    <p>If this policy changes, the new version will be published at this address with a new effective date.</p>
+
+    <h2>Contact</h2>
+    <p>Questions: <a href="https://github.com/nikhi1g/whisper_hotkey/issues" target="_blank" rel="noopener noreferrer">open an issue on GitHub</a>.</p>
+  </main>
+
+  <footer>
+    <span>© <span id="year"></span> Nikhil Gupta</span>
+    <span class="footer-center"></span>
+    <a href="https://github.com/nikhi1g/whisper_hotkey" target="_blank" rel="noopener noreferrer">Source</a>
+  </footer>
+  <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+</body>
+</html>
