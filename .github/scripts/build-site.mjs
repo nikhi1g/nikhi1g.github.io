@@ -13,6 +13,10 @@ fs.copyFileSync('404.html', path.join(outputDirectory, '404.html'));
 // 404 page components: css + es modules the shell loads at runtime.
 fs.cpSync('404', path.join(outputDirectory, '404'), {recursive: true});
 
+// /whisper_hotkey/: the product site, moved here when its own repository went
+// private (GitHub Pages does not publish private repositories on this plan).
+fs.cpSync('whisper_hotkey', path.join(outputDirectory, 'whisper_hotkey'), {recursive: true});
+
 // Unlinked routes: page only, source assets stay in the repo.
 fs.mkdirSync(path.join(outputDirectory, 'why'), {recursive: true});
 fs.copyFileSync('why/index.html', path.join(outputDirectory, 'why', 'index.html'));
