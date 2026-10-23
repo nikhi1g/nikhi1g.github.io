@@ -9,11 +9,19 @@
   <link rel="icon" href="./assets/icon.png">
   <link rel="stylesheet" href="./styles.css?v=simple-1">
   <style>
-    .policy { max-width: 720px; margin: 0 auto; padding: 48px 16px 72px; line-height: 1.55; }
-    .policy h1 { font-size: 34px; margin: 0 0 8px; }
-    .policy h2 { margin: 32px 0 8px; }
-    .policy p, .policy li { font-size: 17px; }
-    .policy .updated { color: #768390; margin-bottom: 28px; }
+    /* The home page is a fixed-height two-column grid; a document scrolls. */
+    body { height: auto; min-height: 100vh; overflow: auto; grid-template-rows: 54px auto 42px; }
+    html, body { min-width: 0; }
+    .policy { width: auto; max-width: 720px; margin: 0 auto; padding: 36px 20px 64px; box-sizing: border-box; line-height: 1.6; overflow-wrap: anywhere; }
+    @media (min-width: 761px) { .policy { padding-left: 0; padding-right: 0; } }
+    .policy h1 { font-size: 36px; margin: 0 0 6px; }
+    .policy .updated { color: #768390; margin: 0 0 30px; font-size: 15px; }
+    .policy h2 { font-size: 21px; margin: 34px 0 10px; }
+    .policy p, .policy li { font-size: 17px; color: var(--text); margin: 0 0 12px; }
+    .policy ul { padding-left: 22px; margin: 0 0 12px; }
+    .policy li { margin-bottom: 10px; }
+    .policy a { color: #539bf5; }
+    footer { position: static; }
   </style>
 </head>
 <body>
@@ -28,7 +36,7 @@
     </nav>
   </header>
 
-  <main class="page-shell policy" id="main">
+  <main class="policy" id="main">
     <h1>Privacy policy</h1>
     <p class="updated">Effective October 23, 2026</p>
 
