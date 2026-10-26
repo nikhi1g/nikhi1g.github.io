@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#22272e">
+  <meta name="description" content="Third-party software and models used by whisper_hotkey, and their licences.">
+  <title>whisper_hotkey acknowledgements</title>
+  <link rel="icon" href="./assets/icon.png">
+  <link rel="stylesheet" href="./styles.css?v=simple-1">
+  <style>
+    /* The home page is a fixed-height two-column grid; a document scrolls. */
+    body { height: auto; min-height: 100vh; overflow: auto; grid-template-rows: 54px auto 42px; }
+    html, body { min-width: 0; }
+    .policy { width: auto; max-width: 720px; margin: 0 auto; padding: 36px 20px 64px; box-sizing: border-box; line-height: 1.6; overflow-wrap: anywhere; }
+    @media (min-width: 761px) { .policy { padding-left: 0; padding-right: 0; } }
+    .policy h1 { font-size: 36px; margin: 0 0 6px; }
+    .policy .updated { color: #768390; margin: 0 0 30px; font-size: 15px; }
+    .policy h2 { font-size: 21px; margin: 34px 0 10px; }
+    .policy p, .policy li { font-size: 17px; color: var(--text); margin: 0 0 12px; }
+    .policy ul { padding-left: 22px; margin: 0 0 12px; }
+    .policy li { margin-bottom: 10px; }
+    .policy a { color: #539bf5; }
+    footer { position: static; }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" aria-label="Primary navigation">
+    <a class="brand" href="./" aria-label="whisper_hotkey home">
+      <img src="./assets/icon.png" alt="" width="34" height="34">
+      <span>whisper_hotkey</span>
+    </a>
+    <nav>
+      <a href="./">Home</a>
+    </nav>
+  </header>
+
+  <main class="policy" id="main">
+    <h1>Acknowledgements</h1>
+    <p class="updated">whisper_hotkey is built on the work below. Thank you.</p>
+
+    <h2>Speech recognition</h2>
+    <ul>
+      <li><strong>NVIDIA Parakeet Unified</strong> (parakeet-unified-en-0.6b), the bundled speech-recognition model.
+        Licensed by NVIDIA Corporation under the
+        <a href="https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-open-model-license/">NVIDIA Open Model License</a>.</li>
+      <li><strong>Parakeet Unified Core ML conversion</strong> by
+        <a href="https://huggingface.co/FluidInference/parakeet-unified-en-0.6b-coreml">FluidInference</a>,
+        <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.</li>
+      <li><strong>FluidAudio</strong> by <a href="https://github.com/FluidInference/FluidAudio">FluidInference</a>,
+        the Swift package that runs the model on the Neural Engine.
+        <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>; whisper_hotkey ships a modified copy
+        with a replaceable decoder.</li>
+    </ul>
+
+    <h2>Full texts</h2>
+    <p>The complete licence texts and notices are included with the app as
+      <code>THIRD_PARTY_NOTICES.md</code> inside the application bundle (Contents/Resources).</p>
+
+    <h2>whisper_hotkey</h2>
+    <p>© Nikhil Gupta. Questions: <a href="mailto:2nikhilg@gmail.com">2nikhilg@gmail.com</a>.</p>
+  </main>
+
+  <footer>
+    <span>© <span id="year"></span> Nikhil Gupta</span>
+    <span class="footer-center"></span>
+    <a href="./privacy.html">Privacy</a>
+  </footer>
+  <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+</body>
+</html>
